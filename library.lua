@@ -43,6 +43,15 @@ local UILibrary = (function()
             BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 0, 40)
         })
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TopBar})
+        -- Patch to square off bottom corners of TopBar
+        CreateElement("Frame", {
+            Parent = TopBar,
+            BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 0, 1, -10),
+            Size = UDim2.new(1, 0, 0, 10)
+        })
         
         CreateElement("TextLabel", {
             Parent = TopBar,
@@ -105,15 +114,24 @@ local UILibrary = (function()
             Position = UDim2.new(0, 0, 0, 40),
             Size = UDim2.new(0, 150, 1, -40)
         })
-        
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TabContainer})
+        -- Patch to square off top corners of TabContainer
         CreateElement("Frame", {
             Parent = TabContainer,
-            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+            BackgroundColor3 = Color3.fromRGB(20, 20, 20),
             BorderSizePixel = 0,
-            Position = UDim2.new(1, -1, 0, 0),
-            Size = UDim2.new(0, 1, 1, 0)
+            Position = UDim2.new(0, 0, 0, 0),
+            Size = UDim2.new(1, 0, 0, 10)
         })
-
+        -- Patch to square off right corners of TabContainer
+        CreateElement("Frame", {
+            Parent = TabContainer,
+            BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+            BorderSizePixel = 0,
+            Position = UDim2.new(1, -10, 0, 0),
+            Size = UDim2.new(0, 10, 1, 0)
+        })
+        
         CreateElement("UIListLayout", {
             Parent = TabContainer,
             SortOrder = Enum.SortOrder.LayoutOrder,
@@ -122,6 +140,16 @@ local UILibrary = (function()
             VerticalAlignment = Enum.VerticalAlignment.Top,
         })
         CreateElement("UIPadding", {Parent = TabContainer, PaddingTop = UDim.new(0, 10)})
+
+        -- Separator Line (Moved to MainFrame to avoid UIListLayout issues)
+        CreateElement("Frame", {
+            Parent = MainFrame,
+            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 150, 0, 40),
+            Size = UDim2.new(0, 1, 1, -40),
+            ZIndex = 5
+        })
 
         local ContentFrame = CreateElement("Frame", {
             Name = "ContentFrame",
