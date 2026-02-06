@@ -652,3 +652,5 @@ local UILibrary = (function()
     end
     return UILibrary
 end)()
+
+return UILibrary
