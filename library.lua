@@ -34,24 +34,14 @@ local UILibrary = (function()
             Visible = true
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = MainFrame})
-        CreateElement("UIStroke", {Color = Color3.fromRGB(40, 40, 40), Thickness = 2, Transparency = 0, Parent = MainFrame})
-        -- Removed gradient on MainFrame for cleaner look
+        CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0, Parent = MainFrame})
+        
         local TopBar = CreateElement("Frame", {
             Name = "TopBar",
             Parent = MainFrame,
-            BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+            BackgroundColor3 = Color3.fromRGB(20, 20, 20),
             BorderSizePixel = 0,
             Size = UDim2.new(1, 0, 0, 40)
-        })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TopBar})
-        -- Fix corners to be flat at bottom
-        local TopBarCover = CreateElement("Frame", {
-            Parent = TopBar,
-            BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-            BorderSizePixel = 0,
-            Position = UDim2.new(0, 0, 1, -10),
-            Size = UDim2.new(1, 0, 0, 10),
-            ZIndex = 0
         })
         
         CreateElement("TextLabel", {
@@ -110,25 +100,15 @@ local UILibrary = (function()
         local TabContainer = CreateElement("Frame", {
             Name = "TabContainer",
             Parent = MainFrame,
-            BackgroundColor3 = Color3.fromRGB(12, 12, 12),
+            BackgroundColor3 = Color3.fromRGB(20, 20, 20),
             BorderSizePixel = 0,
             Position = UDim2.new(0, 0, 0, 40),
-            Size = UDim2.new(0, 140, 1, -40)
+            Size = UDim2.new(0, 150, 1, -40)
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TabContainer})
-        -- Fix corners to be flat at top
-        local TabContainerCover = CreateElement("Frame", {
-            Parent = TabContainer,
-            BackgroundColor3 = Color3.fromRGB(12, 12, 12),
-            BorderSizePixel = 0,
-            Position = UDim2.new(0, 0, 0, 0),
-            Size = UDim2.new(1, 0, 0, 10),
-            ZIndex = 0
-        })
-        -- Separator
+        
         CreateElement("Frame", {
             Parent = TabContainer,
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
             BorderSizePixel = 0,
             Position = UDim2.new(1, -1, 0, 0),
             Size = UDim2.new(0, 1, 1, 0)
@@ -147,8 +127,8 @@ local UILibrary = (function()
             Name = "ContentFrame",
             Parent = MainFrame,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 150, 0, 50),
-            Size = UDim2.new(1, -160, 1, -60)
+            Position = UDim2.new(0, 160, 0, 50),
+            Size = UDim2.new(1, -170, 1, -60)
         })
         local dragging, dragStart, startPos
         TopBar.InputBegan:Connect(function(input)
@@ -258,13 +238,15 @@ local UILibrary = (function()
                 BackgroundColor3 = Color3.fromRGB(30, 30, 30),
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
-                Size = UDim2.new(1, -20, 0, 32),
+                Size = UDim2.new(1, -20, 0, 30),
                 Font = Enum.Font.GothamBold,
                 Text = name,
                 TextColor3 = Color3.fromRGB(150, 150, 150),
-                TextSize = 14
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left
             })
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = tabButton})
+            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 10)})
             
             local page = CreateElement("ScrollingFrame", {
                 Name = name .. "Page",
