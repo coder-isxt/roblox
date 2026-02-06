@@ -223,12 +223,16 @@ local UILibrary = (function()
         function window:SwitchToTab(tabToSelect)
             for _, tab in pairs(tabs) do
                 tab.Page.Visible = false
-                if tab.Button.BackgroundTransparency ~= 1 then
-                    TweenService:Create(tab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(150, 150, 150)}):Play()
-                end
+                TweenService:Create(tab.Button, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+                    TextColor3 = Color3.fromRGB(150, 150, 150)
+                }):Play()
             end
             tabToSelect.Page.Visible = true
-            TweenService:Create(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundTransparency = 0, TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(tabToSelect.Button, TweenInfo.new(0.2), {
+                BackgroundColor3 = Color3.fromRGB(220, 40, 40),
+                TextColor3 = Color3.fromRGB(255, 255, 255)
+            }):Play()
         end
         function window:CreateTab(name)
             local tab = {}
@@ -236,9 +240,9 @@ local UILibrary = (function()
                 Name = name .. "Tab",
                 Parent = TabContainer,
                 BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-                BackgroundTransparency = 1,
+                BackgroundTransparency = 0,
                 BorderSizePixel = 0,
-                Size = UDim2.new(1, -20, 0, 30),
+                Size = UDim2.new(1, -20, 0, 35),
                 Font = Enum.Font.GothamBold,
                 Text = name,
                 TextColor3 = Color3.fromRGB(150, 150, 150),
@@ -264,10 +268,10 @@ local UILibrary = (function()
             tab.Page = page
             table.insert(tabs, tab)
             tabButton.MouseEnter:Connect(function()
-                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundTransparency = 0.8}):Play() end
+                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play() end
             end)
             tabButton.MouseLeave:Connect(function()
-                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play() end
+                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play() end
             end)
             tabButton.MouseButton1Click:Connect(function() window:SwitchToTab(tab) end)
             if #tabs == 1 then window:SwitchToTab(tab) end
