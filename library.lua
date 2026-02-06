@@ -132,14 +132,25 @@ local UILibrary = (function()
             Size = UDim2.new(0, 10, 1, 0)
         })
         
-        CreateElement("UIListLayout", {
+        local TabHolder = CreateElement("ScrollingFrame", {
+            Name = "TabHolder",
             Parent = TabContainer,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 0,
+            BorderSizePixel = 0,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y
+        })
+        
+        CreateElement("UIListLayout", {
+            Parent = TabHolder,
             SortOrder = Enum.SortOrder.LayoutOrder,
             Padding = UDim.new(0, 5),
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
             VerticalAlignment = Enum.VerticalAlignment.Top,
         })
-        CreateElement("UIPadding", {Parent = TabContainer, PaddingTop = UDim.new(0, 10)})
+        CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 10)})
 
         -- Separator Line (Moved to MainFrame to avoid UIListLayout issues)
         CreateElement("Frame", {
@@ -266,7 +277,7 @@ local UILibrary = (function()
             local tab = {}
             local tabButton = CreateElement("TextButton", {
                 Name = name .. "Tab",
-                Parent = TabContainer,
+                Parent = TabHolder,
                 BackgroundColor3 = Color3.fromRGB(30, 30, 30),
                 BackgroundTransparency = 0,
                 BorderSizePixel = 0,
