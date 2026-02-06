@@ -25,100 +25,130 @@ local UILibrary = (function()
         local MainFrame = CreateElement("Frame", {
             Name = "MainFrame",
             Parent = ScreenGui,
-            BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+            BackgroundColor3 = Color3.fromRGB(10, 10, 10),
             BorderSizePixel = 0,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 550, 0, 400),
+            Size = UDim2.new(0, 600, 0, 450),
             ClipsDescendants = true,
             Visible = true
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 20), Parent = MainFrame})
-        CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 2, Transparency = 0.2, Parent = MainFrame})
-        CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 30, 30)), ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 10, 10))}, Rotation = 45, Parent = MainFrame})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = MainFrame})
+        CreateElement("UIStroke", {Color = Color3.fromRGB(40, 40, 40), Thickness = 2, Transparency = 0, Parent = MainFrame})
+        -- Removed gradient on MainFrame for cleaner look
         local TopBar = CreateElement("Frame", {
             Name = "TopBar",
             Parent = MainFrame,
-            BackgroundColor3 = Color3.fromRGB(10, 10, 10),
+            BackgroundColor3 = Color3.fromRGB(15, 15, 15),
             BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 45)
+            Size = UDim2.new(1, 0, 0, 40)
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 20), Parent = TopBar})
-        CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 100, 100))}, Rotation = 90, Parent = TopBar})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TopBar})
+        -- Fix corners to be flat at bottom
+        local TopBarCover = CreateElement("Frame", {
+            Parent = TopBar,
+            BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 0, 1, -10),
+            Size = UDim2.new(1, 0, 0, 10),
+            ZIndex = 0
+        })
+        
         CreateElement("TextLabel", {
             Parent = TopBar,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 25, 0, 0),
-            Size = UDim2.new(0.6, 0, 1, 0),
+            Position = UDim2.new(0, 15, 0, 0),
+            Size = UDim2.new(0.5, 0, 1, 0),
             Font = Enum.Font.GothamBlack,
             Text = title or "UI Library",
-            TextColor3 = Color3.fromRGB(220, 40, 40),
-            TextSize = 20,
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextSize = 18,
             TextXAlignment = Enum.TextXAlignment.Left,
-            TextStrokeTransparency = 0.9,
-            TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
         })
         local CloseButton = CreateElement("TextButton", {
             Parent = TopBar,
-            BackgroundColor3 = Color3.fromRGB(255, 80, 80),
+            BackgroundColor3 = Color3.fromRGB(200, 50, 50),
             BorderSizePixel = 0,
-            Position = UDim2.new(1, -40, 0.5, -15),
-            Size = UDim2.new(0, 30, 0, 30),
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -10, 0.5, 0),
+            Size = UDim2.new(0, 24, 0, 24),
             Font = Enum.Font.GothamBold,
             Text = "X",
             TextColor3 = Color3.fromRGB(255, 255, 255),
-            TextSize = 16
+            TextSize = 14
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = CloseButton})
-        CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))}, Rotation = 90, Parent = CloseButton})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CloseButton})
+        
         local MinimizeButton = CreateElement("TextButton", {
             Parent = TopBar,
-            BackgroundColor3 = Color3.fromRGB(255, 200, 80),
+            BackgroundColor3 = Color3.fromRGB(200, 150, 50),
             BorderSizePixel = 0,
-            Position = UDim2.new(1, -80, 0.5, -15),
-            Size = UDim2.new(0, 30, 0, 30),
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -40, 0.5, 0),
+            Size = UDim2.new(0, 24, 0, 24),
             Font = Enum.Font.GothamBold,
             Text = "-",
             TextColor3 = Color3.fromRGB(255, 255, 255),
-            TextSize = 16
+            TextSize = 14
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = MinimizeButton})
-        CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 200))}, Rotation = 90, Parent = MinimizeButton})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = MinimizeButton})
+        
         local CollapseKeybindButton = CreateElement("TextButton", {
             Parent = TopBar,
-            BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
             BorderSizePixel = 0,
-            Position = UDim2.new(1, -130, 0.5, -15),
-            Size = UDim2.new(0, 40, 0, 30),
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -70, 0.5, 0),
+            Size = UDim2.new(0, 30, 0, 24),
             Font = Enum.Font.GothamBold,
             Text = "Ins",
             TextColor3 = Color3.fromRGB(255, 255, 255),
             TextSize = 12
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = CollapseKeybindButton})
-        CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 150))}, Rotation = 90, Parent = CollapseKeybindButton})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CollapseKeybindButton})
+        
         local TabContainer = CreateElement("Frame", {
             Name = "TabContainer",
             Parent = MainFrame,
-            BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+            BackgroundColor3 = Color3.fromRGB(12, 12, 12),
             BorderSizePixel = 0,
-            Position = UDim2.new(0, 0, 0, 45),
-            Size = UDim2.new(0, 130, 1, -45)
+            Position = UDim2.new(0, 0, 0, 40),
+            Size = UDim2.new(0, 140, 1, -40)
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TabContainer})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TabContainer})
+        -- Fix corners to be flat at top
+        local TabContainerCover = CreateElement("Frame", {
+            Parent = TabContainer,
+            BackgroundColor3 = Color3.fromRGB(12, 12, 12),
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 0, 0, 0),
+            Size = UDim2.new(1, 0, 0, 10),
+            ZIndex = 0
+        })
+        -- Separator
+        CreateElement("Frame", {
+            Parent = TabContainer,
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BorderSizePixel = 0,
+            Position = UDim2.new(1, -1, 0, 0),
+            Size = UDim2.new(0, 1, 1, 0)
+        })
+
         CreateElement("UIListLayout", {
             Parent = TabContainer,
             SortOrder = Enum.SortOrder.LayoutOrder,
-            Padding = UDim.new(0, 10),
+            Padding = UDim.new(0, 5),
             HorizontalAlignment = Enum.HorizontalAlignment.Center,
-            VerticalAlignment = Enum.VerticalAlignment.Top
+            VerticalAlignment = Enum.VerticalAlignment.Top,
         })
+        CreateElement("UIPadding", {Parent = TabContainer, PaddingTop = UDim.new(0, 10)})
+
         local ContentFrame = CreateElement("Frame", {
             Name = "ContentFrame",
             Parent = MainFrame,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 140, 0, 55),
-            Size = UDim2.new(1, -150, 1, -65)
+            Position = UDim2.new(0, 150, 0, 50),
+            Size = UDim2.new(1, -160, 1, -60)
         })
         local dragging, dragStart, startPos
         TopBar.InputBegan:Connect(function(input)
@@ -162,9 +192,9 @@ local UILibrary = (function()
             TabContainer.Visible = not Minimized
             ContentFrame.Visible = not Minimized
             if Minimized then
-                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 550, 0, 45)}):Play()
+                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 600, 0, 40)}):Play()
             else
-                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 550, 0, 400)}):Play()
+                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 600, 0, 450)}):Play()
             end
         end
         MinimizeButton.MouseButton1Click:Connect(MinimizeUI)
@@ -174,7 +204,7 @@ local UILibrary = (function()
             UIVisible = not UIVisible
             if UIVisible then
                 MainFrame.Visible = true
-                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 550, 0, 400)}):Play()
+                TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 600, 0, 450)}):Play()
             else
                 TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
                 task.delay(0.3, function()
@@ -213,98 +243,98 @@ local UILibrary = (function()
         function window:SwitchToTab(tabToSelect)
             for _, tab in pairs(tabs) do
                 tab.Page.Visible = false
-                if tab.Button.BackgroundColor3 ~= Color3.fromRGB(25, 25, 25) then
-                    TweenService:Create(tab.Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 20), TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+                if tab.Button.BackgroundTransparency ~= 1 then
+                    TweenService:Create(tab.Button, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(150, 150, 150)}):Play()
                 end
             end
             tabToSelect.Page.Visible = true
-            TweenService:Create(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 40, 40), TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            TweenService:Create(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundTransparency = 0, TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
         end
         function window:CreateTab(name)
             local tab = {}
             local tabButton = CreateElement("TextButton", {
                 Name = name .. "Tab",
                 Parent = TabContainer,
-                BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+                BackgroundTransparency = 1,
                 BorderSizePixel = 0,
-                Size = UDim2.new(1, -10, 0, 35),
+                Size = UDim2.new(1, -20, 0, 32),
                 Font = Enum.Font.GothamBold,
                 Text = name,
-                TextColor3 = Color3.fromRGB(200, 200, 200),
+                TextColor3 = Color3.fromRGB(150, 150, 150),
                 TextSize = 14
             })
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = tabButton})
-            local tabStroke = CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1.5, Transparency = 0.7, Parent = tabButton})
-            CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = tabButton})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = tabButton})
+            
             local page = CreateElement("ScrollingFrame", {
                 Name = name .. "Page",
                 Parent = ContentFrame,
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, 0, 1, 0),
-                ScrollBarThickness = 4,
-                ScrollBarImageColor3 = Color3.fromRGB(220, 40, 40),
+                ScrollBarThickness = 2,
+                ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
                 Visible = false
             })
-            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 15)})
+            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
+            CreateElement("UIPadding", {Parent = page, PaddingRight = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingTop = UDim.new(0, 5)})
+            
             tab.Button = tabButton
             tab.Page = page
             table.insert(tabs, tab)
             tabButton.MouseEnter:Connect(function()
-                TweenService:Create(tabStroke, TweenInfo.new(0.2), {Transparency = 0.2, Thickness = 2}):Play()
-                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play() end
+                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundTransparency = 0.8}):Play() end
             end)
             tabButton.MouseLeave:Connect(function()
-                TweenService:Create(tabStroke, TweenInfo.new(0.2), {Transparency = 0.7, Thickness = 1.5}):Play()
-                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play() end
+                if not page.Visible then TweenService:Create(tabButton, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play() end
             end)
             tabButton.MouseButton1Click:Connect(function() window:SwitchToTab(tab) end)
             if #tabs == 1 then window:SwitchToTab(tab) end
             function tab:CreateButton(text, callback)
                 local button = CreateElement("TextButton", {
                     Parent = page,
-                    BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
                     BorderSizePixel = 0,
-                    Size = UDim2.new(1, -10, 0, 35),
+                    Size = UDim2.new(1, 0, 0, 35),
                     Font = Enum.Font.GothamBold,
                     Text = text,
                     TextColor3 = Color3.fromRGB(255, 255, 255),
                     TextSize = 14,
                     LayoutOrder = #page:GetChildren()
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = button})
-                local buttonStroke = CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1.5, Transparency = 0.6, Parent = button})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = button})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = button})
+                local buttonStroke = CreateElement("UIStroke", {Color = Color3.fromRGB(50, 50, 50), Thickness = 1, Transparency = 0, Parent = button})
+                
                 button.MouseEnter:Connect(function()
-                    TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-                    TweenService:Create(buttonStroke, TweenInfo.new(0.2), {Transparency = 0.1, Thickness = 2}):Play()
+                    TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+                    TweenService:Create(buttonStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(220, 40, 40)}):Play()
                 end)
                 button.MouseLeave:Connect(function()
-                    TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play()
-                    TweenService:Create(buttonStroke, TweenInfo.new(0.2), {Transparency = 0.6, Thickness = 1.5}):Play()
+                    TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(25, 25, 25)}):Play()
+                    TweenService:Create(buttonStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(50, 50, 50)}):Play()
                 end)
                 button.MouseButton1Click:Connect(function()
                     pcall(callback)
-                    TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -20, 0, 30)}):Play()
+                    TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -4, 0, 31)}):Play()
                     task.wait(0.1)
-                    TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -10, 0, 35)}):Play()
+                    TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 35)}):Play()
                 end)
                 return button
             end
             function tab:CreateToggle(text, callback)
                 local toggleFrame = CreateElement("Frame", {
                     Parent = page,
-                    BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
                     BorderSizePixel = 0,
-                    Size = UDim2.new(1, -10, 0, 35),
+                    Size = UDim2.new(1, 0, 0, 35),
                     LayoutOrder = #page:GetChildren()
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = toggleFrame})
-                CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1, Transparency = 0.6, Parent = toggleFrame})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = toggleFrame})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = toggleFrame})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(50, 50, 50), Thickness = 1, Transparency = 0, Parent = toggleFrame})
+                
                 CreateElement("TextLabel", {
                     Parent = toggleFrame,
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 15, 0, 0),
+                    Position = UDim2.new(0, 10, 0, 0),
                     Size = UDim2.new(0.7, 0, 1, 0),
                     Font = Enum.Font.GothamBold,
                     Text = text,
@@ -317,16 +347,17 @@ local UILibrary = (function()
                     BackgroundColor3 = Color3.fromRGB(40, 40, 40),
                     BorderSizePixel = 0,
                     AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, -10, 0.5, 0),
-                    Size = UDim2.new(0, 50, 0, 24),
+                    Position = UDim2.new(1, -8, 0.5, 0),
+                    Size = UDim2.new(0, 40, 0, 20),
                     Text = ""
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = toggleButton})
+                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = toggleButton}) -- Pill shape
                 local toggleIndicator = CreateElement("Frame", {
                     Parent = toggleButton,
-                    BackgroundColor3 = Color3.fromRGB(150, 150, 150),
+                    BackgroundColor3 = Color3.fromRGB(200, 200, 200),
                     BorderSizePixel = 0,
-                    Position = UDim2.new(0, 4, 0.5, -8),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Position = UDim2.new(0, 2, 0.5, 0),
                     Size = UDim2.new(0, 16, 0, 16)
                 })
                 CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = toggleIndicator})
@@ -335,10 +366,10 @@ local UILibrary = (function()
                     toggled = not toggled
                     if toggled then
                         TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 40, 40)}):Play()
-                        TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(1, -20, 0.5, -8), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+                        TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
                     else
                         TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-                        TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(0, 4, 0.5, -8), BackgroundColor3 = Color3.fromRGB(150, 150, 150)}):Play()
+                        TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Color3.fromRGB(200, 200, 200)}):Play()
                     end
                     pcall(callback, toggled)
                 end)
@@ -347,18 +378,18 @@ local UILibrary = (function()
             function tab:CreateKeybind(text, callback)
                 local keybindFrame = CreateElement("Frame", {
                     Parent = page,
-                    BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
                     BorderSizePixel = 0,
-                    Size = UDim2.new(1, -10, 0, 35),
+                    Size = UDim2.new(1, 0, 0, 35),
                     LayoutOrder = #page:GetChildren()
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = keybindFrame})
-                CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1, Transparency = 0.6, Parent = keybindFrame})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = keybindFrame})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = keybindFrame})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(50, 50, 50), Thickness = 1, Transparency = 0, Parent = keybindFrame})
+                
                 CreateElement("TextLabel", {
                     Parent = keybindFrame,
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 15, 0, 0),
+                    Position = UDim2.new(0, 10, 0, 0),
                     Size = UDim2.new(0.6, 0, 1, 0),
                     Font = Enum.Font.GothamBold,
                     Text = text,
@@ -371,30 +402,30 @@ local UILibrary = (function()
                     BackgroundColor3 = Color3.fromRGB(40, 40, 40),
                     BorderSizePixel = 0,
                     AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, -10, 0.5, 0),
-                    Size = UDim2.new(0, 80, 0, 24),
+                    Position = UDim2.new(1, -8, 0.5, 0),
+                    Size = UDim2.new(0, 80, 0, 22),
                     Font = Enum.Font.GothamBold,
                     Text = "None",
                     TextColor3 = Color3.fromRGB(255, 255, 255),
                     TextSize = 12
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = keybindButton})
-                local keybindStroke = CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1.5, Transparency = 0.6, Parent = keybindButton})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = keybindButton})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = keybindButton})
+                local keybindStroke = CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0, Parent = keybindButton})
+                
                 local currentKey = nil
                 local waiting = false
                 keybindButton.MouseButton1Click:Connect(function()
                     if waiting then return end
                     waiting = true
                     keybindButton.Text = "..."
-                    TweenService:Create(keybindStroke, TweenInfo.new(0.2), {Transparency = 0.4}):Play()
+                    TweenService:Create(keybindStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(220, 40, 40)}):Play()
                     local connection
                     connection = UserInputService.InputBegan:Connect(function(input)
                         if input.UserInputType == Enum.UserInputType.Keyboard then
                             currentKey = input.KeyCode
                             keybindButton.Text = currentKey.Name
                             task.delay(0.2, function() waiting = false end)
-                            TweenService:Create(keybindStroke, TweenInfo.new(0.2), {Transparency = 0.6}):Play()
+                            TweenService:Create(keybindStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(60, 60, 60)}):Play()
                             connection:Disconnect()
                         end
                     end)
@@ -413,18 +444,18 @@ local UILibrary = (function()
             function tab:CreateSlider(text, min, max, default, callback)
                 local sliderFrame = CreateElement("Frame", {
                     Parent = page,
-                    BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
                     BorderSizePixel = 0,
-                    Size = UDim2.new(1, -10, 0, 50),
+                    Size = UDim2.new(1, 0, 0, 50),
                     LayoutOrder = #page:GetChildren()
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = sliderFrame})
-                CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1, Transparency = 0.6, Parent = sliderFrame})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = sliderFrame})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = sliderFrame})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(50, 50, 50), Thickness = 1, Transparency = 0, Parent = sliderFrame})
+                
                 CreateElement("TextLabel", {
                     Parent = sliderFrame,
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 15, 0, 5),
+                    Position = UDim2.new(0, 10, 0, 5),
                     Size = UDim2.new(0.5, 0, 0.4, 0),
                     Font = Enum.Font.GothamBold,
                     Text = text,
@@ -436,7 +467,7 @@ local UILibrary = (function()
                     Parent = sliderFrame,
                     BackgroundTransparency = 1,
                     Position = UDim2.new(0.5, 0, 0, 5),
-                    Size = UDim2.new(0.5, -20, 0.4, 0),
+                    Size = UDim2.new(0.5, -10, 0.4, 0),
                     Font = Enum.Font.Gotham,
                     Text = tostring(default),
                     TextColor3 = Color3.fromRGB(200, 200, 200),
@@ -447,13 +478,12 @@ local UILibrary = (function()
                     Parent = sliderFrame,
                     BackgroundColor3 = Color3.fromRGB(40, 40, 40),
                     BorderSizePixel = 0,
-                    Position = UDim2.new(0.05, 0, 0.6, 0),
-                    Size = UDim2.new(0.9, 0, 0.25, 0),
+                    Position = UDim2.new(0.025, 0, 0.65, 0),
+                    Size = UDim2.new(0.95, 0, 0.15, 0),
                     Text = ""
                 })
                 CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderBar})
-                local sliderBarStroke = CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1.5, Transparency = 0.6, Parent = sliderBar})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = sliderBar})
+                
                 local fill = CreateElement("Frame", {
                     Parent = sliderBar,
                     BackgroundColor3 = Color3.fromRGB(220, 40, 40),
@@ -493,18 +523,18 @@ local UILibrary = (function()
             function tab:CreateCycleButton(text, values, default, callback)
                 local cycleFrame = CreateElement("Frame", {
                     Parent = page,
-                    BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
                     BorderSizePixel = 0,
-                    Size = UDim2.new(1, -10, 0, 35),
+                    Size = UDim2.new(1, 0, 0, 35),
                     LayoutOrder = #page:GetChildren()
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = cycleFrame})
-                CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1, Transparency = 0.6, Parent = cycleFrame})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = cycleFrame})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = cycleFrame})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(50, 50, 50), Thickness = 1, Transparency = 0, Parent = cycleFrame})
+                
                 CreateElement("TextLabel", {
                     Parent = cycleFrame,
                     BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 15, 0, 0),
+                    Position = UDim2.new(0, 10, 0, 0),
                     Size = UDim2.new(0.6, 0, 1, 0),
                     Font = Enum.Font.GothamBold,
                     Text = text,
@@ -517,16 +547,15 @@ local UILibrary = (function()
                     BackgroundColor3 = Color3.fromRGB(40, 40, 40),
                     BorderSizePixel = 0,
                     AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, -10, 0.5, 0),
-                    Size = UDim2.new(0, 110, 0, 24),
+                    Position = UDim2.new(1, -8, 0.5, 0),
+                    Size = UDim2.new(0, 100, 0, 22),
                     Font = Enum.Font.GothamBold,
                     Text = tostring(default or values[1] or "None"),
                     TextColor3 = Color3.fromRGB(255, 255, 255),
                     TextSize = 12
                 })
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = cycleButton})
-                CreateElement("UIStroke", {Color = Color3.fromRGB(220, 40, 40), Thickness = 1.5, Transparency = 0.6, Parent = cycleButton})
-                CreateElement("UIGradient", {Color = ColorSequence.new{ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120))}, Rotation = 90, Parent = cycleButton})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = cycleButton})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0, Parent = cycleButton})
                 local idx = 1
                 for i, v in ipairs(values) do
                     if v == default then idx = i break end
@@ -541,9 +570,9 @@ local UILibrary = (function()
                     idx = idx + 1
                     if idx > #values then idx = 1 end
                     update()
-                    TweenService:Create(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 100, 0, 20)}):Play()
+                    TweenService:Create(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 90, 0, 18)}):Play()
                     task.wait(0.1)
-                    TweenService:Create(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 110, 0, 24)}):Play()
+                    TweenService:Create(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 100, 0, 22)}):Play()
                 end)
                 return {
                     Frame = cycleFrame,
