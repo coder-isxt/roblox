@@ -14,6 +14,7 @@ local UILibrary = (function()
         local window = {}
         local tabs = {}
         window.connections = {}
+        window.cleanupFunctions = {}
         local FPSCleanup = nil
         local Minimized = false
         local ScreenGui = CreateElement("ScreenGui", {
@@ -350,6 +351,9 @@ local UILibrary = (function()
             if FPSCleanup then FPSCleanup() end
             for _, conn in ipairs(window.connections) do
                 conn:Disconnect()
+            end
+            for _, func in ipairs(window.cleanupFunctions) do
+                pcall(func)
             end
             TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
             task.wait(0.3)
@@ -816,6 +820,10 @@ local UILibrary = (function()
                 return paragraphFrame
             end
             return tab
+        end
+
+        function window:OnClose(callback)
+            table.insert(window.cleanupFunctions, callback)
         end
         
         function UILibrary:Notify(args)
