@@ -222,6 +222,7 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
 
             local closestThreat = nil
             local closestDist = math.huge
+            local sizeOfClosest = Vector3.new(0,0,0)
             local SlashDetected = false
             local sizeOfClosest = Vector3.new(0,0,0)
             local closestSize = Vector3.new(0, 0, 0)
@@ -232,7 +233,6 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
             
             for part, _ in pairs(ActiveThreats) do
                 if part and part.Parent then
-                    local pos = part.Position
                     local dist = (part.Position - hrp.Position).Magnitude
                     if dist < closestDist then
                         closestDist = dist
@@ -240,7 +240,7 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
                         closestThreat = part
                         sizeOfClosest = part.Size
                     end
-                    
+
                     local relPos = part.CFrame:PointToObjectSpace(hrp.Position)
                     local size = part.Size
                     local halfSize = size / 2
@@ -248,13 +248,11 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
                     -- Check if inside or near the hitbox (2 stud margin)
                     if math.abs(relPos.X) < (halfSize.X + safetyMargin) and 
                        math.abs(relPos.Y) < (halfSize.Y + safetyMargin) and 
-                       math.abs(relPos.Z) < (halfSize.Z + 2) then
-                        
+                       math.abs(relPos.Z) < (halfSize.Z + safetyMargin) then
                         sizeX = halfSize.X
                         sizeZ = halfSize.Z
                         
-                        
-                        inDanger = true
+                       inDanger = true
                     end
                 end
             end
@@ -262,10 +260,12 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
              -- Proactive Slash Dodge (Jump)
             for part, _ in pairs(ActiveThreats) do
                 if part and part.Parent and part.Name:lower():find("slash") then
-                    if (part.Position - hrp.Position).Magnitude < closestSize.Magnitude + 10 then
+                    local dist = (part.Position - hrp.Position).Magnitude
+                    if dist < 15 then
                        SlashDetected = true
                         break
                     end
+
                 end
             end
 
@@ -273,8 +273,8 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
                 local safePoint = GetBestSafePoint(hrp)
                 if SlashDetected == true then 
                        Vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
-                       task.wait(0.05)
-                       Vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                        task.wait(0.1)
+                        Vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
                 end
                 if safePoint then
                     humanoid:MoveTo(safePoint)
@@ -283,7 +283,6 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
             end
         end)
     else
-        -- FULL DISCONNECT
         if DodgeConnection then
             DodgeConnection:Disconnect()
             DodgeConnection = nil
@@ -292,8 +291,8 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
             DodgeLoop:Disconnect()
             DodgeLoop = nil
         end
+         -- FULL DISCONNECT
         for _, conn in pairs(ActiveThreats) do conn:Disconnect() end
-        ActiveThreats = {}
     end
 end)
 
