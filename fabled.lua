@@ -104,7 +104,7 @@ local function GetBestSafePoint(hrp)
     local size = closestPart.Size
     local relPos = cf:PointToObjectSpace(hrp.Position)
     local halfSize = size / 2
-    local safetyMargin = 12 -- Increased margin for safety
+    local safetyMargin = 4 -- Reduced margin for faster escape
 
     local candidates = {}
     
@@ -129,8 +129,8 @@ local function GetBestSafePoint(hrp)
     
     -- Fallback: Expanded Radial Search
     local radialCandidates = {}
-    for r = 20, 70, 10 do -- Increased range
-        for angle = 0, 360, 45 do
+    for r = 5, 50, 5 do -- More granular radius
+        for angle = 0, 360, 15 do -- Higher precision (360 degrees)
             local rad = math.rad(angle)
             local offset = Vector3.new(math.cos(rad) * r, 0, math.sin(rad) * r)
             table.insert(radialCandidates, hrp.Position + offset)
@@ -220,23 +220,52 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
             local humanoid = character and character:FindFirstChild("Humanoid")
             if not hrp or not humanoid then return end
 
+            local closestThreat = nil
+            local closestDist = math.huge
+            local closestSize = Vector3.new(0, 0, 0)
+            local safetyMargin = 2
+            local sizeX = 0
+            local sizeZ = 0
             local inDanger = false
+            
             for part, _ in pairs(ActiveThreats) do
                 if part and part.Parent then
+                    local dist = (part.Position - hrp.Position).Magnitude
+                    if dist < closestDist then
+                        closestDist = dist
+                        closestSize = part.Size
+                        closestThreat = part
+                    end
+                    
                     local relPos = part.CFrame:PointToObjectSpace(hrp.Position)
                     local size = part.Size
                     local halfSize = size / 2
+                    
                     -- Check if inside or near the hitbox (2 stud margin)
-                    if math.abs(relPos.X) < (halfSize.X + 2) and 
-                       math.abs(relPos.Y) < (halfSize.Y + 2) and 
+                    if math.abs(relPos.X) < (halfSize.X + safetyMargin) and 
+                       math.abs(relPos.Y) < (halfSize.Y + safetyMargin) and 
                        math.abs(relPos.Z) < (halfSize.Z + 2) then
+                        
+                        sizeX = halfSize.X
+                        sizeZ = halfSize.Z
+                        
+                        
                         inDanger = true
+                    end
+                end
+            end
+
+            -- Proactive Slash Dodge (Jump)
+            for part, _ in pairs(ActiveThreats) do
+                if part and part.Parent and part.Name:lower():find("slash") then
+                    if (part.Position - hrp.Position).Magnitude < 20 then
+                        humanoid.Jump = true
                         break
                     end
                 end
             end
 
-            if inDanger and os.clock() - lastMoveTime > 0.1 then
+            if inDanger and os.clock() - lastMoveTime > 0.05 then
                 local safePoint = GetBestSafePoint(hrp)
                 if safePoint then
                     humanoid:MoveTo(safePoint)
