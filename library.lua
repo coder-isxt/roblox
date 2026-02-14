@@ -621,6 +621,48 @@ local UILibrary = (function()
                     end
                 }
             end
+            function tab:CreateParagraph(title, content)
+                local paragraphFrame = CreateElement("Frame", {
+                    Parent = page,
+                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(1, 0, 0, 0),
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    LayoutOrder = #page:GetChildren()
+                })
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = paragraphFrame})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(50, 50, 50), Thickness = 1, Transparency = 0, Parent = paragraphFrame})
+                
+                CreateElement("TextLabel", {
+                    Parent = paragraphFrame,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 10, 0, 10),
+                    Size = UDim2.new(1, -20, 0, 15),
+                    Font = Enum.Font.GothamBold,
+                    Text = title,
+                    TextColor3 = Color3.fromRGB(255, 255, 255),
+                    TextSize = 14,
+                    TextXAlignment = Enum.TextXAlignment.Left
+                })
+                
+                CreateElement("TextLabel", {
+                    Parent = paragraphFrame,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 10, 0, 30),
+                    Size = UDim2.new(1, -20, 0, 0),
+                    AutomaticSize = Enum.AutomaticSize.Y,
+                    Font = Enum.Font.Gotham,
+                    Text = content,
+                    TextColor3 = Color3.fromRGB(200, 200, 200),
+                    TextSize = 12,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextWrapped = true
+                })
+                
+                CreateElement("UIPadding", {Parent = paragraphFrame, PaddingBottom = UDim.new(0, 10)})
+                
+                return paragraphFrame
+            end
             return tab
         end
         
