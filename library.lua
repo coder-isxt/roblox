@@ -106,6 +106,20 @@ local UILibrary = (function()
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CollapseKeybindButton})
         
+        local SettingsButton = CreateElement("TextButton", {
+            Parent = TopBar,
+            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -105, 0.5, 0),
+            Size = UDim2.new(0, 24, 0, 24),
+            Font = Enum.Font.GothamBold,
+            Text = "S",
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextSize = 14
+        })
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = SettingsButton})
+
         local TabContainer = CreateElement("Frame", {
             Name = "TabContainer",
             Parent = MainFrame,
@@ -169,6 +183,124 @@ local UILibrary = (function()
             Position = UDim2.new(0, 160, 0, 50),
             Size = UDim2.new(1, -170, 1, -60)
         })
+
+        -- // Settings Menu // --
+        local SettingsFrame = CreateElement("Frame", {
+            Name = "SettingsFrame",
+            Parent = MainFrame,
+            BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0.9, 0, 0.9, 0),
+            Visible = false,
+            ZIndex = 10
+        })
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = SettingsFrame})
+        
+        CreateElement("TextLabel", {
+            Parent = SettingsFrame,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, 10),
+            Size = UDim2.new(1, 0, 0, 30),
+            Font = Enum.Font.GothamBold,
+            Text = "Settings",
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextSize = 18
+        })
+
+        local SettingsContainer = CreateElement("ScrollingFrame", {
+            Parent = SettingsFrame,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 20, 0, 50),
+            Size = UDim2.new(1, -40, 1, -60),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 2,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y
+        })
+        CreateElement("UIListLayout", {Parent = SettingsContainer, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10)})
+
+        local function CreateSettingsToggle(text, callback)
+            local toggleFrame = CreateElement("Frame", {
+                Parent = SettingsContainer,
+                BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 40)
+            })
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = toggleFrame})
+            
+            CreateElement("TextLabel", {
+                Parent = toggleFrame,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 15, 0, 0),
+                Size = UDim2.new(0.7, 0, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = text,
+                TextColor3 = Color3.fromRGB(255, 255, 255),
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left
+            })
+            
+            local toggleButton = CreateElement("TextButton", {
+                Parent = toggleFrame,
+                BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+                BorderSizePixel = 0,
+                AnchorPoint = Vector2.new(1, 0.5),
+                Position = UDim2.new(1, -10, 0.5, 0),
+                Size = UDim2.new(0, 40, 0, 20),
+                Text = ""
+            })
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = toggleButton})
+            
+            local toggleIndicator = CreateElement("Frame", {
+                Parent = toggleButton,
+                BackgroundColor3 = Color3.fromRGB(200, 200, 200),
+                BorderSizePixel = 0,
+                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.new(0, 2, 0.5, 0),
+                Size = UDim2.new(0, 16, 0, 16)
+            })
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = toggleIndicator})
+            
+            local toggled = false
+            toggleButton.MouseButton1Click:Connect(function()
+                toggled = not toggled
+                if toggled then
+                    TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 40, 40)}):Play()
+                    TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+                else
+                    TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+                    TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+                end
+                pcall(callback, toggled)
+            end)
+        end
+
+        CreateSettingsToggle("Performance Mode (FPS Boost)", function(state)
+            if state then
+                local Lighting = game:GetService("Lighting")
+                Lighting.GlobalShadows = false
+                if Lighting:FindFirstChild("Atmosphere") then Lighting.Atmosphere:Destroy() end
+                
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+                        v.Material = Enum.Material.SmoothPlastic
+                        v.CastShadow = false
+                    elseif v:IsA("Texture") or v:IsA("Decal") then
+                        v.Transparency = 1
+                    elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    end
+                end
+            else
+                game:GetService("Lighting").GlobalShadows = true
+            end
+        end)
+
+        SettingsButton.MouseButton1Click:Connect(function()
+            SettingsFrame.Visible = not SettingsFrame.Visible
+        end)
+
         local dragging, dragStart, startPos
         TopBar.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
