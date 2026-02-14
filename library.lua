@@ -14,6 +14,7 @@ local UILibrary = (function()
         local window = {}
         local tabs = {}
         window.connections = {}
+        local FPSCleanup = nil
         local Minimized = false
         local ScreenGui = CreateElement("ScreenGui", {
             Name = "UILibWindow",
@@ -279,8 +280,10 @@ local UILibrary = (function()
         CreateSettingsToggle("Performance Mode (FPS Boost)", function(state)
             if state then
                 local Lighting = game:GetService("Lighting")
+                local StoredAtmosphere = Lighting:FindFirstChild("Atmosphere")
+                if StoredAtmosphere then StoredAtmosphere.Parent = nil end
+                
                 Lighting.GlobalShadows = false
-                if Lighting:FindFirstChild("Atmosphere") then Lighting.Atmosphere:Destroy() end
                 
                 for _, v in pairs(workspace:GetDescendants()) do
                     if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
@@ -292,8 +295,24 @@ local UILibrary = (function()
                         v.Enabled = false
                     end
                 end
+
+                FPSCleanup = function()
+                    Lighting.GlobalShadows = true
+                    if StoredAtmosphere then StoredAtmosphere.Parent = Lighting end
+                    
+                    for _, v in pairs(workspace:GetDescendants()) do
+                        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then
+                            v.Material = Enum.Material.Plastic
+                            v.CastShadow = true
+                        elseif v:IsA("Texture") or v:IsA("Decal") then
+                            v.Transparency = 0
+                        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                            v.Enabled = true
+                        end
+                    end
+                end
             else
-                game:GetService("Lighting").GlobalShadows = true
+                if FPSCleanup then FPSCleanup() FPSCleanup = nil end
             end
         end)
 
@@ -328,6 +347,7 @@ local UILibrary = (function()
         local toggleConnection
 
         CloseButton.MouseButton1Click:Connect(function()
+            if FPSCleanup then FPSCleanup() end
             for _, conn in ipairs(window.connections) do
                 conn:Disconnect()
             end
