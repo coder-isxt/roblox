@@ -222,6 +222,8 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
 
             local closestThreat = nil
             local closestDist = math.huge
+            local SlashDetected = false
+            local sizeOfClosest = Vector3.new(0,0,0)
             local closestSize = Vector3.new(0, 0, 0)
             local safetyMargin = 2
             local sizeX = 0
@@ -230,11 +232,13 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
             
             for part, _ in pairs(ActiveThreats) do
                 if part and part.Parent then
+                    local pos = part.Position
                     local dist = (part.Position - hrp.Position).Magnitude
                     if dist < closestDist then
                         closestDist = dist
                         closestSize = part.Size
                         closestThreat = part
+                        sizeOfClosest = part.Size
                     end
                     
                     local relPos = part.CFrame:PointToObjectSpace(hrp.Position)
@@ -255,11 +259,11 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
                 end
             end
 
-            -- Proactive Slash Dodge (Jump)
+             -- Proactive Slash Dodge (Jump)
             for part, _ in pairs(ActiveThreats) do
                 if part and part.Parent and part.Name:lower():find("slash") then
-                    if (part.Position - hrp.Position).Magnitude < 20 then
-                        humanoid.Jump = true
+                    if (part.Position - hrp.Position).Magnitude < closestSize.Magnitude + 10 then
+                       SlashDetected = true
                         break
                     end
                 end
@@ -267,6 +271,11 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
 
             if inDanger and os.clock() - lastMoveTime > 0.05 then
                 local safePoint = GetBestSafePoint(hrp)
+                if SlashDetected == true then 
+                       Vim:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+                       task.wait(0.05)
+                       Vim:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+                end
                 if safePoint then
                     humanoid:MoveTo(safePoint)
                     lastMoveTime = os.clock()
@@ -287,6 +296,9 @@ Tabs.Main:CreateKeybind("Toggle Dodge & Visualizer", function()
         ActiveThreats = {}
     end
 end)
+
+
+
 
 Tabs.Main:CreateKeybind("Track Specific Parts (2s)", function()
     UILibrary:Notify({
