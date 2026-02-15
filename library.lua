@@ -176,6 +176,8 @@ local UILibrary = (function()
     function UILibrary:CreateWindow(title)
         local window = {}
         local tabs = {}
+        local CurrentTab = nil
+
         window.connections = {}
         window.cleanupFunctions = {}
         local FPSCleanup = nil
@@ -193,6 +195,70 @@ local UILibrary = (function()
         
         CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
         
+        -- // SEARCH BAR (TOPBAR) // --
+
+        local function ApplySearch(query)
+            if not CurrentTab then return end
+            
+            query = string.lower(query)
+
+            for _, element in ipairs(CurrentTab.Elements) do
+                if not element or not element.Parent then continue end
+                
+                if query == "" then
+                    element.Visible = true
+                else
+                    local text = ""
+                    
+                    if element:IsA("TextButton") then
+                        text = element.Text or ""
+                    else
+                        local label = element:FindFirstChildWhichIsA("TextLabel", true)
+                        if label then
+                            text = label.Text or ""
+                        end
+                    end
+                    
+                    element.Visible = string.find(string.lower(text), query) ~= nil
+                end
+            end
+        end
+
+
+        local SearchBox = CreateElement("TextBox", {
+            Parent = TopBar,
+            PlaceholderText = "Search...",
+            Text = "",
+            ClearTextOnFocus = false,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 180, 0, 26),
+            Font = Enum.Font.Gotham,
+            TextSize = 13
+        }, {
+            BackgroundColor3 = "TerBg",
+            TextColor3 = "Text",
+            PlaceholderColor3 = "SubText"
+        })
+
+        CreateElement("UICorner", {
+            CornerRadius = UDim.new(0, 6),
+            Parent = SearchBox
+        })
+
+        CreateElement("UIStroke", {
+            Parent = SearchBox,
+            Thickness = 1
+        }, {
+            Color = "Stroke"
+        })
+
+        SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            ApplySearch(SearchBox.Text)
+        end)
+
+
+
         local CloseButton = CreateElement("TextButton", { Parent = TopBar, BackgroundColor3 = Color3.fromRGB(200, 50, 50), BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 14 }, {TextColor3 = "Text"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CloseButton})
         local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BackgroundColor3 = Color3.fromRGB(200, 150, 50), BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -40, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "-", TextSize = 14 }, {TextColor3 = "Text"})
@@ -524,6 +590,7 @@ local UILibrary = (function()
         table.insert(window.connections, toggleConnection)
 
         function window:SwitchToTab(tabToSelect)
+            CurrentTab = tabToSelect
             NavDropdownBtn.Text = tabToSelect.Name
             for _, tab in pairs(tabs) do
                 tab.Page.Visible = false
@@ -534,7 +601,9 @@ local UILibrary = (function()
         end
 
         function window:CreateTab(name)
-            local tab = { Name = name }
+
+
+            local tab = { Name = name, Elements = {} }
             local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0, BorderSizePixel = 0, Size = UDim2.new(1, -20, 0, 35), Font = Enum.Font.GothamBold, Text = name, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = tabButton})
             CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 10)})
@@ -557,6 +626,7 @@ local UILibrary = (function()
                 button.MouseEnter:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play(); PlayTween(buttonStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Accent}):Play() end)
                 button.MouseLeave:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play(); PlayTween(buttonStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Stroke}):Play() end)
                 button.MouseButton1Click:Connect(function() pcall(callback); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -4, 0, 31)}):Play(); task.wait(0.1); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 35)}):Play() end)
+                table.insert(tab.Elements, button)
                 return button
             end
 
@@ -595,6 +665,7 @@ local UILibrary = (function()
                 table.insert(Registries.Toggle, syncVisuals)
                 toggleButton.MouseButton1Click:Connect(function() toggled = not toggled; syncVisuals(); pcall(callback, toggled) end)
                 syncVisuals(true)
+                table.insert(tab.Elements, toggleFrame)
                 return toggleFrame
             end
 
@@ -627,6 +698,7 @@ local UILibrary = (function()
                     end
                 end)
                 table.insert(window.connections, keybindConnection)
+                table.insert(tab.Elements, keybindFrame)
                 return keybindFrame
             end
 
@@ -661,6 +733,7 @@ local UILibrary = (function()
                     end
                 end)
                 UserInputService.InputChanged:Connect(function(input) if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then updateSlider(input.Position) end end)
+                table.insert(tab.Elements, sliderFrame)
                 return sliderFrame
             end
 
@@ -685,6 +758,7 @@ local UILibrary = (function()
                     PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 90, 0, 18)}):Play()
                     task.wait(0.1); PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 100, 0, 22)}):Play()
                 end)
+                table.insert(tab.Elements, cycleFrame)
                 return { Frame = cycleFrame, SetValues = function(self, newValues) values = newValues; idx = 1; if #values > 0 then cycleButton.Text = tostring(values[1]) else cycleButton.Text = "None" end end, SetValue = function(self, val) for i, v in ipairs(values) do if v == val then idx = i; cycleButton.Text = tostring(val); break end end end }
             end
 
@@ -716,6 +790,7 @@ local UILibrary = (function()
                         PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
                     end
                 end)
+                table.insert(tab.Elements, dropdownFrame)
                 return dropdownFrame
             end
 
@@ -726,6 +801,8 @@ local UILibrary = (function()
                 CreateElement("TextLabel", { Parent = paragraphFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 10), Size = UDim2.new(1, -20, 0, 15), Font = Enum.Font.GothamBold, Text = title, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
                 CreateElement("TextLabel", { Parent = paragraphFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 30), Size = UDim2.new(1, -20, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.Gotham, Text = content, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true }, {TextColor3 = "SubText"})
                 CreateElement("UIPadding", {Parent = paragraphFrame, PaddingBottom = UDim.new(0, 10)})
+                
+                table.insert(tab.Elements, paragraphFrame)
                 return paragraphFrame
             end
 
