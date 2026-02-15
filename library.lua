@@ -204,73 +204,132 @@ local UILibrary = (function()
             BorderSizePixel = 0,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 10),
-            Size = UDim2.new(0, 400, 0, 300),
+            Size = UDim2.new(0, 500, 0, 350),
             ClipsDescendants = true
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = SettingsFrame})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 14), Parent = SettingsFrame})
         CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = SettingsFrame})
         
         local SettingsHeader = CreateElement("Frame", {
             Parent = SettingsFrame,
-            BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+            BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 0, 40)
         })
 
         CreateElement("TextLabel", {
             Parent = SettingsHeader,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 15, 0, 0),
+            Position = UDim2.new(0, 20, 0, 0),
             Size = UDim2.new(1, -50, 1, 0),
             Font = Enum.Font.GothamBold,
             Text = "Settings",
             TextColor3 = Color3.fromRGB(255, 255, 255),
-            TextSize = 16,
+            TextSize = 18,
             TextXAlignment = Enum.TextXAlignment.Left
         })
         
-        local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 14})
+        local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 16})
 
-        local SettingsContainer = CreateElement("ScrollingFrame", {
+        local SettingsBody = CreateElement("Frame", {
             Parent = SettingsFrame,
             BackgroundTransparency = 1,
             Position = UDim2.new(0, 0, 0, 40),
             Size = UDim2.new(1, 0, 1, -40),
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            ScrollBarThickness = 2,
-            AutomaticCanvasSize = Enum.AutomaticSize.Y
         })
-        CreateElement("UIListLayout", {Parent = SettingsContainer, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
-        CreateElement("UIPadding", {Parent = SettingsContainer, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), PaddingBottom = UDim.new(0, 10)})
+
+        local SettingsSidebar = CreateElement("ScrollingFrame", {
+            Parent = SettingsBody,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 140, 1, 0),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 0
+        })
+        CreateElement("UIListLayout", {Parent = SettingsSidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5)})
+        CreateElement("UIPadding", {Parent = SettingsSidebar, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10)})
+
+        local SettingsSeparator = CreateElement("Frame", {
+            Parent = SettingsBody,
+            BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 140, 0, 10),
+            Size = UDim2.new(0, 1, 1, -20)
+        })
+
+        local SettingsContent = CreateElement("Frame", {
+            Parent = SettingsBody,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 150, 0, 0),
+            Size = UDim2.new(1, -150, 1, 0)
+        })
+
+        local SettingsTabs = {}
+        local CurrentSettingsPage = nil
+
+        local function SwitchSettingsTab(name)
+            for n, tab in pairs(SettingsTabs) do
+                tab.Page.Visible = (n == name)
+                if n == name then
+                    TweenService:Create(tab.Button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.9}):Play()
+                else
+                    TweenService:Create(tab.Button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(150, 150, 150), BackgroundTransparency = 1}):Play()
+                end
+            end
+        end
 
         local function CreateSettingsSection(text)
-            local section = CreateElement("Frame", {
-                Parent = SettingsContainer,
+            if SettingsTabs[text] then
+                CurrentSettingsPage = SettingsTabs[text].Page
+                return
+            end
+
+            local tabBtn = CreateElement("TextButton", {
+                Parent = SettingsSidebar,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 30),
-                LayoutOrder = #SettingsContainer:GetChildren()
-            })
-            CreateElement("TextLabel", {
-                Parent = section,
-                BackgroundTransparency = 1,
-                Position = UDim2.new(0, 5, 0, 0),
-                Size = UDim2.new(1, -5, 1, 0),
-                Font = Enum.Font.GothamBold,
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                Size = UDim2.new(1, -10, 0, 30),
                 Text = text,
+                Font = Enum.Font.GothamBold,
                 TextColor3 = Color3.fromRGB(150, 150, 150),
-                TextSize = 14,
-                TextXAlignment = Enum.TextXAlignment.Left
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                AutoButtonColor = false
             })
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = tabBtn})
+            CreateElement("UIPadding", {Parent = tabBtn, PaddingLeft = UDim.new(0, 10)})
+
+            local page = CreateElement("ScrollingFrame", {
+                Parent = SettingsContent,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Visible = false,
+                CanvasSize = UDim2.new(0, 0, 0, 0),
+                ScrollBarThickness = 2,
+                AutomaticCanvasSize = Enum.AutomaticSize.Y
+            })
+            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
+            CreateElement("UIPadding", {Parent = page, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)})
+
+            SettingsTabs[text] = {Button = tabBtn, Page = page}
+            CurrentSettingsPage = page
+
+            tabBtn.MouseButton1Click:Connect(function()
+                SwitchSettingsTab(text)
+            end)
+
+            -- Select first tab automatically
+            if not next(SettingsTabs, next(SettingsTabs)) then
+                SwitchSettingsTab(text)
+            end
         end
 
         local function CreateSettingsButton(text, callback)
             local button = CreateElement("TextButton", {
-                Parent = SettingsContainer,
+                Parent = CurrentSettingsPage,
                 BackgroundColor3 = Color3.fromRGB(35, 35, 35),
                 BorderSizePixel = 0,
                 Size = UDim2.new(1, 0, 0, 40),
                 AutoButtonColor = false,
-                Text = "",
-                LayoutOrder = #SettingsContainer:GetChildren()
+                Text = ""
             })
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = button})
             local stroke = CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = button})
@@ -303,13 +362,12 @@ local UILibrary = (function()
 
         local function CreateSettingsToggle(text, callback)
             local toggleButton = CreateElement("TextButton", {
-                Parent = SettingsContainer,
+                Parent = CurrentSettingsPage,
                 BackgroundColor3 = Color3.fromRGB(35, 35, 35),
                 BorderSizePixel = 0,
                 Size = UDim2.new(1, 0, 0, 45),
                 AutoButtonColor = false,
-                Text = "",
-                LayoutOrder = #SettingsContainer:GetChildren()
+                Text = ""
             })
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = toggleButton})
             local stroke = CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = toggleButton})
