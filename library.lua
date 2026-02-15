@@ -242,6 +242,65 @@ local UILibrary = (function()
         CreateElement("UIListLayout", {Parent = SettingsContainer, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
         CreateElement("UIPadding", {Parent = SettingsContainer, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), PaddingBottom = UDim.new(0, 10)})
 
+        local function CreateSettingsSection(text)
+            local section = CreateElement("Frame", {
+                Parent = SettingsContainer,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 30),
+                LayoutOrder = #SettingsContainer:GetChildren()
+            })
+            CreateElement("TextLabel", {
+                Parent = section,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 5, 0, 0),
+                Size = UDim2.new(1, -5, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = text,
+                TextColor3 = Color3.fromRGB(150, 150, 150),
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left
+            })
+        end
+
+        local function CreateSettingsButton(text, callback)
+            local button = CreateElement("TextButton", {
+                Parent = SettingsContainer,
+                BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 40),
+                AutoButtonColor = false,
+                Text = "",
+                LayoutOrder = #SettingsContainer:GetChildren()
+            })
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = button})
+            local stroke = CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = button})
+            
+            CreateElement("TextLabel", {
+                Parent = button,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 15, 0, 0),
+                Size = UDim2.new(1, -15, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = text,
+                TextColor3 = Color3.fromRGB(230, 230, 230),
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left
+            })
+
+            button.MouseEnter:Connect(function()
+                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+            end)
+            button.MouseLeave:Connect(function()
+                TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+            end)
+            button.MouseButton1Click:Connect(function()
+                pcall(callback)
+                TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -2, 0, 38)}):Play()
+                task.wait(0.1)
+                TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 40)}):Play()
+            end)
+        end
+
         local function CreateSettingsToggle(text, callback)
             local toggleButton = CreateElement("TextButton", {
                 Parent = SettingsContainer,
@@ -249,7 +308,8 @@ local UILibrary = (function()
                 BorderSizePixel = 0,
                 Size = UDim2.new(1, 0, 0, 45),
                 AutoButtonColor = false,
-                Text = ""
+                Text = "",
+                LayoutOrder = #SettingsContainer:GetChildren()
             })
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = toggleButton})
             local stroke = CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = toggleButton})
@@ -312,6 +372,7 @@ local UILibrary = (function()
             end)
         end
 
+        CreateSettingsSection("General")
         CreateSettingsToggle("Performance Mode (FPS Boost)", function(state)
             if state then
                 local Lighting = game:GetService("Lighting")
@@ -349,6 +410,15 @@ local UILibrary = (function()
             else
                 if FPSCleanup then FPSCleanup() FPSCleanup = nil end
             end
+        end)
+
+        CreateSettingsSection("Developer")
+        CreateSettingsButton("Load Remotespy", function()
+            loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578"))()
+        end)
+
+        CreateSettingsButton("Load DevEx", function()
+            loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
         end)
 
         local function ToggleSettings()
