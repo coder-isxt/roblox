@@ -145,6 +145,34 @@ local UILibrary = (function()
         end
     end
 
+    -- // TOOLTIPS // --
+    local TooltipGui = Instance.new("ScreenGui",game.CoreGui)
+    TooltipGui.Name = "UILibTooltips"
+
+    local TooltipLabel = Instance.new("TextLabel",TooltipGui)
+    TooltipLabel.Visible = false
+    TooltipLabel.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    TooltipLabel.TextColor3 = Color3.new(1,1,1)
+    TooltipLabel.Size = UDim2.new(0,200,0,30)
+
+    function UILibrary:AddTooltip(instance,text)
+        instance.MouseEnter:Connect(function()
+            TooltipLabel.Text = text
+            TooltipLabel.Visible = true
+        end)
+
+        instance.MouseLeave:Connect(function()
+            TooltipLabel.Visible = false
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement then
+                TooltipLabel.Position = UDim2.fromOffset(input.Position.X+12,input.Position.Y+12)
+            end
+        end)
+    end
+
+
     function UILibrary:CreateWindow(title)
         local window = {}
         local tabs = {}
