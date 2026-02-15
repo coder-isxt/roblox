@@ -180,6 +180,28 @@ local UILibrary = (function()
         CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
         CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(1, -10, 0, 0), Size = UDim2.new(0, 10, 1, 0) }, {BackgroundColor3 = "SecBg"})
 
+        -- // SEARCH SYSTEM // --
+        local SearchBox = CreateElement("TextBox",{
+            Parent = TabContainer,
+            PlaceholderText = "Search...",
+            Size = UDim2.new(1,-20,0,30),
+            Position = UDim2.new(0,10,0,10),
+            Text = "",
+            Font = Enum.Font.Gotham,
+            TextSize = 13
+        },{BackgroundColor3="TerBg",TextColor3="Text"})
+
+        CreateElement("UICorner",{CornerRadius=UDim.new(0,6),Parent=SearchBox})
+
+        SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local query = string.lower(SearchBox.Text)
+
+            for _,tab in pairs(tabs) do
+                local match = string.find(string.lower(tab.Name),query)
+                tab.Button.Visible = match ~= nil or query == ""
+            end
+        end)
+
 
         local TabHolder = CreateElement("ScrollingFrame", { Name = "TabHolder", Parent = TabContainer, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y })
         CreateElement("UIListLayout", { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top })
