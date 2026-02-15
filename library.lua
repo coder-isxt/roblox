@@ -1063,6 +1063,100 @@ local UILibrary = (function()
                     end
                 }
             end
+            function tab:CreateDropdown(text, options, default, callback)
+                local dropdownFrame = CreateElement("Frame", {
+                    Parent = page,
+                    BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(1, 0, 0, 45),
+                    ClipsDescendants = true,
+                    LayoutOrder = #page:GetChildren()
+                })
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownFrame})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(50, 50, 50), Thickness = 1, Transparency = 0, Parent = dropdownFrame})
+                
+                CreateElement("TextLabel", {
+                    Parent = dropdownFrame,
+                    BackgroundTransparency = 1,
+                    Position = UDim2.new(0, 10, 0, 0),
+                    Size = UDim2.new(0.5, 0, 0, 45),
+                    Font = Enum.Font.GothamBold,
+                    Text = text,
+                    TextColor3 = Color3.fromRGB(255, 255, 255),
+                    TextSize = 14,
+                    TextXAlignment = Enum.TextXAlignment.Left
+                })
+
+                local dropdownButton = CreateElement("TextButton", {
+                    Parent = dropdownFrame,
+                    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+                    BorderSizePixel = 0,
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Position = UDim2.new(1, -10, 0.5, 0),
+                    Size = UDim2.new(0, 120, 0, 30),
+                    Font = Enum.Font.GothamBold,
+                    Text = default or options[1] or "None",
+                    TextColor3 = Color3.fromRGB(200, 200, 200),
+                    TextSize = 12,
+                    AutoButtonColor = false
+                })
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
+                CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Transparency = 0, Parent = dropdownButton})
+                
+                local isOpen = false
+                local optionContainer
+                
+                dropdownButton.MouseButton1Click:Connect(function()
+                    isOpen = not isOpen
+                    if isOpen then
+                        if optionContainer then optionContainer:Destroy() end
+                        
+                        optionContainer = CreateElement("Frame", {
+                            Parent = dropdownFrame,
+                            BackgroundTransparency = 1,
+                            Position = UDim2.new(0, 0, 0, 45),
+                            Size = UDim2.new(1, 0, 0, #options * 30)
+                        })
+                        
+                        for i, opt in ipairs(options) do
+                            local optBtn = CreateElement("TextButton", {
+                                Parent = optionContainer,
+                                BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+                                BorderSizePixel = 0,
+                                Position = UDim2.new(0, 10, 0, (i-1)*30),
+                                Size = UDim2.new(1, -20, 0, 28),
+                                Font = Enum.Font.Gotham,
+                                Text = opt,
+                                TextColor3 = Color3.fromRGB(200, 200, 200),
+                                TextSize = 12,
+                                AutoButtonColor = false
+                            })
+                            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
+                            
+                            optBtn.MouseEnter:Connect(function()
+                                TweenService:Create(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+                            end)
+                            optBtn.MouseLeave:Connect(function()
+                                TweenService:Create(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+                            end)
+                            
+                            optBtn.MouseButton1Click:Connect(function()
+                                dropdownButton.Text = opt
+                                isOpen = false
+                                TweenService:Create(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+                                task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                                pcall(callback, opt)
+                            end)
+                        end
+                        
+                        TweenService:Create(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45 + (#options * 30) + 10)}):Play()
+                    else
+                        TweenService:Create(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+                        task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                    end
+                end)
+                return dropdownFrame
+            end
             function tab:CreateParagraph(title, content)
                 local paragraphFrame = CreateElement("Frame", {
                     Parent = page,
