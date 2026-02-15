@@ -382,101 +382,10 @@ local UILibrary = (function()
             end)
         end
 
-        local function CreateSettingsSlider(text, min, max, default, callback)
-            local sliderFrame = CreateElement("Frame", { Parent = CurrentSettingsPage, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 50) }, { BackgroundColor3 = "TerBg" })
-            CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = sliderFrame })
-            CreateElement("UIStroke", { Thickness = 1, Parent = sliderFrame }, { Color = "Stroke" })
-            CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 5), Size = UDim2.new(0.5, 0, 0.4, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, { TextColor3 = "Text" })
-            local valueLabel = CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 5), Size = UDim2.new(0.5, -10, 0.4, 0), Font = Enum.Font.Gotham, Text = tostring(default), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right }, { TextColor3 = "SubText" })
-            local sliderBar = CreateElement("TextButton", { Parent = sliderFrame, BorderSizePixel = 0, Position = UDim2.new(0.025, 0, 0.65, 0), Size = UDim2.new(0.95, 0, 0.15, 0), Text = "" }, { BackgroundColor3 = "QuarBg" })
-            CreateElement("UICorner", { CornerRadius = UDim.new(1, 0), Parent = sliderBar })
-            local fill = CreateElement("Frame", { Parent = sliderBar, BorderSizePixel = 0, Size = UDim2.new((default - min) / (max - min), 0, 1, 0) }, { BackgroundColor3 = "Accent" })
-            CreateElement("UICorner", { CornerRadius = UDim.new(1, 0), Parent = fill })
-            local isDragging = false
-            local function updateSlider(inputPos)
-                local relativeX = inputPos.X - sliderBar.AbsolutePosition.X
-                local ratio = math.clamp(relativeX / sliderBar.AbsoluteSize.X, 0, 1)
-                local value = math.floor(min + ratio * (max - min) + 0.5)
-                fill.Size = UDim2.new(ratio, 0, 1, 0)
-                valueLabel.Text = tostring(value)
-                pcall(callback, value)
-            end
-            sliderBar.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then isDragging = true; updateSlider(input.Position); local conn; conn = input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then isDragging = false; conn:Disconnect() end end) end end)
-            UserInputService.InputChanged:Connect(function(input) if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then updateSlider(input.Position) end end)
-        end
-
-        local function CreateSettingsColorPicker(text, default, callback)
-            local pickerFrame = CreateElement("Frame", { Parent = CurrentSettingsPage, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true }, { BackgroundColor3 = "TerBg" })
-            CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = pickerFrame })
-            CreateElement("UIStroke", { Thickness = 1, Parent = pickerFrame }, { Color = "Stroke" })
-            CreateElement("TextLabel", { Parent = pickerFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, { TextColor3 = "Text" })
-            local colorButton = CreateElement("TextButton", { Parent = pickerFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 40, 0, 25), Text = "", BackgroundColor3 = default })
-            CreateElement("UICorner", { CornerRadius = UDim.new(0, 4), Parent = colorButton })
-            
-            local isOpen = false; local pickerContainer
-            colorButton.MouseButton1Click:Connect(function()
-                isOpen = not isOpen
-                if isOpen then
-                    if pickerContainer then pickerContainer:Destroy() end
-                    pickerContainer = CreateElement("Frame", { Parent = pickerFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 0, 110) })
-                    local h, s, v = Color3.toHSV(default)
-                    local colorImg = CreateElement("ImageButton", { Parent = pickerContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, 10), Size = UDim2.new(0, 150, 0, 90), Image = "rbxassetid://4155801252", AutoButtonColor = false })
-                    CreateElement("UICorner", { CornerRadius = UDim.new(0, 4), Parent = colorImg })
-                    local cursor = CreateElement("Frame", { Parent = colorImg, BorderSizePixel = 0, Size = UDim2.new(0, 6, 0, 6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(s, 0, 1 - v, 0), BackgroundColor3 = Color3.new(1,1,1) })
-                    CreateElement("UICorner", { CornerRadius = UDim.new(1, 0), Parent = cursor })
-                    local hueImg = CreateElement("ImageButton", { Parent = pickerContainer, BorderSizePixel = 0, Position = UDim2.new(0, 170, 0, 10), Size = UDim2.new(0, 20, 0, 90), Image = "rbxassetid://5028857472", AutoButtonColor = false })
-                    CreateElement("UICorner", { CornerRadius = UDim.new(0, 4), Parent = hueImg })
-                    local hueCursor = CreateElement("Frame", { Parent = hueImg, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 2), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, h, 0), BackgroundColor3 = Color3.new(1,1,1) })
-                    
-                    local function updateColor()
-                        local newColor = Color3.fromHSV(h, s, v)
-                        colorButton.BackgroundColor3 = newColor
-                        colorImg.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-                        pcall(callback, newColor)
-                    end
-                    
-                    local draggingColor, draggingHue = false, false
-                    colorImg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingColor = true end end)
-                    hueImg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingHue = true end end)
-                    UserInputService.InputChanged:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseMovement then
-                            if draggingColor then
-                                local relX = math.clamp((input.Position.X - colorImg.AbsolutePosition.X) / colorImg.AbsoluteSize.X, 0, 1)
-                                local relY = math.clamp((input.Position.Y - colorImg.AbsolutePosition.Y) / colorImg.AbsoluteSize.Y, 0, 1)
-                                s = relX; v = 1 - relY
-                                cursor.Position = UDim2.new(s, 0, 1 - v, 0)
-                                updateColor()
-                            elseif draggingHue then
-                                local relY = math.clamp((input.Position.Y - hueImg.AbsolutePosition.Y) / hueImg.AbsoluteSize.Y, 0, 1)
-                                h = relY
-                                hueCursor.Position = UDim2.new(0, 0, h, 0)
-                                colorImg.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-                                updateColor()
-                            end
-                        end
-                    end)
-                    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingColor = false; draggingHue = false end end)
-                    
-                    TweenService:Create(pickerFrame, TweenInfo.new(0.2), { Size = UDim2.new(1, 0, 0, 155) }):Play()
-                else
-                    TweenService:Create(pickerFrame, TweenInfo.new(0.2), { Size = UDim2.new(1, 0, 0, 45) }):Play()
-                    task.delay(0.2, function() if pickerContainer then pickerContainer:Destroy() end end)
-                end
-            end)
-        end
-
         -- // Initialize Global Settings Options //
         CreateSettingsSection("Appearance")
         CreateSettingsDropdown("Interface Theme", { "Default", "Dark", "Light", "Discord" }, Options.Theme,
             function(val) UpdateTheme(val) end)
-        CreateSettingsColorPicker("Accent Color", Themes[Options.Theme].Accent, function(color)
-            Themes[Options.Theme].Accent = color
-            UpdateTheme(Options.Theme)
-        end)
-        CreateSettingsSlider("Menu Transparency", 0, 100, 0, function(val)
-            MainFrame.BackgroundTransparency = val / 100
-            SettingsFrame.BackgroundTransparency = val / 100
-        end)
         CreateSettingsDropdown("Toggle Style", { "Switch", "Checkbox" }, Options.ToggleStyle,
             function(val) UpdateToggleStyles(val) end)
         CreateSettingsDropdown("Corner Style", { "Rounded", "Slight", "Blocky" }, Options.CornerStyle,
@@ -954,67 +863,6 @@ local UILibrary = (function()
                 end, SetValue = function(self, val) for i, v in ipairs(values) do if v == val then
                             idx = i; cycleButton.Text = tostring(val); break
                         end end end }
-            end
-
-            function tab:CreateColorPicker(text, default, callback)
-                local pickerFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true, LayoutOrder = #page:GetChildren() }, { BackgroundColor3 = "TerBg" })
-                CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = pickerFrame })
-                CreateElement("UIStroke", { Thickness = 1, Transparency = 0, Parent = pickerFrame }, { Color = "Stroke" })
-                CreateElement("TextLabel", { Parent = pickerFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, { TextColor3 = "Text" })
-                local colorButton = CreateElement("TextButton", { Parent = pickerFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 40, 0, 25), Text = "", BackgroundColor3 = default })
-                CreateElement("UICorner", { CornerRadius = UDim.new(0, 4), Parent = colorButton })
-                
-                local isOpen = false; local pickerContainer
-                colorButton.MouseButton1Click:Connect(function()
-                    isOpen = not isOpen
-                    if isOpen then
-                        if pickerContainer then pickerContainer:Destroy() end
-                        pickerContainer = CreateElement("Frame", { Parent = pickerFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 0, 110) })
-                        local h, s, v = Color3.toHSV(default)
-                        local colorImg = CreateElement("ImageButton", { Parent = pickerContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, 10), Size = UDim2.new(0, 150, 0, 90), Image = "rbxassetid://4155801252", AutoButtonColor = false })
-                        CreateElement("UICorner", { CornerRadius = UDim.new(0, 4), Parent = colorImg })
-                        local cursor = CreateElement("Frame", { Parent = colorImg, BorderSizePixel = 0, Size = UDim2.new(0, 6, 0, 6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(s, 0, 1 - v, 0), BackgroundColor3 = Color3.new(1,1,1) })
-                        CreateElement("UICorner", { CornerRadius = UDim.new(1, 0), Parent = cursor })
-                        local hueImg = CreateElement("ImageButton", { Parent = pickerContainer, BorderSizePixel = 0, Position = UDim2.new(0, 170, 0, 10), Size = UDim2.new(0, 20, 0, 90), Image = "rbxassetid://5028857472", AutoButtonColor = false })
-                        CreateElement("UICorner", { CornerRadius = UDim.new(0, 4), Parent = hueImg })
-                        local hueCursor = CreateElement("Frame", { Parent = hueImg, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 2), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, h, 0), BackgroundColor3 = Color3.new(1,1,1) })
-                        
-                        local function updateColor()
-                            local newColor = Color3.fromHSV(h, s, v)
-                            colorButton.BackgroundColor3 = newColor
-                            colorImg.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-                            pcall(callback, newColor)
-                        end
-                        
-                        local draggingColor, draggingHue = false, false
-                        colorImg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingColor = true end end)
-                        hueImg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingHue = true end end)
-                        UserInputService.InputChanged:Connect(function(input)
-                            if input.UserInputType == Enum.UserInputType.MouseMovement then
-                                if draggingColor then
-                                    local relX = math.clamp((input.Position.X - colorImg.AbsolutePosition.X) / colorImg.AbsoluteSize.X, 0, 1)
-                                    local relY = math.clamp((input.Position.Y - colorImg.AbsolutePosition.Y) / colorImg.AbsoluteSize.Y, 0, 1)
-                                    s = relX; v = 1 - relY
-                                    cursor.Position = UDim2.new(s, 0, 1 - v, 0)
-                                    updateColor()
-                                elseif draggingHue then
-                                    local relY = math.clamp((input.Position.Y - hueImg.AbsolutePosition.Y) / hueImg.AbsoluteSize.Y, 0, 1)
-                                    h = relY
-                                    hueCursor.Position = UDim2.new(0, 0, h, 0)
-                                    colorImg.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-                                    updateColor()
-                                end
-                            end
-                        end)
-                        UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingColor = false; draggingHue = false end end)
-                        
-                        TweenService:Create(pickerFrame, TweenInfo.new(0.2), { Size = UDim2.new(1, 0, 0, 155) }):Play()
-                    else
-                        TweenService:Create(pickerFrame, TweenInfo.new(0.2), { Size = UDim2.new(1, 0, 0, 45) }):Play()
-                        task.delay(0.2, function() if pickerContainer then pickerContainer:Destroy() end end)
-                    end
-                end)
-                return pickerFrame
             end
 
             function tab:CreateDropdown(text, options, default, callback)
