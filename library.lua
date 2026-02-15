@@ -430,6 +430,98 @@ local UILibrary = (function()
             end)
         end
 
+        local function CreateSettingsDropdown(text, options, default, callback)
+            local dropdownFrame = CreateElement("Frame", {
+                Parent = CurrentSettingsPage,
+                BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 45),
+                ClipsDescendants = true
+            })
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = dropdownFrame})
+            local stroke = CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = dropdownFrame})
+            
+            CreateElement("TextLabel", {
+                Parent = dropdownFrame,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 15, 0, 0),
+                Size = UDim2.new(0.5, 0, 0, 45),
+                Font = Enum.Font.GothamBold,
+                Text = text,
+                TextColor3 = Color3.fromRGB(230, 230, 230),
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left
+            })
+
+            local dropdownButton = CreateElement("TextButton", {
+                Parent = dropdownFrame,
+                BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+                BorderSizePixel = 0,
+                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, -15, 0, 8),
+                Size = UDim2.new(0, 120, 0, 28),
+                Font = Enum.Font.GothamBold,
+                Text = default or options[1] or "None",
+                TextColor3 = Color3.fromRGB(200, 200, 200),
+                TextSize = 12,
+                AutoButtonColor = false
+            })
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
+            
+            local isOpen = false
+            local optionContainer
+            
+            dropdownButton.MouseButton1Click:Connect(function()
+                isOpen = not isOpen
+                if isOpen then
+                    if optionContainer then optionContainer:Destroy() end
+                    
+                    optionContainer = CreateElement("Frame", {
+                        Parent = dropdownFrame,
+                        BackgroundTransparency = 1,
+                        Position = UDim2.new(0, 0, 0, 45),
+                        Size = UDim2.new(1, 0, 0, #options * 30)
+                    })
+                    
+                    for i, opt in ipairs(options) do
+                        local optBtn = CreateElement("TextButton", {
+                            Parent = optionContainer,
+                            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+                            BorderSizePixel = 0,
+                            Position = UDim2.new(0, 10, 0, (i-1)*30),
+                            Size = UDim2.new(1, -20, 0, 28),
+                            Font = Enum.Font.Gotham,
+                            Text = opt,
+                            TextColor3 = Color3.fromRGB(200, 200, 200),
+                            TextSize = 12,
+                            AutoButtonColor = false
+                        })
+                        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
+                        
+                        optBtn.MouseEnter:Connect(function()
+                            TweenService:Create(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+                        end)
+                        optBtn.MouseLeave:Connect(function()
+                            TweenService:Create(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+                        end)
+                        
+                        optBtn.MouseButton1Click:Connect(function()
+                            dropdownButton.Text = opt
+                            isOpen = false
+                            TweenService:Create(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+                            task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                            pcall(callback, opt)
+                        end)
+                    end
+                    
+                    TweenService:Create(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45 + (#options * 30) + 10)}):Play()
+                else
+                    TweenService:Create(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+                    task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                end
+            end)
+        end
+
         CreateSettingsSection("General")
         CreateSettingsToggle("Performance Mode (FPS Boost)", function(state)
             if state then
@@ -468,6 +560,11 @@ local UILibrary = (function()
             else
                 if FPSCleanup then FPSCleanup() FPSCleanup = nil end
             end
+        end)
+
+        CreateSettingsSection("Themes")
+        CreateSettingsDropdown("Interface Theme", {"Default", "Dark", "Light", "Discord"}, "Default", function(val)
+            -- Theme logic placeholder
         end)
 
         CreateSettingsSection("Developer")
