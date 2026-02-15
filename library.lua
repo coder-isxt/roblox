@@ -116,7 +116,7 @@ local UILibrary = (function()
             Position = UDim2.new(1, -105, 0.5, 0),
             Size = UDim2.new(0, 24, 0, 24),
             Font = Enum.Font.GothamBold,
-            Text = "S",
+            Text = "⚙",
             TextColor3 = Color3.fromRGB(255, 255, 255),
             TextSize = 14
         })
@@ -187,94 +187,128 @@ local UILibrary = (function()
         })
 
         -- // Settings Menu // --
+        local SettingsOverlay = CreateElement("Frame", {
+            Name = "SettingsOverlay",
+            Parent = MainFrame,
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            Visible = false,
+            ZIndex = 20
+        })
+
         local SettingsFrame = CreateElement("Frame", {
             Name = "SettingsFrame",
-            Parent = MainFrame,
-            BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+            Parent = SettingsOverlay,
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
             BorderSizePixel = 0,
             AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0.9, 0, 0.9, 0),
-            Visible = false,
-            ZIndex = 10
+            Position = UDim2.new(0.5, 0, 0.5, 10),
+            Size = UDim2.new(0, 400, 0, 300),
+            ClipsDescendants = true
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = SettingsFrame})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = SettingsFrame})
+        CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = SettingsFrame})
         
-        CreateElement("TextLabel", {
+        local SettingsHeader = CreateElement("Frame", {
             Parent = SettingsFrame,
+            BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+            Size = UDim2.new(1, 0, 0, 40)
+        })
+
+        CreateElement("TextLabel", {
+            Parent = SettingsHeader,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 0, 0, 10),
-            Size = UDim2.new(1, 0, 0, 30),
+            Position = UDim2.new(0, 15, 0, 0),
+            Size = UDim2.new(1, -50, 1, 0),
             Font = Enum.Font.GothamBold,
             Text = "Settings",
             TextColor3 = Color3.fromRGB(255, 255, 255),
-            TextSize = 18
+            TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left
         })
+        
+        local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 14})
 
         local SettingsContainer = CreateElement("ScrollingFrame", {
             Parent = SettingsFrame,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 20, 0, 50),
-            Size = UDim2.new(1, -40, 1, -60),
+            Position = UDim2.new(0, 0, 0, 40),
+            Size = UDim2.new(1, 0, 1, -40),
             CanvasSize = UDim2.new(0, 0, 0, 0),
             ScrollBarThickness = 2,
             AutomaticCanvasSize = Enum.AutomaticSize.Y
         })
-        CreateElement("UIListLayout", {Parent = SettingsContainer, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10)})
+        CreateElement("UIListLayout", {Parent = SettingsContainer, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
+        CreateElement("UIPadding", {Parent = SettingsContainer, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), PaddingBottom = UDim.new(0, 10)})
 
         local function CreateSettingsToggle(text, callback)
-            local toggleFrame = CreateElement("Frame", {
+            local toggleButton = CreateElement("TextButton", {
                 Parent = SettingsContainer,
                 BackgroundColor3 = Color3.fromRGB(35, 35, 35),
                 BorderSizePixel = 0,
-                Size = UDim2.new(1, 0, 0, 40)
+                Size = UDim2.new(1, 0, 0, 45),
+                AutoButtonColor = false,
+                Text = ""
             })
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = toggleFrame})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = toggleButton})
+            local stroke = CreateElement("UIStroke", {Color = Color3.fromRGB(60, 60, 60), Thickness = 1, Parent = toggleButton})
             
             CreateElement("TextLabel", {
-                Parent = toggleFrame,
+                Parent = toggleButton,
                 BackgroundTransparency = 1,
                 Position = UDim2.new(0, 15, 0, 0),
                 Size = UDim2.new(0.7, 0, 1, 0),
                 Font = Enum.Font.GothamBold,
                 Text = text,
-                TextColor3 = Color3.fromRGB(255, 255, 255),
+                TextColor3 = Color3.fromRGB(230, 230, 230),
                 TextSize = 14,
                 TextXAlignment = Enum.TextXAlignment.Left
             })
             
-            local toggleButton = CreateElement("TextButton", {
-                Parent = toggleFrame,
+            local switchBg = CreateElement("Frame", {
+                Parent = toggleButton,
                 BackgroundColor3 = Color3.fromRGB(50, 50, 50),
                 BorderSizePixel = 0,
                 AnchorPoint = Vector2.new(1, 0.5),
-                Position = UDim2.new(1, -10, 0.5, 0),
-                Size = UDim2.new(0, 40, 0, 20),
-                Text = ""
+                Position = UDim2.new(1, -15, 0.5, 0),
+                Size = UDim2.new(0, 44, 0, 22)
             })
-            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = toggleButton})
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = switchBg})
             
-            local toggleIndicator = CreateElement("Frame", {
-                Parent = toggleButton,
+            local switchCircle = CreateElement("Frame", {
+                Parent = switchBg,
                 BackgroundColor3 = Color3.fromRGB(200, 200, 200),
                 BorderSizePixel = 0,
                 AnchorPoint = Vector2.new(0, 0.5),
                 Position = UDim2.new(0, 2, 0.5, 0),
-                Size = UDim2.new(0, 16, 0, 16)
+                Size = UDim2.new(0, 18, 0, 18)
             })
-            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = toggleIndicator})
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = switchCircle})
             
             local toggled = false
-            toggleButton.MouseButton1Click:Connect(function()
+            
+            local function UpdateToggle()
                 toggled = not toggled
                 if toggled then
-                    TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 40, 40)}):Play()
-                    TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+                    TweenService:Create(switchBg, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 40, 40)}):Play()
+                    TweenService:Create(switchCircle, TweenInfo.new(0.2), {Position = UDim2.new(1, -20, 0.5, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+                    TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(220, 40, 40)}):Play()
                 else
-                    TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
-                    TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+                    TweenService:Create(switchBg, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+                    TweenService:Create(switchCircle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+                    TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(60, 60, 60)}):Play()
                 end
                 pcall(callback, toggled)
+            end
+            
+            toggleButton.MouseButton1Click:Connect(UpdateToggle)
+            
+            toggleButton.MouseEnter:Connect(function()
+                TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+            end)
+            toggleButton.MouseLeave:Connect(function()
+                TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
             end)
         end
 
@@ -317,8 +351,35 @@ local UILibrary = (function()
             end
         end)
 
-        SettingsButton.MouseButton1Click:Connect(function()
-            SettingsFrame.Visible = not SettingsFrame.Visible
+        local function ToggleSettings()
+            if SettingsOverlay.Visible then
+                TweenService:Create(SettingsOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+                TweenService:Create(SettingsFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 10), BackgroundTransparency = 1}):Play()
+                task.delay(0.2, function() SettingsOverlay.Visible = false end)
+            else
+                SettingsOverlay.Visible = true
+                SettingsOverlay.BackgroundTransparency = 1
+                SettingsFrame.Position = UDim2.new(0.5, 0, 0.5, 10)
+                SettingsFrame.BackgroundTransparency = 1
+                
+                TweenService:Create(SettingsOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.5}):Play()
+                TweenService:Create(SettingsFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 0}):Play()
+            end
+        end
+
+        SettingsButton.MouseButton1Click:Connect(ToggleSettings)
+        CloseSettingsButton.MouseButton1Click:Connect(ToggleSettings)
+        
+        -- Close settings when clicking outside frame
+        SettingsOverlay.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                local pos = input.Position
+                local framePos = SettingsFrame.AbsolutePosition
+                local frameSize = SettingsFrame.AbsoluteSize
+                if pos.X < framePos.X or pos.X > framePos.X + frameSize.X or pos.Y < framePos.Y or pos.Y > framePos.Y + frameSize.Y then
+                    ToggleSettings()
+                end
+            end
         end)
 
         local dragging, dragStart, startPos
