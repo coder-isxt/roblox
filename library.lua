@@ -9,7 +9,8 @@ local UILibrary = (function()
         Theme = "Default",
         ToggleStyle = "Switch",  -- "Switch" or "Checkbox"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
-        Font = "Gotham"          -- "Gotham", "Ubuntu", "Code", "Jura"
+        Font = "Gotham",         -- "Gotham", "Ubuntu", "Code", "Jura"
+        MenuStyle = "Sidebar"    -- "Sidebar" (V1) or "Dropdown" (V2)
     }
 
     local Themes = {
@@ -30,8 +31,9 @@ local UILibrary = (function()
     local ToggleRegistry = {}
     local FontRegistry = {}
     local CornerRegistry = {}
+    local MenuLayoutRegistry = {}
 
-    -- Cleans out destroyed elements (like temporary notifications) to prevent memory leaks
+    -- Cleans out destroyed elements to prevent memory leaks
     local function CleanRegistries()
         for i = #ThemeRegistry, 1, -1 do if not ThemeRegistry[i].Instance or not ThemeRegistry[i].Instance.Parent then
                 table.remove(ThemeRegistry, i) end end
@@ -44,7 +46,6 @@ local UILibrary = (function()
     local function CreateElement(class, properties, themeData)
         local element = Instance.new(class)
 
-        -- Intercept Font to apply global styling while preserving weight
         if properties.Font then
             local weight = "Regular"
             if properties.Font == Enum.Font.GothamBold then
@@ -56,11 +57,9 @@ local UILibrary = (function()
             properties.Font = FontMap[Options.Font][weight] or FontMap[Options.Font].Regular
         end
 
-        -- Intercept UICorner to apply shape styling
         if class == "UICorner" then
             local origRadius = properties.CornerRadius or UDim.new(0, 8)
             table.insert(CornerRegistry, { Instance = element, Original = origRadius })
-
             if Options.CornerStyle == "Blocky" then
                 properties.CornerRadius = UDim.new(0, 0)
             elseif Options.CornerStyle == "Slight" then
@@ -68,9 +67,7 @@ local UILibrary = (function()
             end
         end
 
-        for prop, value in pairs(properties) do
-            element[prop] = value
-        end
+        for prop, value in pairs(properties) do element[prop] = value end
 
         if themeData then
             for prop, role in pairs(themeData) do
@@ -83,37 +80,33 @@ local UILibrary = (function()
 
     local function UpdateTheme(themeName)
         if not Themes[themeName] then return end
-        Options.Theme = themeName
-        CleanRegistries()
+        Options.Theme = themeName; CleanRegistries()
         local themeColors = Themes[themeName]
         for _, item in ipairs(ThemeRegistry) do
-            if item.Instance and item.Instance.Parent then
-                TweenService:Create(item.Instance, TweenInfo.new(0.3), { [item.Property] = themeColors[item.Role] })
-                    :Play()
-            end
+            if item.Instance and item.Instance.Parent then TweenService:Create(item.Instance, TweenInfo.new(0.3),
+                    { [item.Property] = themeColors[item.Role] }):Play() end
         end
         for _, syncFunc in ipairs(ToggleRegistry) do syncFunc(true) end
     end
 
     local function UpdateToggleStyles(styleName)
-        Options.ToggleStyle = styleName
-        for _, syncFunc in ipairs(ToggleRegistry) do syncFunc() end
+        Options.ToggleStyle = styleName; for _, syncFunc in ipairs(ToggleRegistry) do syncFunc() end
+    end
+    local function UpdateMenuStyle(styleName)
+        Options.MenuStyle = styleName; for _, syncFunc in ipairs(MenuLayoutRegistry) do syncFunc(styleName) end
     end
 
     local function UpdateFont(fontName)
         if not FontMap[fontName] then return end
-        Options.Font = fontName
-        CleanRegistries()
+        Options.Font = fontName; CleanRegistries()
         for _, item in ipairs(FontRegistry) do
-            if item.Instance and item.Instance.Parent then
-                item.Instance.Font = FontMap[fontName][item.Weight] or FontMap[fontName].Regular
-            end
+            if item.Instance and item.Instance.Parent then item.Instance.Font = FontMap[fontName][item.Weight] or
+                FontMap[fontName].Regular end
         end
     end
 
     local function UpdateCornerStyle(styleName)
-        Options.CornerStyle = styleName
-        CleanRegistries()
+        Options.CornerStyle = styleName; CleanRegistries()
         for _, item in ipairs(CornerRegistry) do
             if item.Instance and item.Instance.Parent then
                 local newRadius = item.Original
@@ -135,75 +128,51 @@ local UILibrary = (function()
         local FPSCleanup = nil
         local Minimized = false
 
-        local ScreenGui = CreateElement("ScreenGui", {
-            Name = "UILibWindow",
-            Parent = game:GetService("CoreGui"),
-            ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-            ResetOnSpawn = false,
-            IgnoreGuiInset = true
-        })
+        local ScreenGui = CreateElement("ScreenGui",
+            { Name = "UILibWindow", Parent = game:GetService("CoreGui"), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true })
 
-        local MainFrame = CreateElement("Frame", {
-            Name = "MainFrame",
-            Parent = ScreenGui,
-            BorderSizePixel = 0,
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 600, 0, 450),
-            ClipsDescendants = true,
-            Visible = true
-        }, { BackgroundColor3 = "MainBg" })
-
+        local MainFrame = CreateElement("Frame",
+            { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position =
+            UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 600, 0, 450), ClipsDescendants = true, Visible = true },
+            { BackgroundColor3 = "MainBg" })
         CreateElement("UICorner", { CornerRadius = UDim.new(0, 10), Parent = MainFrame })
         CreateElement("UIStroke", { Thickness = 1, Transparency = 0, Parent = MainFrame }, { Color = "Stroke" })
 
-        local TopBar = CreateElement("Frame", {
-            Name = "TopBar",
-            Parent = MainFrame,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 40)
-        }, { BackgroundColor3 = "SecBg" })
-
+        local TopBar = CreateElement("Frame",
+            { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 40) },
+            { BackgroundColor3 = "SecBg" })
         CreateElement("UICorner", { CornerRadius = UDim.new(0, 10), Parent = TopBar })
         CreateElement("Frame",
             { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10) },
             { BackgroundColor3 = "SecBg" })
 
-        CreateElement("TextLabel", {
-            Parent = TopBar,
-            BackgroundTransparency = 1,
-            Position = UDim2.new(0, 15, 0, 0),
-            Size = UDim2.new(0.5, 0, 1, 0),
-            Font = Enum.Font.GothamBlack,
-            Text = title or "UI Library",
-            TextSize = 18,
-            TextXAlignment = Enum.TextXAlignment.Left,
-        }, { TextColor3 = "Text" })
+        CreateElement("TextLabel",
+            { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 1,
+                0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 18, TextXAlignment = Enum
+            .TextXAlignment.Left, }, { TextColor3 = "Text" })
 
         local CloseButton = CreateElement("TextButton",
             { Parent = TopBar, BackgroundColor3 = Color3.fromRGB(200, 50, 50), BorderSizePixel = 0, AnchorPoint = Vector2
             .new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font
             .GothamBold, Text = "X", TextSize = 14 }, { TextColor3 = "Text" })
         CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = CloseButton })
-
         local MinimizeButton = CreateElement("TextButton",
             { Parent = TopBar, BackgroundColor3 = Color3.fromRGB(200, 150, 50), BorderSizePixel = 0, AnchorPoint =
             Vector2.new(1, 0.5), Position = UDim2.new(1, -40, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font
             .GothamBold, Text = "-", TextSize = 14 }, { TextColor3 = "Text" })
         CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = MinimizeButton })
-
         local CollapseKeybindButton = CreateElement("TextButton",
             { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -70, 0.5,
                 0), Size = UDim2.new(0, 30, 0, 24), Font = Enum.Font.GothamBold, Text = "Ins", TextSize = 12 },
             { BackgroundColor3 = "QuarBg", TextColor3 = "Text" })
         CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = CollapseKeybindButton })
-
         local SettingsButton = CreateElement("TextButton",
             { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -105, 0.5,
                 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "⚙", TextSize = 14 },
             { BackgroundColor3 = "QuarBg", TextColor3 = "Text" })
         CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = SettingsButton })
 
+        -- Sidebar Navigation Components
         local TabContainer = CreateElement("Frame",
             { Name = "TabContainer", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 40), Size =
             UDim2.new(0, 150, 1, -40) }, { BackgroundColor3 = "SecBg" })
@@ -223,13 +192,87 @@ local UILibrary = (function()
             { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), HorizontalAlignment =
             Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top })
         CreateElement("UIPadding", { Parent = TabHolder, PaddingTop = UDim.new(0, 10) })
-        CreateElement("Frame",
+
+        local Separator = CreateElement("Frame",
             { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 150, 0, 40), Size = UDim2.new(0, 1, 1, -40), ZIndex = 5 },
             { BackgroundColor3 = "Stroke" })
-
         local ContentFrame = CreateElement("Frame",
             { Name = "ContentFrame", Parent = MainFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 160, 0, 50), Size =
             UDim2.new(1, -170, 1, -60) })
+
+        -- Dropdown Navigation Components (V2)
+        local NavDropdownFrame = CreateElement("Frame",
+            { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, 50), Size = UDim2.new(1, -20, 0, 35), ClipsDescendants = true, Visible = false, ZIndex = 10 },
+            { BackgroundColor3 = "TerBg" })
+        CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = NavDropdownFrame })
+        CreateElement("UIStroke", { Thickness = 1, Parent = NavDropdownFrame }, { Color = "Stroke" })
+
+        local NavDropdownBtn = CreateElement("TextButton",
+            { Parent = NavDropdownFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 35), Font = Enum.Font
+            .GothamBold, Text = "Select Tab", TextSize = 14, ZIndex = 11 }, { TextColor3 = "Text" })
+        local NavDropdownIcon = CreateElement("TextLabel",
+            { Parent = NavDropdownBtn, BackgroundTransparency = 1, Position = UDim2.new(1, -25, 0, 0), Size = UDim2.new(
+            0, 20, 1, 0), Font = Enum.Font.GothamBold, Text = "▼", TextSize = 12, ZIndex = 11 }, { TextColor3 = "SubText" })
+
+        local NavIsOpen = false
+        local NavOptionContainer = nil
+
+        NavDropdownBtn.MouseButton1Click:Connect(function()
+            NavIsOpen = not NavIsOpen
+            if NavIsOpen then
+                if NavOptionContainer then NavOptionContainer:Destroy() end
+                NavOptionContainer = CreateElement("Frame",
+                    { Parent = NavDropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 35), Size =
+                    UDim2.new(1, 0, 0, #tabs * 30), ZIndex = 10 })
+                for i, tab in ipairs(tabs) do
+                    local optBtn = CreateElement("TextButton",
+                        { Parent = NavOptionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i - 1) * 30), Size =
+                        UDim2.new(1, -20, 0, 28), Font = Enum.Font.Gotham, Text = tab.Name, TextSize = 12, AutoButtonColor = false, ZIndex = 11 },
+                        { BackgroundColor3 = "QuarBg", TextColor3 = "Text" })
+                    CreateElement("UICorner", { CornerRadius = UDim.new(0, 6), Parent = optBtn })
+
+                    optBtn.MouseEnter:Connect(function() TweenService:Create(optBtn, TweenInfo.new(0.2),
+                            { BackgroundColor3 = Themes[Options.Theme].Hover }):Play() end)
+                    optBtn.MouseLeave:Connect(function() TweenService:Create(optBtn, TweenInfo.new(0.2),
+                            { BackgroundColor3 = Themes[Options.Theme].QuarBg }):Play() end)
+
+                    optBtn.MouseButton1Click:Connect(function()
+                        window:SwitchToTab(tab)
+                        NavIsOpen = false
+                        TweenService:Create(NavDropdownFrame, TweenInfo.new(0.2), { Size = UDim2.new(1, -20, 0, 35) })
+                            :Play()
+                        TweenService:Create(NavDropdownIcon, TweenInfo.new(0.2), { Rotation = 0 }):Play()
+                        task.delay(0.2, function() if NavOptionContainer then NavOptionContainer:Destroy() end end)
+                    end)
+                end
+                TweenService:Create(NavDropdownFrame, TweenInfo.new(0.2),
+                    { Size = UDim2.new(1, -20, 0, 35 + (#tabs * 30) + 10) }):Play()
+                TweenService:Create(NavDropdownIcon, TweenInfo.new(0.2), { Rotation = 180 }):Play()
+            else
+                TweenService:Create(NavDropdownFrame, TweenInfo.new(0.2), { Size = UDim2.new(1, -20, 0, 35) }):Play()
+                TweenService:Create(NavDropdownIcon, TweenInfo.new(0.2), { Rotation = 0 }):Play()
+                task.delay(0.2, function() if NavOptionContainer then NavOptionContainer:Destroy() end end)
+            end
+        end)
+
+        -- Handle Layout Switching
+        table.insert(MenuLayoutRegistry, function(style)
+            if style == "Sidebar" then
+                TabContainer.Visible = true; Separator.Visible = true; NavDropdownFrame.Visible = false
+                TweenService:Create(ContentFrame, TweenInfo.new(0.3),
+                    { Position = UDim2.new(0, 160, 0, 50), Size = UDim2.new(1, -170, 1, -60) }):Play()
+            elseif style == "Dropdown" then
+                TabContainer.Visible = false; Separator.Visible = false; NavDropdownFrame.Visible = true
+                TweenService:Create(ContentFrame, TweenInfo.new(0.3),
+                    { Position = UDim2.new(0, 10, 0, 95), Size = UDim2.new(1, -20, 1, -105) }):Play()
+            end
+            if NavIsOpen then -- Auto-collapse dropdown if open during style switch
+                NavIsOpen = false
+                TweenService:Create(NavDropdownFrame, TweenInfo.new(0.2), { Size = UDim2.new(1, -20, 0, 35) }):Play()
+                TweenService:Create(NavDropdownIcon, TweenInfo.new(0.2), { Rotation = 0 }):Play()
+                if NavOptionContainer then NavOptionContainer:Destroy() end
+            end
+        end)
 
         -- // Settings Menu // --
         local SettingsOverlay = CreateElement("Frame",
@@ -384,6 +427,8 @@ local UILibrary = (function()
 
         -- // Initialize Global Settings Options //
         CreateSettingsSection("Appearance")
+        CreateSettingsDropdown("Menu Style", { "Sidebar", "Dropdown" }, Options.MenuStyle,
+            function(val) UpdateMenuStyle(val) end)
         CreateSettingsDropdown("Interface Theme", { "Default", "Dark", "Light", "Discord" }, Options.Theme,
             function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", { "Switch", "Checkbox" }, Options.ToggleStyle,
@@ -564,7 +609,20 @@ local UILibrary = (function()
         end)
 
         local function MinimizeUI()
-            Minimized = not Minimized; TabContainer.Visible = not Minimized; ContentFrame.Visible = not Minimized
+            Minimized = not Minimized
+
+            -- Preserve Layout specific visibility
+            if Minimized then
+                TabContainer.Visible = false; ContentFrame.Visible = false; NavDropdownFrame.Visible = false
+            else
+                ContentFrame.Visible = true
+                if Options.MenuStyle == "Sidebar" then
+                    TabContainer.Visible = true
+                elseif Options.MenuStyle == "Dropdown" then
+                    NavDropdownFrame.Visible = true
+                end
+            end
+
             TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad),
                 { Size = Minimized and UDim2.new(0, 600, 0, 40) or UDim2.new(0, 600, 0, 450) }):Play()
         end
@@ -605,6 +663,7 @@ local UILibrary = (function()
         table.insert(window.connections, toggleConnection)
 
         function window:SwitchToTab(tabToSelect)
+            NavDropdownBtn.Text = tabToSelect.Name
             for _, tab in pairs(tabs) do
                 tab.Page.Visible = false
                 TweenService:Create(tab.Button, TweenInfo.new(0.2),
@@ -616,7 +675,7 @@ local UILibrary = (function()
         end
 
         function window:CreateTab(name)
-            local tab = {}
+            local tab = { Name = name }
             local tabButton = CreateElement("TextButton",
                 { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0, BorderSizePixel = 0, Size = UDim2
                 .new(1, -20, 0, 35), Font = Enum.Font.GothamBold, Text = name, TextSize = 14, TextXAlignment = Enum
@@ -961,7 +1020,6 @@ local UILibrary = (function()
             local container = notificationGui:FindFirstChild("Container")
             local title, content, duration = args.Title or "Notification", args.Content or "", args.Duration or 5
 
-            -- Changed from Instance.new to CreateElement to support live themes!
             local frame = CreateElement("TextButton",
                 { Name = "Notification", Parent = container, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 60), AutoButtonColor = false, Text =
                 "" }, { BackgroundColor3 = "SecBg" })
@@ -989,6 +1047,9 @@ local UILibrary = (function()
             end
             frame.MouseButton1Click:Connect(close); task.delay(duration, close)
         end
+
+        -- Initialize the correct layout immediately on startup
+        for _, func in ipairs(MenuLayoutRegistry) do func(Options.MenuStyle) end
 
         return window
     end
