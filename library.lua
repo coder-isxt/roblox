@@ -179,34 +179,6 @@ local UILibrary = (function()
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TabContainer})
         CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
         CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(1, -10, 0, 0), Size = UDim2.new(0, 10, 1, 0) }, {BackgroundColor3 = "SecBg"})
-        
-        -- // COLLAPSIBLE SIDEBAR // --
-        local SidebarCollapsed = false
-
-        local CollapseSidebarBtn = CreateElement("TextButton", {
-            Parent = TopBar,
-            Size = UDim2.new(0,24,0,24),
-            Position = UDim2.new(0,120,0.5,-12),
-            Text = "☰",
-            Font = Enum.Font.GothamBold,
-            TextSize = 14
-        }, {BackgroundColor3="QuarBg", TextColor3="Text"})
-
-        CreateElement("UICorner",{CornerRadius=UDim.new(0,6),Parent=CollapseSidebarBtn})
-
-        local function SetSidebarCollapsed(state)
-            SidebarCollapsed = state
-
-            if state then
-                PlayTween(TabContainer,TweenInfo.new(0.25),{Size=UDim2.new(0,50,1,-40)})
-            else
-                PlayTween(TabContainer,TweenInfo.new(0.25),{Size=UDim2.new(0,150,1,-40)})
-            end
-        end
-
-        CollapseSidebarBtn.MouseButton1Click:Connect(function()
-            SetSidebarCollapsed(not SidebarCollapsed)
-        end)
 
 
         local TabHolder = CreateElement("ScrollingFrame", { Name = "TabHolder", Parent = TabContainer, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y })
