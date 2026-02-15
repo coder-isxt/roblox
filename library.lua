@@ -470,9 +470,12 @@ local UILibrary = (function()
             syncVisuals(true)
         end
 
+        -- Performance tab and toggles
+        CreateSettingsSection("Performance")
+
         CreateSettingsToggle("Performance Mode (FPS Boost)", function(state)
+            local Lighting = game:GetService("Lighting")
             if state then
-                local Lighting = game:GetService("Lighting")
                 local StoredAtmosphere = Lighting:FindFirstChild("Atmosphere")
                 if StoredAtmosphere then StoredAtmosphere.Parent = nil end
                 Lighting.GlobalShadows = false
@@ -483,7 +486,7 @@ local UILibrary = (function()
                 end
                 FPSCleanup = function()
                     Lighting.GlobalShadows = true
-                    if StoredAtmosphere then StoredAtmosphere.Parent = Lighting end
+                    if Lighting:FindFirstChild("Atmosphere") == nil and StoredAtmosphere then StoredAtmosphere.Parent = Lighting end
                     for _, v in pairs(workspace:GetDescendants()) do
                         if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then v.Material = Enum.Material.Plastic; v.CastShadow = true
                         elseif v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0
@@ -492,6 +495,55 @@ local UILibrary = (function()
                 end
             else
                 if FPSCleanup then FPSCleanup() FPSCleanup = nil end
+            end
+        end)
+
+        CreateSettingsToggle("Disable Particles & Effects", function(state)
+            if state then
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                        v.Enabled = false
+                    end
+                end
+                ParticleCleanup = function()
+                    for _, v in pairs(workspace:GetDescendants()) do
+                        if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                            v.Enabled = true
+                        end
+                    end
+                end
+            else
+                if ParticleCleanup then ParticleCleanup() ParticleCleanup = nil end
+            end
+        end)
+
+        CreateSettingsToggle("Hide Decals & Textures", function(state)
+            if state then
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 1 end
+                end
+                DecalCleanup = function()
+                    for _, v in pairs(workspace:GetDescendants()) do
+                        if v:IsA("Texture") or v:IsA("Decal") then v.Transparency = 0 end
+                    end
+                end
+            else
+                if DecalCleanup then DecalCleanup() DecalCleanup = nil end
+            end
+        end)
+
+        CreateSettingsToggle("Reduce Part Detail", function(state)
+            if state then
+                for _, v in pairs(workspace:GetDescendants()) do
+                    if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then v.Material = Enum.Material.SmoothPlastic; v.CastShadow = false end
+                end
+                PartDetailCleanup = function()
+                    for _, v in pairs(workspace:GetDescendants()) do
+                        if v:IsA("BasePart") and not v.Parent:FindFirstChild("Humanoid") then v.Material = Enum.Material.Plastic; v.CastShadow = true end
+                    end
+                end
+            else
+                if PartDetailCleanup then PartDetailCleanup() PartDetailCleanup = nil end
             end
         end)
 
