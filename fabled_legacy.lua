@@ -79,8 +79,14 @@ end
 
 local function GetAttackDuration(part)
     local bColor = part.BrickColor.Name
+    -- Fast attacks (red / tawny) are short
     if bColor == "Bright red" or bColor == "Really red" or bColor == "Tawny" then
         return 0.5
+    end
+    -- Longer parts (wide/long sweep actors) should be considered longer duration
+    local maxDim = math.max(part.Size.X, part.Size.Z)
+    if maxDim > 18 then
+        return 3.0
     end
     return 2.0
 end
@@ -91,12 +97,15 @@ local function IsSafeAtTime(position, arrivalDelay)
     
     for part, data in pairs(ActiveThreats) do
         if part and part.Parent then
-            -- Only consider the attack "Dangerous" if our arrival time 
-            -- falls BETWEEN the ImpactTime and the EndTime.
-            if checkTime >= data.ImpactTime and checkTime <= data.EndTime then
+            -- Use stored Impact/End windows if available, otherwise fall back
+            local impact = data.ImpactTime or data.StartTime or 0
+            local fin = data.EndTime or (data.StartTime and data.StartTime + 1.0) or (impact + 1.0)
+
+            if checkTime >= impact and checkTime <= fin then
                 local relPos = part.CFrame:PointToObjectSpace(position)
-                local size = part.Size / 2 + Vector3.new(4, 4, 4) -- Safety buffer
-                
+                local extra = (data.IsLong and 8) or 4
+                local size = part.Size / 2 + Vector3.new(extra, extra, extra) -- Safety buffer
+
                 if math.abs(relPos.X) < size.X and 
                    math.abs(relPos.Z) < size.Z and 
                    math.abs(relPos.Y) < size.Y then
@@ -144,69 +153,23 @@ local function ProcessPart(descendant)
             if not parent then ActiveThreats[descendant] = nil end
         end)
         -- Only store the part and the moment it appeared
+        local startT = os.clock()
+        local duration = GetAttackDuration(descendant)
+        local isLong = math.max(descendant.Size.X, descendant.Size.Z) > 14 or nameLower:find("slash")
+        local isBlue = (bColor == "Medium bluish green" or bColor == "Med. bluish green" or bColor == "Pastel blue-green")
+
         ActiveThreats[descendant] = {
             Instance = descendant,
-            StartTime = os.clock(),
+            StartTime = startT,
+            ImpactTime = startT + 0.06, -- small reaction delay until the part becomes dangerous
+            EndTime = startT + duration + (descendant.Size.Magnitude / 25),
+            IsLong = isLong or isBlue,
+            IsBlue = isBlue,
+            LastPos = descendant.Position,
             Connection = conn
         }
     end
     HighlightPart(descendant)
-end
-
--- // OPTIMIZED SAFE POINT GENERATOR // --
-local function GetBestSafePoint(hrp)
-    if not StartPosition then StartPosition = hrp.Position end
-
-    -- 1. Path Persistence: If current destination is still safe and valid, stick to it
-    if CurrentSafePoint and (CurrentSafePoint - StartPosition).Magnitude <= 70 and IsSafeAtTime(CurrentSafePoint, 0.5) then
-        return CurrentSafePoint
-    end
-
-    local candidates = {}
-    local hrpPos = hrp.Position
-    local right = hrp.CFrame.RightVector
-    local forward = hrp.CFrame.LookVector
-
-    -- 2. Immediate Sidestep Candidates (Highest Priority)
-    local sideOffsets = {8, 15, -8, -15}
-    for _, offset in ipairs(sideOffsets) do
-        table.insert(candidates, hrpPos + (right * offset))
-    end
-
-    -- 3. Backstep and Diagonal Candidates
-    local backDir = -forward
-    local diagonalOffsets = {10, 15}
-    for _, d in ipairs(diagonalOffsets) do
-        table.insert(candidates, hrpPos + (backDir * d)) -- Straight back
-        table.insert(candidates, hrpPos + (backDir + right).Unit * d) -- Back-right
-        table.insert(candidates, hrpPos + (backDir - right).Unit * d) -- Back-left
-    end
-
-    -- 4. Single-Pass Selection (Replaces table.sort for performance)
-    local bestPoint = nil
-    local bestScore = -math.huge
-
-    for _, point in ipairs(candidates) do
-        if (point - StartPosition).Magnitude <= 70 then
-            -- Safety Check
-            if IsSafeAtTime(point, 0.6) then
-                local dist = (point - hrpPos).Magnitude
-                local dirToPoint = (point - hrpPos).Unit
-                local dotRight = math.abs(right:Dot(dirToPoint))
-                local dotForward = forward:Dot(dirToPoint)
-
-                -- Score: Prefer sidestepping (high dotRight) over backpedaling (low/negative dotForward)
-                local score = -dist + (dotRight * 10) - (dotForward * 5)
-                if score > bestScore then
-                    bestScore = score
-                    bestPoint = point
-                end
-            end
-        end
-    end
-
-    CurrentSafePoint = bestPoint or StartPosition
-    return CurrentSafePoint
 end
 
 
@@ -231,16 +194,9 @@ Tabs.Main:CreateKeybind("Toggle Dodge", function()
         
         DodgeConnection = workspace.DescendantAdded:Connect(ProcessPart)
         
-        local MovingToPoint = false
-        local MoveIssuedTime = 0
-        local LastTargetPoint = nil
-        
-        -- Throttling variables
-        local lastMathUpdate = 0
-        local lastEnemyUpdate = 0
-        
         -- // REWRITTEN DODGE LOOP // --
         -- // UPDATED LIVE DODGE LOOP WITH SHORTEST-PATH LOGIC // --
+        -- // MULTI-THREAT & SMART JUMP DODGE LOOP // --
         local lastLogicTick = 0
         DodgeLoop = RunService.Heartbeat:Connect(function()
             local currentTime = os.clock()
@@ -252,16 +208,33 @@ Tabs.Main:CreateKeybind("Toggle Dodge", function()
             local humanoid = character and character:FindFirstChild("Humanoid")
             if not hrp or not humanoid then return end
 
-            local inDanger = false
-            local SlashDetected = false
-            local currentThreat = nil
+            -- Purge threats that no longer exist or have expired so dodging stops
+            do
+                local toRemove = {}
+                for part, d in pairs(ActiveThreats) do
+                    local gone = (not part) or (not part.Parent) or (not part:IsDescendantOf(workspace))
+                    local expired = d.EndTime and (currentTime > d.EndTime + 0.25)
+                    if gone or expired then table.insert(toRemove, part) end
+                end
+                for _, p in ipairs(toRemove) do
+                    local d = ActiveThreats[p]
+                    if d and d.Connection then pcall(function() d.Connection:Disconnect() end) end
+                    ActiveThreats[p] = nil
+                end
+            end
 
+            local overlappingThreats = {}
+            local shouldJump = false
+            
+            -- 1. SCAN ALL ACTIVE HAZARDS
             for part, data in pairs(ActiveThreats) do
                 if part and part.Parent then
                     local relPos = part.CFrame:PointToObjectSpace(hrp.Position)
                     local halfSize = part.Size / 2
-                    local margin = 5 
-                    
+                    -- Dynamic margin based on threat length
+                    local dynExtra = (data.IsLong and 8) or 0
+                    local margin = 4 + dynExtra
+
                     local isInside = math.abs(relPos.X) < (halfSize.X + margin) and 
                                     math.abs(relPos.Z) < (halfSize.Z + margin) and
                                     math.abs(relPos.Y) < (halfSize.Y + margin)
@@ -269,48 +242,121 @@ Tabs.Main:CreateKeybind("Toggle Dodge", function()
                     if isInside then
                         local bColor = part.BrickColor.Name
                         local age = currentTime - data.StartTime
-                        
-                        -- Check for "Blueish" attacks specifically (often have faster or unique timing)
-                        local isBlue = bColor:find("blue") or bColor:find("green")
-                        local isFastTrack = (bColor == "Bright red" or bColor == "Really red" or bColor == "Tawny" or isBlue)
-                        
-                        -- Reduced delay for blue attacks to ensure we react before they pulse
-                        local activationDelay = isFastTrack and 0.05 or 0.8
-                        
-                        if age >= activationDelay then
-                            inDanger = true
-                            currentThreat = part
-                            if part.Name:lower():find("slash") or part.Size.Y < 7 then 
-                                SlashDetected = true 
-                            end
-                            break 
+                        local isFast = (bColor:find("red") or bColor:find("blue") or bColor:find("green") or bColor == "Tawny")
+                        local isLong = data.IsLong
+                        local isBlue = data.IsBlue
+
+                        local requiredAge = 0.6
+                        if isFast then
+                            requiredAge = 0.05
+                        elseif isBlue then
+                            requiredAge = 0.12 -- bluish circles: respond a bit sooner but not instant
+                        elseif isLong then
+                            requiredAge = 0.14 -- react earlier for long sweeps
                         end
+
+                        if age >= requiredAge then
+                            table.insert(overlappingThreats, part)
+                            -- Enhanced Jump Detection: Check name or thin vertical profile
+                            if part.Name:lower():find("slash") then 
+                                shouldJump = true 
+                            end
+                        end
+                    end
+
+                    -- Update velocity estimate for sweep prediction
+                    do
+                        local last = data.LastPos or part.Position
+                        local dt = 0.033
+                        local vel = (part.Position - last) / dt
+                        data.Velocity = vel
+                        data.LastPos = part.Position
                     end
                 end
             end
 
-            if inDanger and currentThreat then
-                if SlashDetected then humanoid.Jump = true end
-                
-                local cf = currentThreat.CFrame
-                local size = currentThreat.Size
-                local relPos = cf:PointToObjectSpace(hrp.Position)
-                
-                -- DETERMINING THE SHORTEST EXIT (The "Side that isn't so long")
-                -- Compare X and Z dimensions to find the "thickness" of the attack
-                local bestPoint
-                local safetyBuffer = 10 -- Extra studs to ensure we clear the zone
+            -- 2. REACTION LOGIC
+            if #overlappingThreats > 0 then
+                -- Execute Jump if a slash is detected
+                if shouldJump then 
+                    humanoid.Jump = true 
+                end
 
+                local bestPoint = nil
+                local candidates = {}
+                
+                -- Generate potential exits for the "primary" threat (the first one)
+                local primary = overlappingThreats[1]
+                local cf = primary.CFrame
+                local size = primary.Size
+                local relPos = cf:PointToObjectSpace(hrp.Position)
+                local primaryData = ActiveThreats[primary]
+                local safetyBuffer = 12 + ((primaryData and primaryData.IsLong) and 8 or 0)
+
+                -- Exit points based on shortest axis
                 if size.X < size.Z then
-                    -- The attack is "long" on the Z axis (like a beam pointing forward)
-                    -- We MUST exit via the X axis (sidestep)
-                    local sideX = relPos.X >= 0 and 1 or -1
-                    bestPoint = cf:PointToWorldSpace(Vector3.new((size.X/2 + safetyBuffer) * sideX, 0, relPos.Z))
+                    table.insert(candidates, cf:PointToWorldSpace(Vector3.new(size.X/2 + safetyBuffer, 0, relPos.Z)))
+                    table.insert(candidates, cf:PointToWorldSpace(Vector3.new(-(size.X/2 + safetyBuffer), 0, relPos.Z)))
                 else
-                    -- The attack is "wide" on the X axis (like a horizontal sweep)
-                    -- We MUST exit via the Z axis (backstep/forward step)
-                    local sideZ = relPos.Z >= 0 and 1 or -1
-                    bestPoint = cf:PointToWorldSpace(Vector3.new(relPos.X, 0, (size.Z/2 + safetyBuffer) * sideZ))
+                    table.insert(candidates, cf:PointToWorldSpace(Vector3.new(relPos.X, 0, size.Z/2 + safetyBuffer)))
+                    table.insert(candidates, cf:PointToWorldSpace(Vector3.new(relPos.X, 0, -(size.Z/2 + safetyBuffer))))
+                end
+
+                -- Predict sweep direction and offer perpendicular sidesteps
+                local primaryVel = (primaryData and primaryData.Velocity) or Vector3.new()
+                if primaryVel.Magnitude > 1 then
+                    local sweepDir = primaryVel.Unit
+                    local perp = Vector3.new(-sweepDir.Z, 0, sweepDir.X)
+                    local offset = (math.max(size.X, size.Z) / 2) + safetyBuffer + 6
+                    table.insert(candidates, cf.Position + perp * offset)
+                    table.insert(candidates, cf.Position - perp * offset)
+                    -- also add candidates relative to our position
+                    table.insert(candidates, hrp.Position + perp * (offset * 0.8))
+                    table.insert(candidates, hrp.Position - perp * (offset * 0.8))
+                end
+
+                -- Add conservative fallback candidates: move further back and sideways
+                local backDir = -hrp.CFrame.LookVector
+                local rightDir = hrp.CFrame.RightVector
+                table.insert(candidates, hrp.Position + backDir * 22)
+                table.insert(candidates, hrp.Position + backDir * 22 + rightDir * 15)
+                table.insert(candidates, hrp.Position + backDir * 22 - rightDir * 15)
+
+                -- 3. GLOBAL SAFETY TEST: Pick the point that is inside the FEWEST threats
+                local bestHazardCount = math.huge
+                local bestDist = math.huge
+
+                for _, p in ipairs(candidates) do
+                    -- Use stricter travel-time aware safety test: check further ahead
+                    local dist = (p - hrp.Position).Magnitude
+                    local travelTime = dist / math.max(humanoid.WalkSpeed, 6)
+                    local arrivalDelay = travelTime + 0.15
+                    
+                    -- Check not just at arrival, but also 0.2 seconds after arrival
+                    if not IsSafeAtTime(p, arrivalDelay) or not IsSafeAtTime(p, arrivalDelay + 0.2) then
+                        continue
+                    end
+
+                    -- Count static overlaps at arrival as secondary metric (fewer is better)
+                    local currentHazardCount = 0
+                    for part, d in pairs(ActiveThreats) do
+                        if part and part.Parent then
+                            local pRel = part.CFrame:PointToObjectSpace(p)
+                            local hSize = part.Size / 2 + Vector3.new((d.IsLong and 6) or 4, (d.IsLong and 6) or 4, (d.IsLong and 6) or 4)
+                            if math.abs(pRel.X) < hSize.X and math.abs(pRel.Z) < hSize.Z and math.abs(pRel.Y) < hSize.Y then
+                                currentHazardCount = currentHazardCount + 1
+                            end
+                        end
+                    end
+
+                    if currentHazardCount < bestHazardCount then
+                        bestHazardCount = currentHazardCount
+                        bestDist = dist
+                        bestPoint = p
+                    elseif currentHazardCount == bestHazardCount and dist < bestDist then
+                        bestDist = dist
+                        bestPoint = p
+                    end
                 end
 
                 if bestPoint then
@@ -318,6 +364,7 @@ Tabs.Main:CreateKeybind("Toggle Dodge", function()
                     CurrentSafePoint = bestPoint
                 end
             else
+                -- Completely safe? Stop moving.
                 if CurrentSafePoint then
                     CurrentSafePoint = nil
                     humanoid:MoveTo(hrp.Position)
@@ -387,6 +434,7 @@ Tabs.Main:CreateToggle("Auto Face Enemy", function(state)
             local character = Player.Character
             local hrp = character and character:FindFirstChild("HumanoidRootPart")
             if hrp and DodgeEnabled and target then
+                char.Humanoid.AutoRotate = false
                 local gyro = hrp:FindFirstChild("FaceGyro") or Instance.new("BodyGyro")
                 gyro.Name = "FaceGyro"
                 gyro.MaxTorque = Vector3.new(0, 400000, 0)
