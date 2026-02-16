@@ -3,6 +3,7 @@ local UILibrary = (function()
     local UILibrary = {}
     local TweenService = game:GetService("TweenService")
     local UserInputService = game:GetService("UserInputService")
+    local HttpService = game:GetService("HttpService")
 
     -- // TWEEN POOLING // --
     local TweenPool = {}
@@ -48,6 +49,244 @@ local UILibrary = (function()
         Code = { Regular = Enum.Font.Code, Bold = Enum.Font.Code, Black = Enum.Font.Code },
         Jura = { Regular = Enum.Font.Jura, Bold = Enum.Font.Jura, Black = Enum.Font.Jura }
     }
+
+    local PersistConfig = {
+        Folder = "XenoUILibrary",
+        FileName = "settings.json",
+        Data = {
+            LibraryOptions = {},
+            Values = {}
+        },
+        RuntimeValues = {}
+    }
+
+    local function CanPersist()
+        return typeof(writefile) == "function"
+            and typeof(readfile) == "function"
+            and typeof(isfile) == "function"
+            and typeof(makefolder) == "function"
+    end
+
+    local function EnsureConfigFolder()
+        if not CanPersist() then return end
+        if typeof(isfolder) == "function" then
+            if not isfolder(PersistConfig.Folder) then
+                pcall(makefolder, PersistConfig.Folder)
+            end
+        else
+            pcall(makefolder, PersistConfig.Folder)
+        end
+    end
+
+    local function EncodePersistValue(value)
+        local valueType = typeof(value)
+        if valueType == "nil" or valueType == "number" or valueType == "string" or valueType == "boolean" then
+            return value
+        end
+
+        if valueType == "Color3" then
+            return {
+                __type = "Color3",
+                r = value.R,
+                g = value.G,
+                b = value.B
+            }
+        end
+
+        if valueType == "EnumItem" then
+            return {
+                __type = "EnumItem",
+                enumType = tostring(value.EnumType),
+                name = value.Name
+            }
+        end
+
+        if valueType == "table" then
+            local encoded = {}
+            for key, subValue in pairs(value) do
+                encoded[key] = EncodePersistValue(subValue)
+            end
+            return encoded
+        end
+
+        return nil
+    end
+
+    local function DecodePersistValue(value)
+        if typeof(value) ~= "table" then
+            return value
+        end
+
+        if value.__type == "Color3" then
+            return Color3.new(value.r or 0, value.g or 0, value.b or 0)
+        end
+
+        if value.__type == "EnumItem" then
+            local enumName = string.match(value.enumType or "", "^Enum%.(.+)$")
+            if enumName and Enum[enumName] and value.name then
+                return Enum[enumName][value.name]
+            end
+            return nil
+        end
+
+        local decoded = {}
+        for key, subValue in pairs(value) do
+            decoded[key] = DecodePersistValue(subValue)
+        end
+        return decoded
+    end
+
+    local function SavePersistConfig()
+        if not CanPersist() then return false end
+
+        EnsureConfigFolder()
+
+        local ok, encoded = pcall(function()
+            return HttpService:JSONEncode(PersistConfig.Data)
+        end)
+        if not ok then return false end
+
+        local path = PersistConfig.Folder .. "/" .. PersistConfig.FileName
+        local writeOk = pcall(writefile, path, encoded)
+        return writeOk
+    end
+
+    local function LoadPersistConfig()
+        if not CanPersist() then return end
+
+        PersistConfig.Data = {
+            LibraryOptions = {},
+            Values = {}
+        }
+
+        EnsureConfigFolder()
+        local path = PersistConfig.Folder .. "/" .. PersistConfig.FileName
+        if not isfile(path) then return end
+
+        local readOk, rawData = pcall(readfile, path)
+        if not readOk or type(rawData) ~= "string" or rawData == "" then return end
+
+        local decodeOk, decoded = pcall(function()
+            return HttpService:JSONDecode(rawData)
+        end)
+        if not decodeOk or type(decoded) ~= "table" then return end
+
+        if type(decoded.LibraryOptions) == "table" then
+            PersistConfig.Data.LibraryOptions = decoded.LibraryOptions
+        end
+        if type(decoded.Values) == "table" then
+            PersistConfig.Data.Values = decoded.Values
+        end
+    end
+
+    local function ApplyLoadedLibraryOptions()
+        local savedOptions = PersistConfig.Data.LibraryOptions
+        if type(savedOptions) ~= "table" then return end
+
+        if Themes[savedOptions.Theme] then
+            Options.Theme = savedOptions.Theme
+        end
+        if savedOptions.ToggleStyle == "Switch" or savedOptions.ToggleStyle == "Checkbox" then
+            Options.ToggleStyle = savedOptions.ToggleStyle
+        end
+        if savedOptions.CornerStyle == "Rounded" or savedOptions.CornerStyle == "Slight" or savedOptions.CornerStyle == "Blocky" then
+            Options.CornerStyle = savedOptions.CornerStyle
+        end
+        if FontMap[savedOptions.Font] then
+            Options.Font = savedOptions.Font
+        end
+        if savedOptions.MenuStyle == "Sidebar" or savedOptions.MenuStyle == "Dropdown" then
+            Options.MenuStyle = savedOptions.MenuStyle
+        end
+    end
+
+    local function SaveLibraryOptions()
+        PersistConfig.Data.LibraryOptions = {
+            Theme = Options.Theme,
+            ToggleStyle = Options.ToggleStyle,
+            CornerStyle = Options.CornerStyle,
+            Font = Options.Font,
+            MenuStyle = Options.MenuStyle
+        }
+        SavePersistConfig()
+    end
+
+    LoadPersistConfig()
+    ApplyLoadedLibraryOptions()
+
+    function UILibrary:SetConfigStorage(folderName, fileName)
+        if type(folderName) == "string" and folderName ~= "" then
+            PersistConfig.Folder = folderName
+        end
+        if type(fileName) == "string" and fileName ~= "" then
+            PersistConfig.FileName = fileName
+        end
+
+        PersistConfig.RuntimeValues = {}
+        LoadPersistConfig()
+        ApplyLoadedLibraryOptions()
+        SaveLibraryOptions()
+        return self
+    end
+
+    function UILibrary:RegisterValue(key, defaultValue, onLoad)
+        if type(key) ~= "string" or key == "" then
+            error("RegisterValue key must be a non-empty string", 2)
+        end
+
+        local saved = PersistConfig.Data.Values[key]
+        local hasSaved = saved ~= nil
+        local decodedValue = hasSaved and DecodePersistValue(saved) or nil
+        local resolvedValue = hasSaved and decodedValue
+        if hasSaved and resolvedValue == nil and defaultValue ~= nil then
+            resolvedValue = defaultValue
+        end
+        if not hasSaved then
+            resolvedValue = defaultValue
+        end
+        PersistConfig.RuntimeValues[key] = resolvedValue
+
+        if not hasSaved then
+            PersistConfig.Data.Values[key] = EncodePersistValue(defaultValue)
+            SavePersistConfig()
+        end
+
+        if type(onLoad) == "function" then
+            pcall(onLoad, resolvedValue, hasSaved)
+        end
+
+        local handle = {}
+
+        function handle:Get()
+            return PersistConfig.RuntimeValues[key]
+        end
+
+        function handle:Set(newValue)
+            PersistConfig.RuntimeValues[key] = newValue
+            PersistConfig.Data.Values[key] = EncodePersistValue(newValue)
+            SavePersistConfig()
+            return newValue
+        end
+
+        function handle:Reset()
+            return self:Set(defaultValue)
+        end
+
+        function handle:Save()
+            PersistConfig.Data.Values[key] = EncodePersistValue(PersistConfig.RuntimeValues[key])
+            SavePersistConfig()
+        end
+
+        return handle
+    end
+
+    function UILibrary:GetValue(key, fallback)
+        local value = PersistConfig.RuntimeValues[key]
+        if value == nil then
+            return fallback
+        end
+        return value
+    end
 
     -- // REGISTRIES (SPLIT BY TYPE) // --
     local Registries = {
@@ -120,10 +359,11 @@ local UILibrary = (function()
             if item.Instance and item.Instance.Parent then PlayTween(item.Instance, TweenInfo.new(0.3), {[item.Property] = themeColors[item.Role]}):Play() end
         end
         for _, syncFunc in ipairs(Registries.Toggle) do syncFunc(true) end
+        SaveLibraryOptions()
     end
 
-    local function UpdateToggleStyles(styleName) Options.ToggleStyle = styleName; for _, syncFunc in ipairs(Registries.Toggle) do syncFunc() end end
-    local function UpdateMenuStyle(styleName) Options.MenuStyle = styleName; for _, syncFunc in ipairs(Registries.MenuLayout) do syncFunc(styleName) end end
+    local function UpdateToggleStyles(styleName) Options.ToggleStyle = styleName; for _, syncFunc in ipairs(Registries.Toggle) do syncFunc() end SaveLibraryOptions() end
+    local function UpdateMenuStyle(styleName) Options.MenuStyle = styleName; for _, syncFunc in ipairs(Registries.MenuLayout) do syncFunc(styleName) end SaveLibraryOptions() end
 
     local function UpdateFont(fontName)
         if not FontMap[fontName] then return end
@@ -131,6 +371,7 @@ local UILibrary = (function()
         for _, item in ipairs(Registries.Font) do
             if item.Instance and item.Instance.Parent then item.Instance.Font = FontMap[fontName][item.Weight] or FontMap[fontName].Regular end
         end
+        SaveLibraryOptions()
     end
 
     local function UpdateCornerStyle(styleName)
@@ -143,6 +384,7 @@ local UILibrary = (function()
                 PlayTween(item.Instance, TweenInfo.new(0.3), {CornerRadius = newRadius}):Play()
             end
         end
+        SaveLibraryOptions()
     end
 
     -- // TOOLTIPS // --
@@ -892,6 +1134,7 @@ local UILibrary = (function()
         
         -- Initialize the correct layout immediately on startup
         for _, func in ipairs(Registries.MenuLayout) do func(Options.MenuStyle) end
+        SaveLibraryOptions()
         
         return window
     end
