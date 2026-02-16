@@ -924,7 +924,7 @@ local UILibrary = (function()
                 return button
             end
 
-            function tab:CreateToggle(text, callback)
+            function tab:CreateToggle(text, callback, defaultState)
                 local toggleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 35), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = toggleFrame})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = toggleFrame}, {Color = "Stroke"})
@@ -942,7 +942,7 @@ local UILibrary = (function()
                 local checkInner = CreateElement("Frame", { Parent = checkBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 3), Parent = checkInner})
 
-                local toggled = false
+                local toggled = (type(defaultState) == "boolean") and defaultState or false
                 local function syncVisuals(themeUpdate)
                     local duration = themeUpdate and 0 or 0.2
                     if Options.ToggleStyle == "Switch" then
@@ -955,9 +955,19 @@ local UILibrary = (function()
                         PlayTween(checkInner, TweenInfo.new(duration), {Size = toggled and UDim2.new(1, -6, 1, -6) or UDim2.new(0, 0, 0, 0)}):Play()
                     end
                 end
-                
+
+                local function setToggleState(state, skipCallback)
+                    toggled = state and true or false
+                    syncVisuals()
+                    if not skipCallback then
+                        pcall(callback, toggled)
+                    end
+                end
+
                 table.insert(Registries.Toggle, syncVisuals)
-                toggleButton.MouseButton1Click:Connect(function() toggled = not toggled; syncVisuals(); pcall(callback, toggled) end)
+                toggleButton.MouseButton1Click:Connect(function()
+                    setToggleState(not toggled, false)
+                end)
                 syncVisuals(true)
                 table.insert(tab.Elements, toggleFrame)
                 return toggleFrame
