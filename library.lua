@@ -33,22 +33,14 @@ local UILibrary = (function()
         ToggleStyle = "Switch", -- "Switch" or "Checkbox"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
         Font = "Gotham", -- "Gotham", "Ubuntu", "Code", "Jura"
-        MenuStyle = "Sidebar" -- "Sidebar", "SidebarCompact", "SidebarMini", "Topbar", "Dashboard", "Tablet", "Dropdown", "DropdownCompact", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"
+        MenuStyle = "Sidebar" -- "Sidebar", "TopBar", "Dropdown", "Tablet"
     }
 
     local MenuStyleSet = {
         Sidebar = true,
-        SidebarCompact = true,
-        SidebarMini = true,
-        Dashboard = true,
-        Tablet = true,
+        TopBar = true,
         Dropdown = true,
-        DropdownCompact = true,
-        Topbar = true,
-        FloatingDropdown = true,
-        FloatingLeft = true,
-        FloatingRight = true,
-        Minimal = true
+        Tablet = true
     }
 
     local Themes = {
@@ -247,8 +239,18 @@ local UILibrary = (function()
         if FontMap[savedOptions.Font] then
             Options.Font = savedOptions.Font
         end
-        if MenuStyleSet[savedOptions.MenuStyle] then
-            Options.MenuStyle = savedOptions.MenuStyle
+        local savedMenuStyle = savedOptions.MenuStyle
+        if savedMenuStyle == "Topbar" then
+            savedMenuStyle = "TopBar"
+        elseif savedMenuStyle == "SidebarCompact" or savedMenuStyle == "SidebarMini" or savedMenuStyle == "Minimal" then
+            savedMenuStyle = "Sidebar"
+        elseif savedMenuStyle == "DropdownCompact" or savedMenuStyle == "FloatingDropdown" or savedMenuStyle == "FloatingLeft" or savedMenuStyle == "FloatingRight" then
+            savedMenuStyle = "Dropdown"
+        elseif savedMenuStyle == "Dashboard" then
+            savedMenuStyle = "TopBar"
+        end
+        if MenuStyleSet[savedMenuStyle] then
+            Options.MenuStyle = savedMenuStyle
         end
     end
 
@@ -416,7 +418,17 @@ local UILibrary = (function()
     end
 
     local function UpdateToggleStyles(styleName) Options.ToggleStyle = styleName; for _, syncFunc in ipairs(Registries.Toggle) do syncFunc() end SaveLibraryOptions() end
-    local function UpdateMenuStyle(styleName) Options.MenuStyle = styleName; for _, syncFunc in ipairs(Registries.MenuLayout) do syncFunc(styleName) end SaveLibraryOptions() end
+    local function UpdateMenuStyle(styleName)
+        if styleName == "Topbar" then
+            styleName = "TopBar"
+        end
+        if not MenuStyleSet[styleName] then
+            return
+        end
+        Options.MenuStyle = styleName
+        for _, syncFunc in ipairs(Registries.MenuLayout) do syncFunc(styleName) end
+        SaveLibraryOptions()
+    end
 
     local function UpdateFont(fontName)
         if not FontMap[fontName] then return end
@@ -526,7 +538,9 @@ local UILibrary = (function()
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TopBar})
         CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
         
-        CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 19, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 19, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0.5, -13), Size = UDim2.new(0, 34, 0, 26), Font = Enum.Font.GothamBold, Text = "<", TextSize = 16, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = TabletBackButton})
         
         -- // SEARCH BAR (TOPBAR) // --
 
@@ -615,6 +629,9 @@ local UILibrary = (function()
         
         local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 150, 0, topBarHeight), Size = UDim2.new(0, 1, 1, -topBarHeight), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
         local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 160, 0, topBarHeight + 8), Size = UDim2.new(1, -172, 1, -(topBarHeight + 20)) })
+        local TabletHomeFrame = CreateElement("ScrollingFrame", { Name = "TabletHomeFrame", Parent = ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), ScrollBarThickness = 2, Visible = false, AutomaticCanvasSize = Enum.AutomaticSize.Y }, {ScrollBarImageColor3 = "Stroke"})
+        local TabletGridPadding = CreateElement("UIPadding", { Parent = TabletHomeFrame, PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4) })
+        local TabletGridLayout = CreateElement("UIGridLayout", { Parent = TabletHomeFrame, CellPadding = UDim2.new(0, 8, 0, 8), CellSize = UDim2.new(0.5, -8, 0, 72), SortOrder = Enum.SortOrder.LayoutOrder, FillDirectionMaxCells = 2 })
 
         -- Dropdown Navigation Components (V2)
         local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, topBarHeight + 8), Size = UDim2.new(1, -20, 0, 32), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
@@ -638,6 +655,44 @@ local UILibrary = (function()
             ShowSeparator = true,
             ShowDropdown = false
         }
+        local IsTabletHomeVisible = false
+
+        local function SetTabletBackVisible(visible)
+            TabletBackButton.Visible = visible
+            if visible then
+                TitleLabel.Position = UDim2.new(0, 52, 0, 0)
+                TitleLabel.Size = UDim2.new(0.38, 0, 1, 0)
+            else
+                TitleLabel.Position = UDim2.new(0, 14, 0, 0)
+                TitleLabel.Size = UDim2.new(0.45, 0, 1, 0)
+            end
+        end
+
+        local function UpdateTabletGridSizing()
+            local width = math.max(ContentFrame.AbsoluteSize.X - 8, 300)
+            local cols = 2
+            if width >= 880 then
+                cols = 4
+            elseif width >= 640 then
+                cols = 3
+            end
+            local gap = 8
+            local cellW = math.floor((width - (gap * (cols - 1))) / cols)
+            TabletGridLayout.FillDirectionMaxCells = cols
+            TabletGridLayout.CellSize = UDim2.new(0, cellW, 0, 72)
+        end
+
+        local function ShowTabletHome()
+            if Options.MenuStyle ~= "Tablet" then
+                return
+            end
+            IsTabletHomeVisible = true
+            TabletHomeFrame.Visible = true
+            SetTabletBackVisible(false)
+            for _, tab in pairs(tabs) do
+                tab.Page.Visible = false
+            end
+        end
 
         local function GetTabButtonColors()
             if CurrentTabButtonMode == "Top" then
@@ -773,39 +828,7 @@ local UILibrary = (function()
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
-            elseif style == "SidebarCompact" then
-                preset = {
-                    ShowSidebar = true,
-                    ShowSeparator = true,
-                    ShowDropdown = false,
-                    TabMode = "Sidebar",
-                    SidebarSize = UDim2.new(0, 124, 1, -topBarHeight),
-                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
-                    SeparatorPos = UDim2.new(0, 124, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 134, 0, contentTop),
-                    ContentSize = UDim2.new(1, -146, 1, -(contentTop + 12)),
-                    NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 31),
-                    NavAnchor = Vector2.new(0, 0),
-                    NavRow = 24
-                }
-            elseif style == "SidebarMini" then
-                preset = {
-                    ShowSidebar = true,
-                    ShowSeparator = true,
-                    ShowDropdown = false,
-                    TabMode = "Sidebar",
-                    SidebarSize = UDim2.new(0, 104, 1, -topBarHeight),
-                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
-                    SeparatorPos = UDim2.new(0, 104, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 114, 0, contentTop),
-                    ContentSize = UDim2.new(1, -126, 1, -(contentTop + 12)),
-                    NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 30),
-                    NavAnchor = Vector2.new(0, 0),
-                    NavRow = 24
-                }
-            elseif style == "Topbar" then
+            elseif style == "TopBar" then
                 preset = {
                     ShowSidebar = true,
                     ShowSeparator = false,
@@ -823,42 +846,6 @@ local UILibrary = (function()
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
-            elseif style == "Dashboard" then
-                preset = {
-                    ShowSidebar = true,
-                    ShowSeparator = false,
-                    ShowDropdown = false,
-                    TabMode = "Top",
-                    TopTabWidth = 136,
-                    TopTabHeight = 30,
-                    SidebarSize = UDim2.new(1, -24, 0, 44),
-                    SidebarPos = UDim2.new(0, 12, 0, topBarHeight + 8),
-                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 12, 0, topBarHeight + 60),
-                    ContentSize = UDim2.new(1, -24, 1, -(topBarHeight + 72)),
-                    NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 32),
-                    NavAnchor = Vector2.new(0, 0),
-                    NavRow = 26
-                }
-            elseif style == "Tablet" then
-                preset = {
-                    ShowSidebar = true,
-                    ShowSeparator = false,
-                    ShowDropdown = false,
-                    TabMode = "Top",
-                    TopTabWidth = 150,
-                    TopTabHeight = 34,
-                    SidebarSize = UDim2.new(1, -20, 0, 50),
-                    SidebarPos = UDim2.new(0, 10, 0, topBarHeight + 6),
-                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 62),
-                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 74)),
-                    NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 34),
-                    NavAnchor = Vector2.new(0, 0),
-                    NavRow = 28
-                }
             elseif style == "Dropdown" then
                 preset = {
                     ShowSidebar = false,
@@ -875,71 +862,7 @@ local UILibrary = (function()
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
-            elseif style == "DropdownCompact" then
-                preset = {
-                    ShowSidebar = false,
-                    ShowSeparator = false,
-                    ShowDropdown = true,
-                    TabMode = "Sidebar",
-                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
-                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
-                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 44),
-                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 56)),
-                    NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 30),
-                    NavAnchor = Vector2.new(0, 0),
-                    NavRow = 24
-                }
-            elseif style == "FloatingDropdown" then
-                preset = {
-                    ShowSidebar = false,
-                    ShowSeparator = false,
-                    ShowDropdown = true,
-                    TabMode = "Sidebar",
-                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
-                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
-                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 56),
-                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 68)),
-                    NavPos = UDim2.new(0.5, 0, 0, contentTop),
-                    NavSize = UDim2.new(0, 220, 0, 32),
-                    NavAnchor = Vector2.new(0.5, 0),
-                    NavRow = 26
-                }
-            elseif style == "FloatingLeft" then
-                preset = {
-                    ShowSidebar = false,
-                    ShowSeparator = false,
-                    ShowDropdown = true,
-                    TabMode = "Sidebar",
-                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
-                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
-                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 56),
-                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 68)),
-                    NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(0, 200, 0, 32),
-                    NavAnchor = Vector2.new(0, 0),
-                    NavRow = 26
-                }
-            elseif style == "FloatingRight" then
-                preset = {
-                    ShowSidebar = false,
-                    ShowSeparator = false,
-                    ShowDropdown = true,
-                    TabMode = "Sidebar",
-                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
-                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
-                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 56),
-                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 68)),
-                    NavPos = UDim2.new(1, -10, 0, contentTop),
-                    NavSize = UDim2.new(0, 200, 0, 32),
-                    NavAnchor = Vector2.new(1, 0),
-                    NavRow = 26
-                }
-            elseif style == "Minimal" then
+            elseif style == "Tablet" then
                 preset = {
                     ShowSidebar = false,
                     ShowSeparator = false,
@@ -1000,8 +923,20 @@ local UILibrary = (function()
             Separator.Visible = preset.ShowSeparator
             NavDropdownFrame.Visible = preset.ShowDropdown
             PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = preset.ContentPos, Size = preset.ContentSize}):Play()
-            if CurrentTab then
-                window:SwitchToTab(CurrentTab)
+            UpdateTabletGridSizing()
+            if style == "Tablet" then
+                if IsTabletHomeVisible or not CurrentTab then
+                    ShowTabletHome()
+                else
+                    window:SwitchToTab(CurrentTab)
+                end
+            else
+                IsTabletHomeVisible = false
+                TabletHomeFrame.Visible = false
+                SetTabletBackVisible(false)
+                if CurrentTab then
+                    window:SwitchToTab(CurrentTab)
+                end
             end
             if NavIsOpen then -- Auto-collapse dropdown if open during style switch
                 NavIsOpen = false
@@ -1188,7 +1123,7 @@ local UILibrary = (function()
             table.insert(ThemeOptions, themeName)
         end
         table.sort(ThemeOptions)
-        CreateSettingsDropdown("Menu Style", {"Sidebar", "SidebarCompact", "SidebarMini", "Topbar", "Dashboard", "Tablet", "Dropdown", "DropdownCompact", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
+        CreateSettingsDropdown("Menu Style", {"Sidebar", "TopBar", "Dropdown", "Tablet"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
         CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
         CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
@@ -1362,6 +1297,11 @@ local UILibrary = (function()
         SettingsButton.MouseLeave:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         CollapseKeybindButton.MouseEnter:Connect(function() PlayTween(CollapseKeybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         CollapseKeybindButton.MouseLeave:Connect(function() PlayTween(CollapseKeybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
+        TabletBackButton.MouseEnter:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
+        TabletBackButton.MouseLeave:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
+        TabletBackButton.MouseButton1Click:Connect(function()
+            ShowTabletHome()
+        end)
         
         local toggleConnection
         CloseButton.MouseButton1Click:Connect(function()
@@ -1441,6 +1381,10 @@ local UILibrary = (function()
             end
         end)
         table.insert(window.connections, cameraSwapConnection)
+        local contentResizeConnection = ContentFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            UpdateTabletGridSizing()
+        end)
+        table.insert(window.connections, contentResizeConnection)
 
         function window:SwitchToTab(tabToSelect)
             CurrentTab = tabToSelect
@@ -1458,6 +1402,14 @@ local UILibrary = (function()
             if tabToSelect.ActiveRail then
                 PlayTween(tabToSelect.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
             end
+
+            if Options.MenuStyle == "Tablet" then
+                IsTabletHomeVisible = false
+                TabletHomeFrame.Visible = false
+                SetTabletBackVisible(true)
+            else
+                SetTabletBackVisible(false)
+            end
         end
 
         function window:CreateTab(name)
@@ -1473,8 +1425,11 @@ local UILibrary = (function()
             local page = CreateElement("ScrollingFrame", { Name = name .. "Page", Parent = ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), ScrollBarThickness = 2, Visible = false }, {ScrollBarImageColor3 = "Stroke"})
             CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
             CreateElement("UIPadding", {Parent = page, PaddingRight = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingTop = UDim.new(0, 5)})
+            local tabletTile = CreateElement("TextButton", { Name = name .. "Tile", Parent = TabletHomeFrame, BorderSizePixel = 0, AutoButtonColor = false, Text = name, Font = Enum.Font.GothamBold, TextSize = 15 }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = tabletTile})
+            CreateElement("UIStroke", {Parent = tabletTile, Thickness = 1}, {Color = "Stroke"})
             
-            tab.Button = tabButton; tab.Page = page; tab.ActiveRail = activeRail; table.insert(tabs, tab)
+            tab.Button = tabButton; tab.Page = page; tab.ActiveRail = activeRail; tab.TabletTile = tabletTile; table.insert(tabs, tab)
             ApplyTabButtonMode(tab)
             tabButton.MouseEnter:Connect(function()
                 if not page.Visible then
@@ -1488,7 +1443,24 @@ local UILibrary = (function()
                 end
             end)
             tabButton.MouseButton1Click:Connect(function() window:SwitchToTab(tab) end)
-            if #tabs == 1 then window:SwitchToTab(tab) end
+            tabletTile.MouseEnter:Connect(function()
+                PlayTween(tabletTile, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play()
+            end)
+            tabletTile.MouseLeave:Connect(function()
+                PlayTween(tabletTile, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play()
+            end)
+            tabletTile.MouseButton1Click:Connect(function()
+                window:SwitchToTab(tab)
+            end)
+
+            UpdateTabletGridSizing()
+            if #tabs == 1 then
+                if Options.MenuStyle == "Tablet" then
+                    ShowTabletHome()
+                else
+                    window:SwitchToTab(tab)
+                end
+            end
 
             local function ResolvePersistedValue(saveKey, defaultValue)
                 if type(saveKey) ~= "string" or saveKey == "" then
