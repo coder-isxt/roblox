@@ -30,9 +30,11 @@ local UILibrary = (function()
     -- // CONFIGURATION & THEMES // --
     local Options = {
         Theme = "Default",
-        ToggleStyle = "Switch", -- "Switch" or "Checkbox"
-        CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
-        Font = "Gotham", -- "Gotham", "Ubuntu", "Code", "Jura"
+        ToggleStyle = "Switch", -- "Switch", "Checkbox", "Pill", "Dot"
+        CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky", "Glow"
+        SliderStyle = "Line", -- "Line", "Pill", "Block"
+        ComboStyle = "Classic", -- "Classic", "Compact", "Soft"
+        Font = "Gotham", -- FontMap keys
         MenuStyle = "Sidebar" -- "Sidebar", "TopBar", "Dropdown", "Tablet"
     }
 
@@ -50,15 +52,30 @@ local UILibrary = (function()
         Discord = { MainBg = Color3.fromRGB(54, 57, 63), SecBg = Color3.fromRGB(47, 49, 54), TerBg = Color3.fromRGB(64, 68, 75), QuarBg = Color3.fromRGB(79, 84, 92), Hover = Color3.fromRGB(114, 118, 125), Accent = Color3.fromRGB(88, 101, 242), Text = Color3.fromRGB(255, 255, 255), SubText = Color3.fromRGB(185, 187, 190), Stroke = Color3.fromRGB(32, 34, 37) },
         Midnight = { MainBg = Color3.fromRGB(8, 12, 20), SecBg = Color3.fromRGB(14, 20, 32), TerBg = Color3.fromRGB(18, 27, 40), QuarBg = Color3.fromRGB(28, 39, 58), Hover = Color3.fromRGB(36, 49, 72), Accent = Color3.fromRGB(94, 150, 255), Text = Color3.fromRGB(234, 241, 255), SubText = Color3.fromRGB(145, 164, 198), Stroke = Color3.fromRGB(48, 65, 95) },
         Mint = { MainBg = Color3.fromRGB(14, 26, 24), SecBg = Color3.fromRGB(20, 35, 33), TerBg = Color3.fromRGB(25, 43, 40), QuarBg = Color3.fromRGB(34, 57, 53), Hover = Color3.fromRGB(43, 71, 67), Accent = Color3.fromRGB(59, 216, 170), Text = Color3.fromRGB(226, 255, 246), SubText = Color3.fromRGB(148, 196, 180), Stroke = Color3.fromRGB(57, 88, 80) },
-        Rose = { MainBg = Color3.fromRGB(30, 16, 20), SecBg = Color3.fromRGB(39, 21, 26), TerBg = Color3.fromRGB(47, 25, 32), QuarBg = Color3.fromRGB(61, 33, 42), Hover = Color3.fromRGB(75, 43, 54), Accent = Color3.fromRGB(255, 103, 148), Text = Color3.fromRGB(255, 235, 242), SubText = Color3.fromRGB(201, 151, 169), Stroke = Color3.fromRGB(94, 56, 70) }
+        Rose = { MainBg = Color3.fromRGB(30, 16, 20), SecBg = Color3.fromRGB(39, 21, 26), TerBg = Color3.fromRGB(47, 25, 32), QuarBg = Color3.fromRGB(61, 33, 42), Hover = Color3.fromRGB(75, 43, 54), Accent = Color3.fromRGB(255, 103, 148), Text = Color3.fromRGB(255, 235, 242), SubText = Color3.fromRGB(201, 151, 169), Stroke = Color3.fromRGB(94, 56, 70) },
+        Ocean = { MainBg = Color3.fromRGB(9, 20, 31), SecBg = Color3.fromRGB(13, 29, 44), TerBg = Color3.fromRGB(18, 38, 56), QuarBg = Color3.fromRGB(26, 52, 74), Hover = Color3.fromRGB(34, 67, 95), Accent = Color3.fromRGB(64, 188, 255), Text = Color3.fromRGB(231, 245, 255), SubText = Color3.fromRGB(145, 178, 201), Stroke = Color3.fromRGB(47, 81, 109) },
+        Forest = { MainBg = Color3.fromRGB(15, 21, 14), SecBg = Color3.fromRGB(22, 31, 20), TerBg = Color3.fromRGB(28, 40, 26), QuarBg = Color3.fromRGB(38, 53, 35), Hover = Color3.fromRGB(48, 68, 45), Accent = Color3.fromRGB(124, 204, 96), Text = Color3.fromRGB(238, 248, 232), SubText = Color3.fromRGB(163, 191, 156), Stroke = Color3.fromRGB(61, 84, 57) },
+        Ember = { MainBg = Color3.fromRGB(24, 12, 9), SecBg = Color3.fromRGB(33, 17, 13), TerBg = Color3.fromRGB(42, 22, 17), QuarBg = Color3.fromRGB(56, 30, 23), Hover = Color3.fromRGB(72, 38, 28), Accent = Color3.fromRGB(255, 124, 64), Text = Color3.fromRGB(255, 238, 226), SubText = Color3.fromRGB(207, 164, 141), Stroke = Color3.fromRGB(91, 53, 40) }
     }
 
     local FontMap = {
         Gotham = { Regular = Enum.Font.Gotham, Bold = Enum.Font.GothamBold, Black = Enum.Font.GothamBlack },
         Ubuntu = { Regular = Enum.Font.Ubuntu, Bold = Enum.Font.Ubuntu, Black = Enum.Font.Ubuntu },
         Code = { Regular = Enum.Font.Code, Bold = Enum.Font.Code, Black = Enum.Font.Code },
-        Jura = { Regular = Enum.Font.Jura, Bold = Enum.Font.Jura, Black = Enum.Font.Jura }
+        Jura = { Regular = Enum.Font.Jura, Bold = Enum.Font.Jura, Black = Enum.Font.Jura },
+        SciFi = { Regular = Enum.Font.SciFi, Bold = Enum.Font.SciFi, Black = Enum.Font.SciFi },
+        Arcade = { Regular = Enum.Font.Arcade, Bold = Enum.Font.Arcade, Black = Enum.Font.Arcade },
+        Highway = { Regular = Enum.Font.Highway, Bold = Enum.Font.Highway, Black = Enum.Font.Highway },
+        Garamond = { Regular = Enum.Font.Garamond, Bold = Enum.Font.Garamond, Black = Enum.Font.Garamond },
+        Fantasy = { Regular = Enum.Font.Fantasy, Bold = Enum.Font.Fantasy, Black = Enum.Font.Fantasy },
+        Bodoni = { Regular = Enum.Font.Bodoni, Bold = Enum.Font.Bodoni, Black = Enum.Font.Bodoni },
+        SourceSans = { Regular = Enum.Font.SourceSans, Bold = Enum.Font.SourceSansBold, Black = Enum.Font.SourceSansBold }
     }
+
+    local ToggleStyleSet = { Switch = true, Checkbox = true, Pill = true, Dot = true }
+    local CornerStyleSet = { Rounded = true, Slight = true, Blocky = true, Glow = true }
+    local SliderStyleSet = { Line = true, Pill = true, Block = true }
+    local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
 
     local PersistConfig = {
         SchemaVersion = 2,
@@ -230,11 +247,17 @@ local UILibrary = (function()
         if Themes[savedOptions.Theme] then
             Options.Theme = savedOptions.Theme
         end
-        if savedOptions.ToggleStyle == "Switch" or savedOptions.ToggleStyle == "Checkbox" then
+        if ToggleStyleSet[savedOptions.ToggleStyle] then
             Options.ToggleStyle = savedOptions.ToggleStyle
         end
-        if savedOptions.CornerStyle == "Rounded" or savedOptions.CornerStyle == "Slight" or savedOptions.CornerStyle == "Blocky" then
+        if CornerStyleSet[savedOptions.CornerStyle] then
             Options.CornerStyle = savedOptions.CornerStyle
+        end
+        if SliderStyleSet[savedOptions.SliderStyle] then
+            Options.SliderStyle = savedOptions.SliderStyle
+        end
+        if ComboStyleSet[savedOptions.ComboStyle] then
+            Options.ComboStyle = savedOptions.ComboStyle
         end
         if FontMap[savedOptions.Font] then
             Options.Font = savedOptions.Font
@@ -259,6 +282,8 @@ local UILibrary = (function()
             Theme = Options.Theme,
             ToggleStyle = Options.ToggleStyle,
             CornerStyle = Options.CornerStyle,
+            SliderStyle = Options.SliderStyle,
+            ComboStyle = Options.ComboStyle,
             Font = Options.Font,
             MenuStyle = Options.MenuStyle
         }
@@ -348,6 +373,8 @@ local UILibrary = (function()
         Font = {},
         Corner = {},
         Toggle = {},
+        Slider = {},
+        Combo = {},
         MenuLayout = {},
         Tooltips = {},
         Favorites = {},
@@ -402,7 +429,35 @@ local UILibrary = (function()
                 element[prop] = Themes[Options.Theme][role]
             end
         end
+        if class == "UIStroke" and Options.CornerStyle == "Glow" and themeData and themeData.Color == "Stroke" then
+            element.Thickness = 1.8
+            element.Color = Themes[Options.Theme].Accent
+            element.Transparency = 0.12
+        end
         return element
+    end
+
+    local function ApplyCornerStyleVisuals(themeUpdate)
+        local styleName = Options.CornerStyle
+        local colors = Themes[Options.Theme]
+        for _, item in ipairs(Registries.Theme) do
+            if item.Instance and item.Instance.Parent and item.Instance:IsA("UIStroke") and item.Property == "Color" and item.Role == "Stroke" then
+                local targetThickness = styleName == "Glow" and 1.8 or 1
+                local targetColor = styleName == "Glow" and colors.Accent or colors.Stroke
+                local targetTransparency = styleName == "Glow" and 0.12 or 0
+                if themeUpdate then
+                    item.Instance.Thickness = targetThickness
+                    item.Instance.Color = targetColor
+                    item.Instance.Transparency = targetTransparency
+                else
+                    PlayTween(item.Instance, TweenInfo.new(0.25), {
+                        Thickness = targetThickness,
+                        Color = targetColor,
+                        Transparency = targetTransparency
+                    }):Play()
+                end
+            end
+        end
     end
 
     local function UpdateTheme(themeName)
@@ -412,12 +467,20 @@ local UILibrary = (function()
         for _, item in ipairs(Registries.Theme) do
             if item.Instance and item.Instance.Parent then PlayTween(item.Instance, TweenInfo.new(0.3), {[item.Property] = themeColors[item.Role]}):Play() end
         end
+        ApplyCornerStyleVisuals(true)
         for _, syncFunc in ipairs(Registries.Toggle) do syncFunc(true) end
+        for _, syncFunc in ipairs(Registries.Slider) do syncFunc(true) end
+        for _, syncFunc in ipairs(Registries.Combo) do syncFunc(true) end
         for _, syncFunc in ipairs(Registries.MenuLayout) do syncFunc(Options.MenuStyle) end
         SaveLibraryOptions()
     end
 
-    local function UpdateToggleStyles(styleName) Options.ToggleStyle = styleName; for _, syncFunc in ipairs(Registries.Toggle) do syncFunc() end SaveLibraryOptions() end
+    local function UpdateToggleStyles(styleName)
+        if not ToggleStyleSet[styleName] then return end
+        Options.ToggleStyle = styleName
+        for _, syncFunc in ipairs(Registries.Toggle) do syncFunc() end
+        SaveLibraryOptions()
+    end
     local function UpdateMenuStyle(styleName)
         if styleName == "Topbar" then
             styleName = "TopBar"
@@ -440,15 +503,35 @@ local UILibrary = (function()
     end
 
     local function UpdateCornerStyle(styleName)
+        if not CornerStyleSet[styleName] then return end
         Options.CornerStyle = styleName; CleanRegistries()
         for _, item in ipairs(Registries.Corner) do
             if item.Instance and item.Instance.Parent then
                 local newRadius = item.Original
                 if styleName == "Blocky" then newRadius = UDim.new(0, 0)
-                elseif styleName == "Slight" then if item.Original.Scale ~= 1 then newRadius = UDim.new(0, math.floor(item.Original.Offset / 2)) end end
+                elseif styleName == "Slight" then
+                    if item.Original.Scale ~= 1 then newRadius = UDim.new(0, math.floor(item.Original.Offset / 2)) end
+                elseif styleName == "Glow" then
+                    if item.Original.Scale ~= 1 then newRadius = UDim.new(0, math.max(6, item.Original.Offset)) end
+                end
                 PlayTween(item.Instance, TweenInfo.new(0.3), {CornerRadius = newRadius}):Play()
             end
         end
+        ApplyCornerStyleVisuals(false)
+        SaveLibraryOptions()
+    end
+
+    local function UpdateSliderStyle(styleName)
+        if not SliderStyleSet[styleName] then return end
+        Options.SliderStyle = styleName
+        for _, syncFunc in ipairs(Registries.Slider) do syncFunc() end
+        SaveLibraryOptions()
+    end
+
+    local function UpdateComboStyle(styleName)
+        if not ComboStyleSet[styleName] then return end
+        Options.ComboStyle = styleName
+        for _, syncFunc in ipairs(Registries.Combo) do syncFunc() end
         SaveLibraryOptions()
     end
 
@@ -1090,29 +1173,59 @@ local UILibrary = (function()
             local dropdownFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true }, {BackgroundColor3 = "TerBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = dropdownFrame})
             CreateElement("UIStroke", {Thickness = 1, Parent = dropdownFrame}, {Color = "Stroke"})
-            CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+            local titleLabel = CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
 
             local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -15, 0, 8), Size = UDim2.new(0, 120, 0, 28), Font = Enum.Font.GothamBold, Text = default or options[1] or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
             
             local isOpen = false; local optionContainer
+            local headerHeight, rowHeight = 45, 30
+            local function resolveComboMetrics()
+                if Options.ComboStyle == "Compact" then
+                    return 40, 26, 108, 24
+                elseif Options.ComboStyle == "Soft" then
+                    return 48, 32, 130, 32
+                end
+                return 45, 30, 120, 28
+            end
+            local function applyComboStyle(themeUpdate)
+                local _, _, btnW, btnH = resolveComboMetrics()
+                headerHeight, rowHeight = resolveComboMetrics()
+                dropdownFrame.Size = UDim2.new(1, 0, 0, isOpen and (headerHeight + (#options * rowHeight) + 10) or headerHeight)
+                titleLabel.Size = UDim2.new(0.5, 0, 0, headerHeight)
+                dropdownButton.Position = UDim2.new(1, -15, 0, math.floor((headerHeight - btnH) / 2))
+                dropdownButton.Size = UDim2.new(0, btnW, 0, btnH)
+                if optionContainer then
+                    optionContainer.Position = UDim2.new(0, 0, 0, headerHeight)
+                    optionContainer.Size = UDim2.new(1, 0, 0, #options * rowHeight)
+                    for i, child in ipairs(optionContainer:GetChildren()) do
+                        if child:IsA("TextButton") then
+                            child.Position = UDim2.new(0, 10, 0, (i - 1) * rowHeight)
+                            child.Size = UDim2.new(1, -20, 0, rowHeight - 2)
+                        end
+                    end
+                end
+            end
+            table.insert(Registries.Combo, applyComboStyle)
+
             dropdownButton.MouseButton1Click:Connect(function()
                 isOpen = not isOpen
                 if isOpen then
                     if optionContainer then optionContainer:Destroy() end
-                    optionContainer = CreateElement("Frame", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 0, #options * 30) })
+                    optionContainer = CreateElement("Frame", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, headerHeight), Size = UDim2.new(1, 0, 0, #options * rowHeight) })
                     for i, opt in ipairs(options) do
-                        local optBtn = CreateElement("TextButton", { Parent = optionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*30), Size = UDim2.new(1, -20, 0, 28), Font = Enum.Font.Gotham, Text = opt, TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+                        local optBtn = CreateElement("TextButton", { Parent = optionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*rowHeight), Size = UDim2.new(1, -20, 0, rowHeight - 2), Font = Enum.Font.Gotham, Text = opt, TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
                         CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
                         optBtn.MouseEnter:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
                         optBtn.MouseLeave:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg}):Play() end)
-                        optBtn.MouseButton1Click:Connect(function() dropdownButton.Text = opt; isOpen = false; PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end); pcall(callback, opt) end)
+                        optBtn.MouseButton1Click:Connect(function() dropdownButton.Text = opt; isOpen = false; PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end); pcall(callback, opt) end)
                     end
-                    PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45 + (#options * 30) + 10)}):Play()
+                    PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight + (#options * rowHeight) + 10)}):Play()
                 else
-                    PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                    PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
                 end
             end)
+            applyComboStyle(true)
         end
 
         -- // Initialize Global Settings Options //
@@ -1125,9 +1238,11 @@ local UILibrary = (function()
         table.sort(ThemeOptions)
         CreateSettingsDropdown("Menu Style", {"Sidebar", "TopBar", "Dropdown", "Tablet"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
         CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
-        CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
-        CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
-        CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura"}, Options.Font, function(val) UpdateFont(val) end)
+        CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox", "Pill", "Dot"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
+        CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky", "Glow"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
+        CreateSettingsDropdown("Slider Style", {"Line", "Pill", "Block"}, Options.SliderStyle, function(val) UpdateSliderStyle(val) end)
+        CreateSettingsDropdown("Combo Style", {"Classic", "Compact", "Soft"}, Options.ComboStyle, function(val) UpdateComboStyle(val) end)
+        CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura", "SciFi", "Arcade", "Highway", "Garamond", "Fantasy", "Bodoni", "SourceSans"}, Options.Font, function(val) UpdateFont(val) end)
 
         CreateSettingsSection("General")
         CreateSettingsGroup("Runtime", true)
@@ -1148,18 +1263,38 @@ local UILibrary = (function()
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = checkBg})
             local checkInner = CreateElement("Frame", { Parent = checkBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 3), Parent = checkInner})
+            local dotBg = CreateElement("Frame", { Parent = toggleContainer, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0, 22, 0, 22), Visible = false }, {BackgroundColor3 = "QuarBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = dotBg})
+            local dotInner = CreateElement("Frame", { Parent = dotBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = dotInner})
             
             local toggled = false
             local function syncVisuals(themeUpdate)
                 local duration = themeUpdate and 0 or 0.2
-                if Options.ToggleStyle == "Switch" then
-                    switchBg.Visible = true; checkBg.Visible = false
+                if Options.ToggleStyle == "Switch" or Options.ToggleStyle == "Pill" then
+                    switchBg.Visible = true; checkBg.Visible = false; dotBg.Visible = false
+                    if Options.ToggleStyle == "Pill" then
+                        toggleContainer.Size = UDim2.new(0, 50, 0, 24)
+                        switchCircle.Size = UDim2.new(0, 20, 0, 20)
+                    else
+                        toggleContainer.Size = UDim2.new(0, 44, 0, 22)
+                        switchCircle.Size = UDim2.new(0, 18, 0, 18)
+                    end
                     PlayTween(switchBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
-                    PlayTween(switchCircle, TweenInfo.new(duration), {Position = toggled and UDim2.new(1, -20, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = toggled and Themes[Options.Theme].Text or Themes[Options.Theme].SubText}):Play()
-                else
-                    switchBg.Visible = false; checkBg.Visible = true
+                    PlayTween(switchCircle, TweenInfo.new(duration), {
+                        Position = toggled and UDim2.new(1, -(switchCircle.Size.X.Offset + 2), 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
+                        BackgroundColor3 = toggled and Themes[Options.Theme].Text or Themes[Options.Theme].SubText
+                    }):Play()
+                elseif Options.ToggleStyle == "Checkbox" then
+                    switchBg.Visible = false; checkBg.Visible = true; dotBg.Visible = false
+                    toggleContainer.Size = UDim2.new(0, 44, 0, 22)
                     PlayTween(checkBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
                     PlayTween(checkInner, TweenInfo.new(duration), {Size = toggled and UDim2.new(1, -6, 1, -6) or UDim2.new(0, 0, 0, 0)}):Play()
+                else
+                    switchBg.Visible = false; checkBg.Visible = false; dotBg.Visible = true
+                    toggleContainer.Size = UDim2.new(0, 44, 0, 22)
+                    PlayTween(dotBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
+                    PlayTween(dotInner, TweenInfo.new(duration), {Size = toggled and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 0, 0, 0)}):Play()
                 end
                 if not themeUpdate then PlayTween(stroke, TweenInfo.new(duration), {Color = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].Stroke}):Play() else stroke.Color = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].Stroke end
             end
@@ -1499,20 +1634,37 @@ local UILibrary = (function()
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = checkBg})
                 local checkInner = CreateElement("Frame", { Parent = checkBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 3), Parent = checkInner})
+                local dotBg = CreateElement("Frame", { Parent = toggleButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Visible = false }, {BackgroundColor3 = "QuarBg"})
+                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = dotBg})
+                local dotIndicator = CreateElement("Frame", { Parent = dotBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
+                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = dotIndicator})
 
                 local fallbackState = (type(defaultState) == "boolean") and defaultState or false
                 local loadedState, toggleStore = ResolvePersistedValue(saveKey, fallbackState)
                 local toggled = (type(loadedState) == "boolean") and loadedState or fallbackState
                 local function syncVisuals(themeUpdate)
                     local duration = themeUpdate and 0 or 0.2
-                    if Options.ToggleStyle == "Switch" then
-                        switchBg.Visible = true; checkBg.Visible = false
+                    if Options.ToggleStyle == "Switch" or Options.ToggleStyle == "Pill" then
+                        switchBg.Visible = true; checkBg.Visible = false; dotBg.Visible = false
+                        if Options.ToggleStyle == "Pill" then
+                            toggleButton.Size = UDim2.new(0, 46, 0, 22)
+                            switchIndicator.Size = UDim2.new(0, 18, 0, 18)
+                        else
+                            toggleButton.Size = UDim2.new(0, 40, 0, 20)
+                            switchIndicator.Size = UDim2.new(0, 16, 0, 16)
+                        end
                         PlayTween(switchBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
-                        PlayTween(switchIndicator, TweenInfo.new(duration), {Position = toggled and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = toggled and Themes[Options.Theme].Text or Themes[Options.Theme].SubText}):Play()
-                    else
-                        switchBg.Visible = false; checkBg.Visible = true
+                        PlayTween(switchIndicator, TweenInfo.new(duration), {Position = toggled and UDim2.new(1, -(switchIndicator.Size.X.Offset + 2), 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = toggled and Themes[Options.Theme].Text or Themes[Options.Theme].SubText}):Play()
+                    elseif Options.ToggleStyle == "Checkbox" then
+                        switchBg.Visible = false; checkBg.Visible = true; dotBg.Visible = false
+                        toggleButton.Size = UDim2.new(0, 40, 0, 20)
                         PlayTween(checkBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
                         PlayTween(checkInner, TweenInfo.new(duration), {Size = toggled and UDim2.new(1, -6, 1, -6) or UDim2.new(0, 0, 0, 0)}):Play()
+                    else
+                        switchBg.Visible = false; checkBg.Visible = false; dotBg.Visible = true
+                        toggleButton.Size = UDim2.new(0, 40, 0, 20)
+                        PlayTween(dotBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
+                        PlayTween(dotIndicator, TweenInfo.new(duration), {Size = toggled and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 0, 0, 0)}):Play()
                     end
                 end
 
@@ -1606,17 +1758,51 @@ local UILibrary = (function()
                 CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 5), Size = UDim2.new(0.5, 0, 0.4, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
                 local valueLabel = CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 5), Size = UDim2.new(0.5, -10, 0.4, 0), Font = Enum.Font.Gotham, Text = tostring(currentValue), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right }, {TextColor3 = "SubText"})
                 local sliderBar = CreateElement("TextButton", { Parent = sliderFrame, BorderSizePixel = 0, Position = UDim2.new(0.025, 0, 0.65, 0), Size = UDim2.new(0.95, 0, 0.15, 0), Text = "" }, {BackgroundColor3 = "QuarBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderBar})
+                local sliderBarCorner = CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderBar})
 
                 local initialRatio = (max == min) and 0 or ((currentValue - min) / (max - min))
                 local fill = CreateElement("Frame", { Parent = sliderBar, BorderSizePixel = 0, Size = UDim2.new(initialRatio, 0, 1, 0) }, {BackgroundColor3 = "Accent"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = fill})
+                local fillCorner = CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = fill})
+                local knob = CreateElement("Frame", { Parent = sliderBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(initialRatio, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0), Visible = false }, {BackgroundColor3 = "Text"})
+                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = knob})
+
+                local function applySliderStyle(themeUpdate)
+                    local duration = themeUpdate and 0 or 0.2
+                    local styleName = Options.SliderStyle
+                    if styleName == "Pill" then
+                        sliderBar.Position = UDim2.new(0.025, 0, 0.62, 0)
+                        sliderBar.Size = UDim2.new(0.95, 0, 0.22, 0)
+                        sliderBarCorner.CornerRadius = UDim.new(1, 0)
+                        fillCorner.CornerRadius = UDim.new(1, 0)
+                        knob.Visible = true
+                        PlayTween(knob, TweenInfo.new(duration), {Size = UDim2.new(0, 14, 0, 14), BackgroundColor3 = Themes[Options.Theme].Text}):Play()
+                    elseif styleName == "Block" then
+                        sliderBar.Position = UDim2.new(0.025, 0, 0.62, 0)
+                        sliderBar.Size = UDim2.new(0.95, 0, 0.20, 0)
+                        sliderBarCorner.CornerRadius = UDim.new(0, 4)
+                        fillCorner.CornerRadius = UDim.new(0, 4)
+                        knob.Visible = true
+                        PlayTween(knob, TweenInfo.new(duration), {Size = UDim2.new(0, 12, 0, 12), BackgroundColor3 = Themes[Options.Theme].Accent}):Play()
+                    else
+                        sliderBar.Position = UDim2.new(0.025, 0, 0.65, 0)
+                        sliderBar.Size = UDim2.new(0.95, 0, 0.15, 0)
+                        sliderBarCorner.CornerRadius = UDim.new(1, 0)
+                        fillCorner.CornerRadius = UDim.new(1, 0)
+                        PlayTween(knob, TweenInfo.new(duration), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+                        task.delay(duration, function()
+                            if Options.SliderStyle == "Line" and knob.Parent then
+                                knob.Visible = false
+                            end
+                        end)
+                    end
+                end
                 
                 local isDragging = false
                 local function applySliderValue(value, skipCallback)
                     local clamped = math.clamp(math.floor((tonumber(value) or min) + 0.5), min, max)
                     local ratio = (max == min) and 0 or ((clamped - min) / (max - min))
                     fill.Size = UDim2.new(ratio, 0, 1, 0)
+                    knob.Position = UDim2.new(ratio, 0, 0.5, 0)
                     valueLabel.Text = tostring(clamped)
                     currentValue = clamped
                     if sliderStore then
@@ -1642,6 +1828,8 @@ local UILibrary = (function()
                     end
                 end)
                 UserInputService.InputChanged:Connect(function(input) if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then updateSlider(input.Position) end end)
+                table.insert(Registries.Slider, applySliderStyle)
+                applySliderStyle(true)
                 if sliderStore then
                     applySliderValue(currentValue, false)
                 end
@@ -1719,7 +1907,7 @@ local UILibrary = (function()
                 local dropdownFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownFrame})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = dropdownFrame}, {Color = "Stroke"})
-                CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+                local titleLabel = CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
 
                 local fallbackValue = default or options[1]
                 local loadedValue, dropdownStore = ResolvePersistedValue(saveKey, fallbackValue)
@@ -1738,6 +1926,15 @@ local UILibrary = (function()
                 local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 120, 0, 30), Font = Enum.Font.GothamBold, Text = currentValue or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = dropdownButton}, {Color = "Stroke"})
+                local headerHeight, rowHeight = 45, 30
+                local function resolveComboMetrics()
+                    if Options.ComboStyle == "Compact" then
+                        return 40, 26, 110, 24
+                    elseif Options.ComboStyle == "Soft" then
+                        return 48, 32, 132, 32
+                    end
+                    return 45, 30, 120, 30
+                end
                 
                 local function setDropdownValue(value, skipCallback)
                     currentValue = value
@@ -1751,28 +1948,50 @@ local UILibrary = (function()
                 end
 
                 local isOpen = false; local optionContainer
+                local function applyComboStyle(themeUpdate)
+                    local _, _, btnW, btnH = resolveComboMetrics()
+                    headerHeight, rowHeight = resolveComboMetrics()
+                    dropdownFrame.Size = UDim2.new(1, 0, 0, isOpen and (headerHeight + (#options * rowHeight) + 10) or headerHeight)
+                    titleLabel.Size = UDim2.new(0.5, 0, 0, headerHeight)
+                    dropdownButton.Position = UDim2.new(1, -10, 0, math.floor((headerHeight - btnH) / 2))
+                    dropdownButton.Size = UDim2.new(0, btnW, 0, btnH)
+                    dropdownButton.AnchorPoint = Vector2.new(1, 0)
+                    if optionContainer then
+                        optionContainer.Position = UDim2.new(0, 0, 0, headerHeight)
+                        optionContainer.Size = UDim2.new(1, 0, 0, #options * rowHeight)
+                        for i, child in ipairs(optionContainer:GetChildren()) do
+                            if child:IsA("TextButton") then
+                                child.Position = UDim2.new(0, 10, 0, (i - 1) * rowHeight)
+                                child.Size = UDim2.new(1, -20, 0, rowHeight - 2)
+                            end
+                        end
+                    end
+                end
+                table.insert(Registries.Combo, applyComboStyle)
+
                 dropdownButton.MouseButton1Click:Connect(function()
                     isOpen = not isOpen
                     if isOpen then
                         if optionContainer then optionContainer:Destroy() end
-                        optionContainer = CreateElement("Frame", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 45), Size = UDim2.new(1, 0, 0, #options * 30) })
+                        optionContainer = CreateElement("Frame", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, headerHeight), Size = UDim2.new(1, 0, 0, #options * rowHeight) })
                         for i, opt in ipairs(options) do
-                            local optBtn = CreateElement("TextButton", { Parent = optionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*30), Size = UDim2.new(1, -20, 0, 28), Font = Enum.Font.Gotham, Text = opt, TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "TerBg", TextColor3 = "SubText"})
+                            local optBtn = CreateElement("TextButton", { Parent = optionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*rowHeight), Size = UDim2.new(1, -20, 0, rowHeight - 2), Font = Enum.Font.Gotham, Text = opt, TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "TerBg", TextColor3 = "SubText"})
                             CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
                             optBtn.MouseEnter:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
                             optBtn.MouseLeave:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play() end)
                             optBtn.MouseButton1Click:Connect(function()
                                 setDropdownValue(opt, false)
                                 isOpen = false
-                                PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+                                PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight)}):Play()
                                 task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
                             end)
                         end
-                        PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45 + (#options * 30) + 10)}):Play()
+                        PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight + (#options * rowHeight) + 10)}):Play()
                     else
-                        PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                        PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
                     end
                 end)
+                applyComboStyle(true)
                 if dropdownStore and currentValue ~= nil then
                     setDropdownValue(currentValue, false)
                 end
@@ -1826,6 +2045,7 @@ local UILibrary = (function()
         
         -- Initialize the correct layout immediately on startup
         for _, func in ipairs(Registries.MenuLayout) do func(Options.MenuStyle) end
+        ApplyCornerStyleVisuals(true)
         SaveLibraryOptions()
         
         return window
