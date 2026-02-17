@@ -424,12 +424,37 @@ local UILibrary = (function()
     -- // TOOLTIPS // --
     local TooltipGui = Instance.new("ScreenGui",game.CoreGui)
     TooltipGui.Name = "UILibTooltips"
+    TooltipGui.IgnoreGuiInset = true
+    TooltipGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    TooltipGui.DisplayOrder = 10000
 
     local TooltipLabel = Instance.new("TextLabel",TooltipGui)
     TooltipLabel.Visible = false
     TooltipLabel.BackgroundColor3 = Color3.fromRGB(20,20,20)
     TooltipLabel.TextColor3 = Color3.new(1,1,1)
-    TooltipLabel.Size = UDim2.new(0,200,0,30)
+    TooltipLabel.Size = UDim2.new(0,220,0,30)
+    TooltipLabel.ZIndex = 10001
+    TooltipLabel.BorderSizePixel = 0
+    TooltipLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TooltipLabel.Font = Enum.Font.Gotham
+    TooltipLabel.TextSize = 12
+    local TooltipPadding = Instance.new("UIPadding", TooltipLabel)
+    TooltipPadding.PaddingLeft = UDim.new(0, 8)
+    TooltipPadding.PaddingRight = UDim.new(0, 8)
+    local TooltipCorner = Instance.new("UICorner", TooltipLabel)
+    TooltipCorner.CornerRadius = UDim.new(0, 6)
+    local TooltipStroke = Instance.new("UIStroke", TooltipLabel)
+    TooltipStroke.Thickness = 1
+    TooltipStroke.Color = Color3.fromRGB(55, 55, 55)
+
+    local TooltipInputConnection = nil
+    if not TooltipInputConnection then
+        TooltipInputConnection = UserInputService.InputChanged:Connect(function(input)
+            if TooltipLabel.Visible and input.UserInputType == Enum.UserInputType.MouseMovement then
+                TooltipLabel.Position = UDim2.fromOffset(input.Position.X + 14, input.Position.Y + 14)
+            end
+        end)
+    end
 
     function UILibrary:AddTooltip(instance,text)
         instance.MouseEnter:Connect(function()
@@ -439,12 +464,6 @@ local UILibrary = (function()
 
         instance.MouseLeave:Connect(function()
             TooltipLabel.Visible = false
-        end)
-
-        UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then
-                TooltipLabel.Position = UDim2.fromOffset(input.Position.X+12,input.Position.Y+12)
-            end
         end)
     end
 
@@ -464,6 +483,24 @@ local UILibrary = (function()
         local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 680, 0, 500), ClipsDescendants = true, Visible = true }, {BackgroundColor3 = "MainBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = MainFrame})
         CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = MainFrame}, {Color = "Stroke"})
+        local expandedWidth, expandedHeight = 680, 500
+        local function ComputeWindowSize()
+            local camera = workspace.CurrentCamera
+            local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+            local width = math.clamp(math.floor(viewport.X * 0.62), 620, 980)
+            local height = math.clamp(math.floor(viewport.Y * 0.74), 460, 760)
+            return width, height
+        end
+        local function UpdateWindowSize(animate)
+            expandedWidth, expandedHeight = ComputeWindowSize()
+            local targetSize = Minimized and UDim2.new(0, expandedWidth, 0, 48) or UDim2.new(0, expandedWidth, 0, expandedHeight)
+            if animate then
+                PlayTween(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+            else
+                MainFrame.Size = targetSize
+            end
+        end
+        UpdateWindowSize(false)
         
         local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 48) }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TopBar})
@@ -535,12 +572,12 @@ local UILibrary = (function()
 
 
 
-        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BackgroundColor3 = Color3.fromRGB(200, 50, 50), BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 14 }, {TextColor3 = "Text"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CloseButton})
-        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BackgroundColor3 = Color3.fromRGB(200, 150, 50), BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -40, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "-", TextSize = 14 }, {TextColor3 = "Text"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = MinimizeButton})
-        local CollapseKeybindButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -70, 0.5, 0), Size = UDim2.new(0, 30, 0, 24), Font = Enum.Font.GothamBold, Text = "Ins", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CollapseKeybindButton})
+        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "X", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = CloseButton})
+        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -44, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "-", TextSize = 14 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = MinimizeButton})
+        local CollapseKeybindButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -78, 0.5, 0), Size = UDim2.new(0, 36, 0, 26), Font = Enum.Font.GothamBold, Text = "INS", TextSize = 10 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = CollapseKeybindButton})
         local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -120, 0.5, 0), Size = UDim2.new(0, 36, 0, 26), Font = Enum.Font.GothamBold, Text = "CFG", TextSize = 10 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = SettingsButton})
 
@@ -565,7 +602,7 @@ local UILibrary = (function()
         CreateElement("UIStroke", {Thickness = 1, Parent = NavDropdownFrame}, {Color = "Stroke"})
 
         local NavDropdownBtn = CreateElement("TextButton", { Parent = NavDropdownFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 35), Font = Enum.Font.GothamBold, Text = "Select Tab", TextSize = 14, ZIndex = 11 }, {TextColor3 = "Text"})
-        local NavDropdownIcon = CreateElement("TextLabel", { Parent = NavDropdownBtn, BackgroundTransparency = 1, Position = UDim2.new(1, -25, 0, 0), Size = UDim2.new(0, 20, 1, 0), Font = Enum.Font.GothamBold, Text = "▼", TextSize = 12, ZIndex = 11 }, {TextColor3 = "SubText"})
+        local NavDropdownIcon = CreateElement("TextLabel", { Parent = NavDropdownBtn, BackgroundTransparency = 1, Position = UDim2.new(1, -25, 0, 0), Size = UDim2.new(0, 20, 1, 0), Font = Enum.Font.GothamBold, Text = "v", TextSize = 12, ZIndex = 11 }, {TextColor3 = "SubText"})
 
         local NavIsOpen = false
         local NavOptionContainer = nil
@@ -585,15 +622,15 @@ local UILibrary = (function()
                     optBtn.MouseButton1Click:Connect(function()
                         window:SwitchToTab(tab)
                         NavIsOpen = false
-                        PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -20, 0, 35)}):Play()
+                        PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35)}):Play()
                         PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 0}):Play()
                         task.delay(0.2, function() if NavOptionContainer then NavOptionContainer:Destroy() end end)
                     end)
                 end
-                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -20, 0, 35 + (#tabs * 30) + 10)}):Play()
+                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35 + (#tabs * 30) + 10)}):Play()
                 PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 180}):Play()
             else
-                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -20, 0, 35)}):Play()
+                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35)}):Play()
                 PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 0}):Play()
                 task.delay(0.2, function() if NavOptionContainer then NavOptionContainer:Destroy() end end)
             end
@@ -610,7 +647,7 @@ local UILibrary = (function()
             end
             if NavIsOpen then -- Auto-collapse dropdown if open during style switch
                 NavIsOpen = false
-                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -20, 0, 35)}):Play()
+                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35)}):Play()
                 PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 0}):Play()
                 if NavOptionContainer then NavOptionContainer:Destroy() end
             end
@@ -956,6 +993,12 @@ local UILibrary = (function()
         end)
         CloseButton.MouseEnter:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Accent, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         CloseButton.MouseLeave:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
+        MinimizeButton.MouseEnter:Connect(function() PlayTween(MinimizeButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
+        MinimizeButton.MouseLeave:Connect(function() PlayTween(MinimizeButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
+        SettingsButton.MouseEnter:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
+        SettingsButton.MouseLeave:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
+        CollapseKeybindButton.MouseEnter:Connect(function() PlayTween(CollapseKeybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
+        CollapseKeybindButton.MouseLeave:Connect(function() PlayTween(CollapseKeybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         
         local toggleConnection
         CloseButton.MouseButton1Click:Connect(function()
@@ -978,14 +1021,17 @@ local UILibrary = (function()
                 elseif Options.MenuStyle == "Dropdown" then NavDropdownFrame.Visible = true end
             end
             
-            PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = Minimized and UDim2.new(0, 680, 0, 48) or UDim2.new(0, 680, 0, 500)}):Play()
+            UpdateWindowSize(true)
         end
         MinimizeButton.MouseButton1Click:Connect(MinimizeUI)
 
         local UIVisible = true
         local function ToggleUI()
             UIVisible = not UIVisible
-            if UIVisible then MainFrame.Visible = true; PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 680, 0, 500)}):Play()
+            if UIVisible then
+                MainFrame.Visible = true
+                UpdateWindowSize(false)
+                PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = Minimized and UDim2.new(0, expandedWidth, 0, 48) or UDim2.new(0, expandedWidth, 0, expandedHeight)}):Play()
             else PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play(); task.delay(0.3, function() if not UIVisible then MainFrame.Visible = false end end) end
         end
 
@@ -1007,6 +1053,30 @@ local UILibrary = (function()
             if not gameProcessed and input.KeyCode == collapseKey then ToggleUI() end
         end)
         table.insert(window.connections, toggleConnection)
+        local cameraViewportConnection = nil
+        local function BindViewportListener()
+            if cameraViewportConnection then
+                cameraViewportConnection:Disconnect()
+                cameraViewportConnection = nil
+            end
+            local camera = workspace.CurrentCamera
+            if camera then
+                cameraViewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+                    if UIVisible then
+                        UpdateWindowSize(false)
+                    end
+                end)
+                table.insert(window.connections, cameraViewportConnection)
+            end
+        end
+        BindViewportListener()
+        local cameraSwapConnection = workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+            BindViewportListener()
+            if UIVisible then
+                UpdateWindowSize(false)
+            end
+        end)
+        table.insert(window.connections, cameraSwapConnection)
 
         function window:SwitchToTab(tabToSelect)
             CurrentTab = tabToSelect
