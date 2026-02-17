@@ -912,6 +912,14 @@ local UILibrary = (function()
             tabButton.MouseButton1Click:Connect(function() window:SwitchToTab(tab) end)
             if #tabs == 1 then window:SwitchToTab(tab) end
 
+            local function ResolvePersistedValue(saveKey, defaultValue)
+                if type(saveKey) ~= "string" or saveKey == "" then
+                    return defaultValue, nil
+                end
+                local store = UILibrary:RegisterValue(saveKey, defaultValue)
+                return store:Get(), store
+            end
+
             function tab:CreateButton(text, callback)
                 local button = CreateElement("TextButton", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 35), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = button})
@@ -924,7 +932,7 @@ local UILibrary = (function()
                 return button
             end
 
-            function tab:CreateToggle(text, callback, defaultState)
+            function tab:CreateToggle(text, callback, defaultState, saveKey)
                 local toggleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 35), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = toggleFrame})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = toggleFrame}, {Color = "Stroke"})
@@ -942,7 +950,9 @@ local UILibrary = (function()
                 local checkInner = CreateElement("Frame", { Parent = checkBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 3), Parent = checkInner})
 
-                local toggled = (type(defaultState) == "boolean") and defaultState or false
+                local fallbackState = (type(defaultState) == "boolean") and defaultState or false
+                local loadedState, toggleStore = ResolvePersistedValue(saveKey, fallbackState)
+                local toggled = (type(loadedState) == "boolean") and loadedState or fallbackState
                 local function syncVisuals(themeUpdate)
                     local duration = themeUpdate and 0 or 0.2
                     if Options.ToggleStyle == "Switch" then
@@ -959,6 +969,9 @@ local UILibrary = (function()
                 local function setToggleState(state, skipCallback)
                     toggled = state and true or false
                     syncVisuals()
+                    if toggleStore then
+                        toggleStore:Set(toggled)
+                    end
                     if not skipCallback then
                         pcall(callback, toggled)
                     end
@@ -969,11 +982,14 @@ local UILibrary = (function()
                     setToggleState(not toggled, false)
                 end)
                 syncVisuals(true)
+                if toggleStore then
+                    pcall(callback, toggled)
+                end
                 table.insert(tab.Elements, toggleFrame)
                 return toggleFrame
             end
 
-            function tab:CreateKeybind(text, callback)
+            function tab:CreateKeybind(text, callback, defaultKey, saveKey)
                 local keybindFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 35), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = keybindFrame})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = keybindFrame}, {Color = "Stroke"})
@@ -983,13 +999,34 @@ local UILibrary = (function()
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = keybindButton})
                 local keybindStroke = CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = keybindButton}, {Color = "Stroke"})
                 
-                local currentKey = nil; local waiting = false
+                local validDefaultKey = (typeof(defaultKey) == "EnumItem") and defaultKey or nil
+                local loadedKey, keyStore = ResolvePersistedValue(saveKey, validDefaultKey)
+                local currentKey = (typeof(loadedKey) == "EnumItem") and loadedKey or validDefaultKey
+                if typeof(currentKey) == "EnumItem" then
+                    keybindButton.Text = currentKey.Name
+                end
+                local waiting = false
+
+                local function setKeybind(newKey, skipCallback)
+                    if newKey ~= nil and typeof(newKey) ~= "EnumItem" then
+                        return
+                    end
+                    currentKey = newKey
+                    keybindButton.Text = currentKey and currentKey.Name or "None"
+                    if keyStore then
+                        keyStore:Set(currentKey)
+                    end
+                    if not skipCallback then
+                        pcall(callback, currentKey)
+                    end
+                end
+
                 keybindButton.MouseButton1Click:Connect(function()
                     if waiting then return end
                     waiting = true; keybindButton.Text = "..."; PlayTween(keybindStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Accent}):Play()
                     local connection; connection = UserInputService.InputBegan:Connect(function(input)
                         if input.UserInputType == Enum.UserInputType.Keyboard then
-                            currentKey = input.KeyCode; keybindButton.Text = currentKey.Name; task.delay(0.2, function() waiting = false end)
+                            setKeybind(input.KeyCode, false); task.delay(0.2, function() waiting = false end)
                             PlayTween(keybindStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Stroke}):Play(); connection:Disconnect()
                         end
                     end)
@@ -1001,32 +1038,53 @@ local UILibrary = (function()
                         lastInput = os.clock(); pcall(callback, currentKey)
                     end
                 end)
+                if keyStore and currentKey then
+                    pcall(callback, currentKey)
+                end
                 table.insert(window.connections, keybindConnection)
                 table.insert(tab.Elements, keybindFrame)
                 return keybindFrame
             end
 
-            function tab:CreateSlider(text, min, max, default, callback)
+            function tab:CreateSlider(text, min, max, default, callback, saveKey)
                 local sliderFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 50), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = sliderFrame})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = sliderFrame}, {Color = "Stroke"})
-                
+                local fallbackValue = tonumber(default) or min
+                fallbackValue = math.clamp(fallbackValue, min, max)
+                local loadedValue, sliderStore = ResolvePersistedValue(saveKey, fallbackValue)
+                local currentValue = tonumber(loadedValue) or fallbackValue
+                currentValue = math.clamp(currentValue, min, max)
+
                 CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 5), Size = UDim2.new(0.5, 0, 0.4, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-                local valueLabel = CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 5), Size = UDim2.new(0.5, -10, 0.4, 0), Font = Enum.Font.Gotham, Text = tostring(default), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right }, {TextColor3 = "SubText"})
+                local valueLabel = CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 5), Size = UDim2.new(0.5, -10, 0.4, 0), Font = Enum.Font.Gotham, Text = tostring(currentValue), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right }, {TextColor3 = "SubText"})
                 local sliderBar = CreateElement("TextButton", { Parent = sliderFrame, BorderSizePixel = 0, Position = UDim2.new(0.025, 0, 0.65, 0), Size = UDim2.new(0.95, 0, 0.15, 0), Text = "" }, {BackgroundColor3 = "QuarBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderBar})
-                
-                local fill = CreateElement("Frame", { Parent = sliderBar, BorderSizePixel = 0, Size = UDim2.new((default - min) / (max - min), 0, 1, 0) }, {BackgroundColor3 = "Accent"})
+
+                local initialRatio = (max == min) and 0 or ((currentValue - min) / (max - min))
+                local fill = CreateElement("Frame", { Parent = sliderBar, BorderSizePixel = 0, Size = UDim2.new(initialRatio, 0, 1, 0) }, {BackgroundColor3 = "Accent"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = fill})
                 
                 local isDragging = false
+                local function applySliderValue(value, skipCallback)
+                    local clamped = math.clamp(math.floor((tonumber(value) or min) + 0.5), min, max)
+                    local ratio = (max == min) and 0 or ((clamped - min) / (max - min))
+                    fill.Size = UDim2.new(ratio, 0, 1, 0)
+                    valueLabel.Text = tostring(clamped)
+                    currentValue = clamped
+                    if sliderStore then
+                        sliderStore:Set(clamped)
+                    end
+                    if not skipCallback then
+                        pcall(callback, clamped)
+                    end
+                end
+
                 local function updateSlider(inputPos)
                     local relativeX = inputPos.X - sliderBar.AbsolutePosition.X
                     local ratio = math.clamp(relativeX / sliderBar.AbsoluteSize.X, 0, 1)
                     local value = math.floor(min + ratio * (max - min) + 0.5)
-                    fill.Size = UDim2.new(ratio, 0, 1, 0)
-                    valueLabel.Text = tostring(value)
-                    pcall(callback, value)
+                    applySliderValue(value, false)
                 end
                 sliderBar.InputBegan:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1037,45 +1095,114 @@ local UILibrary = (function()
                     end
                 end)
                 UserInputService.InputChanged:Connect(function(input) if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then updateSlider(input.Position) end end)
+                if sliderStore then
+                    applySliderValue(currentValue, false)
+                end
                 table.insert(tab.Elements, sliderFrame)
                 return sliderFrame
             end
 
-            function tab:CreateCycleButton(text, values, default, callback)
+            function tab:CreateCycleButton(text, values, default, callback, saveKey)
                 local cycleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 35), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = cycleFrame})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = cycleFrame}, {Color = "Stroke"})
-                
+                local fallbackValue = default or values[1]
+                local loadedValue, cycleStore = ResolvePersistedValue(saveKey, fallbackValue)
+
                 CreateElement("TextLabel", { Parent = cycleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.6, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-                local cycleButton = CreateElement("TextButton", { Parent = cycleFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0, 100, 0, 22), Font = Enum.Font.GothamBold, Text = tostring(default or values[1] or "None"), TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+                local cycleButton = CreateElement("TextButton", { Parent = cycleFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.new(0, 100, 0, 22), Font = Enum.Font.GothamBold, Text = tostring(loadedValue or fallbackValue or "None"), TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = cycleButton})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = cycleButton}, {Color = "Stroke"})
                 
                 local idx = 1
-                for i, v in ipairs(values) do if v == default then idx = i break end end
-                local function update() local val = values[idx]; cycleButton.Text = tostring(val); pcall(callback, val) end
+                for i, v in ipairs(values) do
+                    if v == loadedValue then
+                        idx = i
+                        break
+                    elseif v == fallbackValue and idx == 1 then
+                        idx = i
+                    end
+                end
+                local function update(skipCallback)
+                    local val = values[idx]
+                    cycleButton.Text = tostring(val)
+                    if cycleStore then
+                        cycleStore:Set(val)
+                    end
+                    if not skipCallback then
+                        pcall(callback, val)
+                    end
+                end
                 
                 cycleButton.MouseButton1Click:Connect(function()
                     if #values == 0 then return end
                     idx = idx + 1; if idx > #values then idx = 1 end
-                    update()
+                    update(false)
                     PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 90, 0, 18)}):Play()
                     task.wait(0.1); PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 100, 0, 22)}):Play()
                 end)
+                if cycleStore and #values > 0 then
+                    update(false)
+                end
                 table.insert(tab.Elements, cycleFrame)
-                return { Frame = cycleFrame, SetValues = function(self, newValues) values = newValues; idx = 1; if #values > 0 then cycleButton.Text = tostring(values[1]) else cycleButton.Text = "None" end end, SetValue = function(self, val) for i, v in ipairs(values) do if v == val then idx = i; cycleButton.Text = tostring(val); break end end end }
+                return {
+                    Frame = cycleFrame,
+                    SetValues = function(self, newValues)
+                        values = newValues
+                        idx = 1
+                        if #values > 0 then
+                            update(true)
+                        else
+                            cycleButton.Text = "None"
+                        end
+                    end,
+                    SetValue = function(self, val)
+                        for i, v in ipairs(values) do
+                            if v == val then
+                                idx = i
+                                update(true)
+                                break
+                            end
+                        end
+                    end
+                }
             end
 
-            function tab:CreateDropdown(text, options, default, callback)
+            function tab:CreateDropdown(text, options, default, callback, saveKey)
                 local dropdownFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownFrame})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = dropdownFrame}, {Color = "Stroke"})
                 CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
 
-                local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 120, 0, 30), Font = Enum.Font.GothamBold, Text = default or options[1] or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+                local fallbackValue = default or options[1]
+                local loadedValue, dropdownStore = ResolvePersistedValue(saveKey, fallbackValue)
+                local currentValue = loadedValue
+                local valueInOptions = false
+                for _, option in ipairs(options) do
+                    if option == currentValue then
+                        valueInOptions = true
+                        break
+                    end
+                end
+                if not valueInOptions then
+                    currentValue = fallbackValue
+                end
+
+                local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 120, 0, 30), Font = Enum.Font.GothamBold, Text = currentValue or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = dropdownButton}, {Color = "Stroke"})
                 
+                local function setDropdownValue(value, skipCallback)
+                    currentValue = value
+                    dropdownButton.Text = value or "None"
+                    if dropdownStore then
+                        dropdownStore:Set(value)
+                    end
+                    if not skipCallback then
+                        pcall(callback, value)
+                    end
+                end
+
                 local isOpen = false; local optionContainer
                 dropdownButton.MouseButton1Click:Connect(function()
                     isOpen = not isOpen
@@ -1087,13 +1214,21 @@ local UILibrary = (function()
                             CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
                             optBtn.MouseEnter:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
                             optBtn.MouseLeave:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play() end)
-                            optBtn.MouseButton1Click:Connect(function() dropdownButton.Text = opt; isOpen = false; PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end); pcall(callback, opt) end)
+                            optBtn.MouseButton1Click:Connect(function()
+                                setDropdownValue(opt, false)
+                                isOpen = false
+                                PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play()
+                                task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                            end)
                         end
                         PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45 + (#options * 30) + 10)}):Play()
                     else
                         PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 45)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
                     end
                 end)
+                if dropdownStore and currentValue ~= nil then
+                    setDropdownValue(currentValue, false)
+                end
                 table.insert(tab.Elements, dropdownFrame)
                 return dropdownFrame
             end
