@@ -33,13 +33,15 @@ local UILibrary = (function()
         ToggleStyle = "Switch", -- "Switch" or "Checkbox"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
         Font = "Gotham", -- "Gotham", "Ubuntu", "Code", "Jura"
-        MenuStyle = "Sidebar" -- "Sidebar", "SidebarCompact", "SidebarMini", "Dropdown", "DropdownCompact", "Topbar", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"
+        MenuStyle = "Sidebar" -- "Sidebar", "SidebarCompact", "SidebarMini", "Topbar", "Dashboard", "Tablet", "Dropdown", "DropdownCompact", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"
     }
 
     local MenuStyleSet = {
         Sidebar = true,
         SidebarCompact = true,
         SidebarMini = true,
+        Dashboard = true,
+        Tablet = true,
         Dropdown = true,
         DropdownCompact = true,
         Topbar = true,
@@ -409,6 +411,7 @@ local UILibrary = (function()
             if item.Instance and item.Instance.Parent then PlayTween(item.Instance, TweenInfo.new(0.3), {[item.Property] = themeColors[item.Role]}):Play() end
         end
         for _, syncFunc in ipairs(Registries.Toggle) do syncFunc(true) end
+        for _, syncFunc in ipairs(Registries.MenuLayout) do syncFunc(Options.MenuStyle) end
         SaveLibraryOptions()
     end
 
@@ -607,8 +610,8 @@ local UILibrary = (function()
         
 
         local TabHolder = CreateElement("ScrollingFrame", { Name = "TabHolder", Parent = TabContainer, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y })
-        CreateElement("UIListLayout", { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top })
-        CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 12)})
+        local TabListLayout = CreateElement("UIListLayout", { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top, FillDirection = Enum.FillDirection.Vertical })
+        local TabPadding = CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 12)})
         
         local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 150, 0, topBarHeight), Size = UDim2.new(0, 1, 1, -topBarHeight), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
         local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 160, 0, topBarHeight + 8), Size = UDim2.new(1, -172, 1, -(topBarHeight + 20)) })
@@ -627,6 +630,89 @@ local UILibrary = (function()
         local ActiveNavFrameSize = UDim2.new(1, -24, 0, 35)
         local ActiveNavFramePos = UDim2.new(0, 12, 0, 60)
         local ActiveNavAnchor = Vector2.new(0, 0)
+        local CurrentTabButtonMode = "Sidebar"
+        local TopTabWidth = 132
+        local TopTabHeight = 28
+        local ActiveLayoutState = {
+            ShowSidebar = true,
+            ShowSeparator = true,
+            ShowDropdown = false
+        }
+
+        local function GetTabButtonColors()
+            if CurrentTabButtonMode == "Top" then
+                return Themes[Options.Theme].TerBg, Themes[Options.Theme].QuarBg
+            end
+            return Themes[Options.Theme].SecBg, Themes[Options.Theme].TerBg
+        end
+
+        local function ApplyTabHolderMode(mode)
+            CurrentTabButtonMode = mode or "Sidebar"
+            if CurrentTabButtonMode == "Top" then
+                TabHolder.Position = UDim2.new(0, 10, 0, 0)
+                TabHolder.Size = UDim2.new(1, -20, 1, 0)
+                TabHolder.AutomaticCanvasSize = Enum.AutomaticSize.X
+                TabHolder.ScrollingDirection = Enum.ScrollingDirection.X
+                TabHolder.ScrollBarThickness = 2
+                TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+                TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+                TabListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+                TabListLayout.Padding = UDim.new(0, 8)
+                TabPadding.PaddingTop = UDim.new(0, 6)
+                TabPadding.PaddingBottom = UDim.new(0, 6)
+                TabPadding.PaddingLeft = UDim.new(0, 0)
+                TabPadding.PaddingRight = UDim.new(0, 0)
+            else
+                TabHolder.Position = UDim2.new(0, 0, 0, 0)
+                TabHolder.Size = UDim2.new(1, 0, 1, 0)
+                TabHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
+                TabHolder.ScrollingDirection = Enum.ScrollingDirection.Y
+                TabHolder.ScrollBarThickness = 0
+                TabListLayout.FillDirection = Enum.FillDirection.Vertical
+                TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                TabListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+                TabListLayout.Padding = UDim.new(0, 5)
+                TabPadding.PaddingTop = UDim.new(0, 12)
+                TabPadding.PaddingBottom = UDim.new(0, 0)
+                TabPadding.PaddingLeft = UDim.new(0, 0)
+                TabPadding.PaddingRight = UDim.new(0, 0)
+            end
+        end
+
+        local function ApplyTabButtonMode(tabEntry)
+            if not tabEntry or not tabEntry.Button or not tabEntry.ActiveRail then
+                return
+            end
+
+            local tabButton = tabEntry.Button
+            local activeRail = tabEntry.ActiveRail
+            local buttonPadding = tabButton:FindFirstChildOfClass("UIPadding")
+            local idleColor = GetTabButtonColors()
+
+            if CurrentTabButtonMode == "Top" then
+                tabButton.Size = UDim2.new(0, TopTabWidth, 0, TopTabHeight)
+                tabButton.TextXAlignment = Enum.TextXAlignment.Center
+                if buttonPadding then
+                    buttonPadding.PaddingLeft = UDim.new(0, 0)
+                    buttonPadding.PaddingRight = UDim.new(0, 0)
+                end
+                activeRail.Position = UDim2.new(0, 10, 1, -4)
+                activeRail.Size = UDim2.new(1, -20, 0, 2)
+            else
+                tabButton.Size = UDim2.new(1, -18, 0, 38)
+                tabButton.TextXAlignment = Enum.TextXAlignment.Left
+                if buttonPadding then
+                    buttonPadding.PaddingLeft = UDim.new(0, 14)
+                    buttonPadding.PaddingRight = UDim.new(0, 0)
+                end
+                activeRail.Position = UDim2.new(0, 0, 0, 8)
+                activeRail.Size = UDim2.new(0, 3, 1, -16)
+            end
+
+            if CurrentTab ~= tabEntry then
+                tabButton.BackgroundColor3 = idleColor
+            end
+        end
 
         local function GetNavOpenSize()
             return UDim2.new(
@@ -676,6 +762,7 @@ local UILibrary = (function()
                     ShowSidebar = true,
                     ShowSeparator = true,
                     ShowDropdown = false,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -691,6 +778,7 @@ local UILibrary = (function()
                     ShowSidebar = true,
                     ShowSeparator = true,
                     ShowDropdown = false,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, 124, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, 124, 0, topBarHeight),
@@ -706,6 +794,7 @@ local UILibrary = (function()
                     ShowSidebar = true,
                     ShowSeparator = true,
                     ShowDropdown = false,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, 104, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, 104, 0, topBarHeight),
@@ -716,11 +805,66 @@ local UILibrary = (function()
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 24
                 }
+            elseif style == "Topbar" then
+                preset = {
+                    ShowSidebar = true,
+                    ShowSeparator = false,
+                    ShowDropdown = false,
+                    TabMode = "Top",
+                    TopTabWidth = 128,
+                    TopTabHeight = 28,
+                    SidebarSize = UDim2.new(1, -20, 0, 40),
+                    SidebarPos = UDim2.new(0, 10, 0, topBarHeight + 6),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 54),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 66)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 32),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 26
+                }
+            elseif style == "Dashboard" then
+                preset = {
+                    ShowSidebar = true,
+                    ShowSeparator = false,
+                    ShowDropdown = false,
+                    TabMode = "Top",
+                    TopTabWidth = 136,
+                    TopTabHeight = 30,
+                    SidebarSize = UDim2.new(1, -24, 0, 44),
+                    SidebarPos = UDim2.new(0, 12, 0, topBarHeight + 8),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 12, 0, topBarHeight + 60),
+                    ContentSize = UDim2.new(1, -24, 1, -(topBarHeight + 72)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 32),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 26
+                }
+            elseif style == "Tablet" then
+                preset = {
+                    ShowSidebar = true,
+                    ShowSeparator = false,
+                    ShowDropdown = false,
+                    TabMode = "Top",
+                    TopTabWidth = 150,
+                    TopTabHeight = 34,
+                    SidebarSize = UDim2.new(1, -20, 0, 50),
+                    SidebarPos = UDim2.new(0, 10, 0, topBarHeight + 6),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 62),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 74)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 34),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 28
+                }
             elseif style == "Dropdown" then
                 preset = {
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -736,6 +880,7 @@ local UILibrary = (function()
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -746,26 +891,12 @@ local UILibrary = (function()
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 24
                 }
-            elseif style == "Topbar" then
-                preset = {
-                    ShowSidebar = false,
-                    ShowSeparator = false,
-                    ShowDropdown = true,
-                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
-                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
-                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 42),
-                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 54)),
-                    NavPos = UDim2.new(0, 10, 0, topBarHeight + 4),
-                    NavSize = UDim2.new(1, -20, 0, 30),
-                    NavAnchor = Vector2.new(0, 0),
-                    NavRow = 24
-                }
             elseif style == "FloatingDropdown" then
                 preset = {
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -781,6 +912,7 @@ local UILibrary = (function()
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -796,6 +928,7 @@ local UILibrary = (function()
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -811,6 +944,7 @@ local UILibrary = (function()
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = false,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -826,6 +960,7 @@ local UILibrary = (function()
                     ShowSidebar = true,
                     ShowSeparator = true,
                     ShowDropdown = false,
+                    TabMode = "Sidebar",
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -842,6 +977,16 @@ local UILibrary = (function()
             ActiveNavFrameSize = preset.NavSize
             ActiveNavAnchor = preset.NavAnchor
             ActiveNavRowHeight = preset.NavRow
+            TopTabWidth = preset.TopTabWidth or 132
+            TopTabHeight = preset.TopTabHeight or 28
+            ActiveLayoutState.ShowSidebar = preset.ShowSidebar
+            ActiveLayoutState.ShowSeparator = preset.ShowSeparator
+            ActiveLayoutState.ShowDropdown = preset.ShowDropdown
+
+            ApplyTabHolderMode(preset.TabMode)
+            for _, tab in pairs(tabs) do
+                ApplyTabButtonMode(tab)
+            end
 
             TabContainer.AnchorPoint = Vector2.new(0, 0)
             TabContainer.Position = preset.SidebarPos
@@ -851,14 +996,13 @@ local UILibrary = (function()
             NavDropdownFrame.Position = ActiveNavFramePos
             NavDropdownFrame.Size = ActiveNavFrameSize
 
-            if preset.ShowSidebar then
-                TabContainer.Visible = true; Separator.Visible = true; NavDropdownFrame.Visible = false
-            elseif preset.ShowDropdown then
-                TabContainer.Visible = false; Separator.Visible = false; NavDropdownFrame.Visible = true
-            else
-                TabContainer.Visible = false; Separator.Visible = false; NavDropdownFrame.Visible = false
-            end
+            TabContainer.Visible = preset.ShowSidebar
+            Separator.Visible = preset.ShowSeparator
+            NavDropdownFrame.Visible = preset.ShowDropdown
             PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = preset.ContentPos, Size = preset.ContentSize}):Play()
+            if CurrentTab then
+                window:SwitchToTab(CurrentTab)
+            end
             if NavIsOpen then -- Auto-collapse dropdown if open during style switch
                 NavIsOpen = false
                 PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = ActiveNavFrameSize}):Play()
@@ -1044,7 +1188,7 @@ local UILibrary = (function()
             table.insert(ThemeOptions, themeName)
         end
         table.sort(ThemeOptions)
-        CreateSettingsDropdown("Menu Style", {"Sidebar", "SidebarCompact", "SidebarMini", "Dropdown", "DropdownCompact", "Topbar", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
+        CreateSettingsDropdown("Menu Style", {"Sidebar", "SidebarCompact", "SidebarMini", "Topbar", "Dashboard", "Tablet", "Dropdown", "DropdownCompact", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
         CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
         CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
@@ -1236,8 +1380,9 @@ local UILibrary = (function()
                 TabContainer.Visible = false; ContentFrame.Visible = false; NavDropdownFrame.Visible = false
             else
                 ContentFrame.Visible = true
-                if Options.MenuStyle == "Sidebar" then TabContainer.Visible = true
-                elseif Options.MenuStyle == "Dropdown" then NavDropdownFrame.Visible = true end
+                TabContainer.Visible = ActiveLayoutState.ShowSidebar
+                Separator.Visible = ActiveLayoutState.ShowSeparator
+                NavDropdownFrame.Visible = ActiveLayoutState.ShowDropdown
             end
             
             UpdateWindowSize(true)
@@ -1300,15 +1445,16 @@ local UILibrary = (function()
         function window:SwitchToTab(tabToSelect)
             CurrentTab = tabToSelect
             NavDropdownBtn.Text = tabToSelect.Name
+            local idleColor, activeColor = GetTabButtonColors()
             for _, tab in pairs(tabs) do
                 tab.Page.Visible = false
-                PlayTween(tab.Button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].SecBg, TextColor3 = Themes[Options.Theme].SubText}):Play()
+                PlayTween(tab.Button, TweenInfo.new(0.2), {BackgroundColor3 = idleColor, TextColor3 = Themes[Options.Theme].SubText}):Play()
                 if tab.ActiveRail then
                     PlayTween(tab.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
                 end
             end
             tabToSelect.Page.Visible = true
-            PlayTween(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg, TextColor3 = Themes[Options.Theme].Text}):Play()
+            PlayTween(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundColor3 = activeColor, TextColor3 = Themes[Options.Theme].Text}):Play()
             if tabToSelect.ActiveRail then
                 PlayTween(tabToSelect.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
             end
@@ -1329,8 +1475,18 @@ local UILibrary = (function()
             CreateElement("UIPadding", {Parent = page, PaddingRight = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingTop = UDim.new(0, 5)})
             
             tab.Button = tabButton; tab.Page = page; tab.ActiveRail = activeRail; table.insert(tabs, tab)
-            tabButton.MouseEnter:Connect(function() if not page.Visible then PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end end)
-            tabButton.MouseLeave:Connect(function() if not page.Visible then PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].SecBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end end)
+            ApplyTabButtonMode(tab)
+            tabButton.MouseEnter:Connect(function()
+                if not page.Visible then
+                    PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play()
+                end
+            end)
+            tabButton.MouseLeave:Connect(function()
+                if not page.Visible then
+                    local idleColor = GetTabButtonColors()
+                    PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = idleColor, TextColor3 = Themes[Options.Theme].SubText}):Play()
+                end
+            end)
             tabButton.MouseButton1Click:Connect(function() window:SwitchToTab(tab) end)
             if #tabs == 1 then window:SwitchToTab(tab) end
 
