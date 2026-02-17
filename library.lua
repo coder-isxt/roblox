@@ -51,9 +51,13 @@ local UILibrary = (function()
     }
 
     local PersistConfig = {
+        SchemaVersion = 2,
         Folder = "XenoUILibrary",
         FileName = "settings.json",
         Data = {
+            Meta = {
+                Version = 2
+            },
             LibraryOptions = {},
             Values = {}
         },
@@ -140,6 +144,8 @@ local UILibrary = (function()
         if not CanPersist() then return false end
 
         EnsureConfigFolder()
+        PersistConfig.Data.Meta = PersistConfig.Data.Meta or {}
+        PersistConfig.Data.Meta.Version = PersistConfig.SchemaVersion
 
         local ok, encoded = pcall(function()
             return HttpService:JSONEncode(PersistConfig.Data)
@@ -155,6 +161,9 @@ local UILibrary = (function()
         if not CanPersist() then return end
 
         PersistConfig.Data = {
+            Meta = {
+                Version = PersistConfig.SchemaVersion
+            },
             LibraryOptions = {},
             Values = {}
         }
@@ -171,11 +180,36 @@ local UILibrary = (function()
         end)
         if not decodeOk or type(decoded) ~= "table" then return end
 
-        if type(decoded.LibraryOptions) == "table" then
-            PersistConfig.Data.LibraryOptions = decoded.LibraryOptions
+        local migrated = decoded
+        if migrated.Meta == nil and (type(migrated.LibraryOptions) == "table" or type(migrated.Values) == "table") then
+            migrated = {
+                Meta = {
+                    Version = 1
+                },
+                LibraryOptions = migrated.LibraryOptions or {},
+                Values = migrated.Values or {}
+            }
         end
-        if type(decoded.Values) == "table" then
-            PersistConfig.Data.Values = decoded.Values
+
+        if type(migrated.Meta) ~= "table" then
+            migrated.Meta = { Version = 1 }
+        end
+
+        local version = tonumber(migrated.Meta.Version) or 1
+        if version < 2 then
+            migrated.Meta.Version = 2
+        end
+
+        if type(migrated.LibraryOptions) == "table" then
+            PersistConfig.Data.LibraryOptions = migrated.LibraryOptions
+        end
+        if type(migrated.Values) == "table" then
+            PersistConfig.Data.Values = migrated.Values
+        end
+        PersistConfig.Data.Meta = migrated.Meta
+
+        if version < PersistConfig.SchemaVersion then
+            SavePersistConfig()
         end
     end
 
@@ -427,15 +461,15 @@ local UILibrary = (function()
         
         local ScreenGui = CreateElement("ScreenGui", { Name = "UILibWindow", Parent = game:GetService("CoreGui"), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true })
         
-        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 600, 0, 450), ClipsDescendants = true, Visible = true }, {BackgroundColor3 = "MainBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = MainFrame})
+        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 680, 0, 500), ClipsDescendants = true, Visible = true }, {BackgroundColor3 = "MainBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = MainFrame})
         CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = MainFrame}, {Color = "Stroke"})
         
-        local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 40) }, {BackgroundColor3 = "SecBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TopBar})
-        CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
+        local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 48) }, {BackgroundColor3 = "SecBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TopBar})
+        CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -12), Size = UDim2.new(1, 0, 0, 12) }, {BackgroundColor3 = "SecBg"})
         
-        CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 18, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
         
         -- // SEARCH BAR (TOPBAR) // --
 
@@ -474,7 +508,7 @@ local UILibrary = (function()
             ClearTextOnFocus = false,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 180, 0, 26),
+            Size = UDim2.new(0, 200, 0, 30),
             Font = Enum.Font.Gotham,
             TextSize = 13
         }, {
@@ -484,7 +518,7 @@ local UILibrary = (function()
         })
 
         CreateElement("UICorner", {
-            CornerRadius = UDim.new(0, 6),
+            CornerRadius = UDim.new(0, 8),
             Parent = SearchBox
         })
 
@@ -507,26 +541,26 @@ local UILibrary = (function()
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = MinimizeButton})
         local CollapseKeybindButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -70, 0.5, 0), Size = UDim2.new(0, 30, 0, 24), Font = Enum.Font.GothamBold, Text = "Ins", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = CollapseKeybindButton})
-        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -105, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "⚙", TextSize = 14 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = SettingsButton})
+        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -120, 0.5, 0), Size = UDim2.new(0, 36, 0, 26), Font = Enum.Font.GothamBold, Text = "CFG", TextSize = 10 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = SettingsButton})
 
         -- Sidebar Navigation Components
-        local TabContainer = CreateElement("Frame", { Name = "TabContainer", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 40), Size = UDim2.new(0, 150, 1, -40) }, {BackgroundColor3 = "SecBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TabContainer})
-        CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
-        CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(1, -10, 0, 0), Size = UDim2.new(0, 10, 1, 0) }, {BackgroundColor3 = "SecBg"})
+        local TabContainer = CreateElement("Frame", { Name = "TabContainer", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 48), Size = UDim2.new(0, 176, 1, -48) }, {BackgroundColor3 = "SecBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TabContainer})
+        CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 0, 12) }, {BackgroundColor3 = "SecBg"})
+        CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(1, -12, 0, 0), Size = UDim2.new(0, 12, 1, 0) }, {BackgroundColor3 = "SecBg"})
 
         
 
         local TabHolder = CreateElement("ScrollingFrame", { Name = "TabHolder", Parent = TabContainer, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y })
         CreateElement("UIListLayout", { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top })
-        CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 10)})
+        CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 12)})
         
-        local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 150, 0, 40), Size = UDim2.new(0, 1, 1, -40), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
-        local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 160, 0, 50), Size = UDim2.new(1, -170, 1, -60) })
+        local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 176, 0, 48), Size = UDim2.new(0, 1, 1, -48), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
+        local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 188, 0, 60), Size = UDim2.new(1, -200, 1, -72) })
 
         -- Dropdown Navigation Components (V2)
-        local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, 50), Size = UDim2.new(1, -20, 0, 35), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
+        local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 12, 0, 60), Size = UDim2.new(1, -24, 0, 35), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = NavDropdownFrame})
         CreateElement("UIStroke", {Thickness = 1, Parent = NavDropdownFrame}, {Color = "Stroke"})
 
@@ -569,10 +603,10 @@ local UILibrary = (function()
         table.insert(Registries.MenuLayout, function(style)
             if style == "Sidebar" then
                 TabContainer.Visible = true; Separator.Visible = true; NavDropdownFrame.Visible = false
-                PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = UDim2.new(0, 160, 0, 50), Size = UDim2.new(1, -170, 1, -60)}):Play()
+                PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = UDim2.new(0, 188, 0, 60), Size = UDim2.new(1, -200, 1, -72)}):Play()
             elseif style == "Dropdown" then
                 TabContainer.Visible = false; Separator.Visible = false; NavDropdownFrame.Visible = true
-                PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = UDim2.new(0, 10, 0, 95), Size = UDim2.new(1, -20, 1, -105)}):Play()
+                PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = UDim2.new(0, 12, 0, 102), Size = UDim2.new(1, -24, 1, -114)}):Play()
             end
             if NavIsOpen then -- Auto-collapse dropdown if open during style switch
                 NavIsOpen = false
@@ -603,6 +637,7 @@ local UILibrary = (function()
 
         local SettingsTabs = {}
         local CurrentSettingsPage = nil
+        local CurrentSettingsContainer = nil
 
         local function SwitchSettingsTab(name)
             for n, tab in pairs(SettingsTabs) do
@@ -610,6 +645,7 @@ local UILibrary = (function()
                 if n == name then PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.9}):Play()
                 else PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 1}):Play() end
             end
+            CurrentSettingsContainer = nil
         end
 
         local function CreateSettingsSection(text)
@@ -620,13 +656,98 @@ local UILibrary = (function()
             local page = CreateElement("ScrollingFrame", { Parent = SettingsContent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y })
             CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
             CreateElement("UIPadding", {Parent = page, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)})
-            SettingsTabs[text] = {Button = tabBtn, Page = page}; CurrentSettingsPage = page
+            SettingsTabs[text] = {Button = tabBtn, Page = page}; CurrentSettingsPage = page; CurrentSettingsContainer = nil
             tabBtn.MouseButton1Click:Connect(function() SwitchSettingsTab(text) end)
             if not next(SettingsTabs, next(SettingsTabs)) then SwitchSettingsTab(text) end
         end
 
+        local function ResolveSettingsParent()
+            return CurrentSettingsContainer or CurrentSettingsPage
+        end
+
+        local function CreateSettingsGroup(groupTitle, expandedByDefault)
+            local groupFrame = CreateElement("Frame", {
+                Parent = CurrentSettingsPage,
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                ClipsDescendants = true
+            }, {BackgroundColor3 = "TerBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = groupFrame})
+            CreateElement("UIStroke", {Thickness = 1, Parent = groupFrame}, {Color = "Stroke"})
+
+            local headerButton = CreateElement("TextButton", {
+                Parent = groupFrame,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 34),
+                BorderSizePixel = 0,
+                Text = ""
+            })
+            CreateElement("TextLabel", {
+                Parent = headerButton,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 12, 0, 0),
+                Size = UDim2.new(1, -34, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = groupTitle,
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left
+            }, {TextColor3 = "Text"})
+            local arrow = CreateElement("TextLabel", {
+                Parent = headerButton,
+                BackgroundTransparency = 1,
+                AnchorPoint = Vector2.new(1, 0.5),
+                Position = UDim2.new(1, -12, 0.5, 0),
+                Size = UDim2.new(0, 16, 0, 16),
+                Font = Enum.Font.GothamBold,
+                Text = ">",
+                TextSize = 12
+            }, {TextColor3 = "SubText"})
+
+            local content = CreateElement("Frame", {
+                Parent = groupFrame,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 0, 0, 34),
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y
+            })
+            CreateElement("UIListLayout", {Parent = content, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
+            CreateElement("UIPadding", {Parent = content, PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)})
+
+            local expanded = expandedByDefault ~= false
+            local function syncGroup(animate)
+                arrow.Rotation = expanded and 90 or 0
+                if expanded then
+                    content.Visible = true
+                    content.AutomaticSize = Enum.AutomaticSize.Y
+                else
+                    content.AutomaticSize = Enum.AutomaticSize.None
+                    content.Size = UDim2.new(1, 0, 0, 0)
+                    content.Visible = false
+                end
+                if animate then
+                    PlayTween(groupFrame, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play()
+                end
+            end
+
+            headerButton.MouseButton1Click:Connect(function()
+                expanded = not expanded
+                syncGroup(true)
+            end)
+            headerButton.MouseEnter:Connect(function()
+                PlayTween(groupFrame, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play()
+            end)
+            headerButton.MouseLeave:Connect(function()
+                PlayTween(groupFrame, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play()
+            end)
+
+            syncGroup(false)
+            CurrentSettingsContainer = content
+            return groupFrame
+        end
+
         local function CreateSettingsButton(text, callback)
-            local button = CreateElement("TextButton", { Parent = CurrentSettingsPage, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 40), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
+            local button = CreateElement("TextButton", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 40), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = button})
             CreateElement("UIStroke", {Thickness = 1, Parent = button}, {Color = "Stroke"})
             CreateElement("TextLabel", { Parent = button, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(1, -15, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
@@ -636,7 +757,7 @@ local UILibrary = (function()
         end
 
         local function CreateSettingsDropdown(text, options, default, callback)
-            local dropdownFrame = CreateElement("Frame", { Parent = CurrentSettingsPage, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true }, {BackgroundColor3 = "TerBg"})
+            local dropdownFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true }, {BackgroundColor3 = "TerBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = dropdownFrame})
             CreateElement("UIStroke", {Thickness = 1, Parent = dropdownFrame}, {Color = "Stroke"})
             CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
@@ -666,6 +787,7 @@ local UILibrary = (function()
 
         -- // Initialize Global Settings Options //
         CreateSettingsSection("Appearance")
+        CreateSettingsGroup("Visual Style", true)
         CreateSettingsDropdown("Menu Style", {"Sidebar", "Dropdown"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
         CreateSettingsDropdown("Interface Theme", {"Default", "Dark", "Light", "Discord"}, Options.Theme, function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
@@ -673,8 +795,9 @@ local UILibrary = (function()
         CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura"}, Options.Font, function(val) UpdateFont(val) end)
 
         CreateSettingsSection("General")
+        CreateSettingsGroup("Runtime", true)
         local function CreateSettingsToggle(text, callback)
-            local toggleButton = CreateElement("TextButton", { Parent = CurrentSettingsPage, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
+            local toggleButton = CreateElement("TextButton", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = toggleButton})
             local stroke = CreateElement("UIStroke", {Thickness = 1, Parent = toggleButton}, {Color = "Stroke"})
             CreateElement("TextLabel", { Parent = toggleButton, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.7, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
@@ -714,6 +837,7 @@ local UILibrary = (function()
 
         -- Performance tab and toggles
         CreateSettingsSection("Performance")
+        CreateSettingsGroup("Optimization", true)
 
         CreateSettingsToggle("Performance Mode (FPS Boost)", function(state)
             local Lighting = game:GetService("Lighting")
@@ -790,6 +914,7 @@ local UILibrary = (function()
         end)
 
         CreateSettingsSection("Developer")
+        CreateSettingsGroup("Tools", true)
         CreateSettingsButton("Load Remotespy", function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578"))() end)
         CreateSettingsButton("Load DevEx", function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))() end)
 
@@ -829,8 +954,8 @@ local UILibrary = (function()
                 MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             end
         end)
-        CloseButton.MouseEnter:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 100, 100)}):Play() end)
-        CloseButton.MouseLeave:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 80, 80)}):Play() end)
+        CloseButton.MouseEnter:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Accent, TextColor3 = Themes[Options.Theme].Text}):Play() end)
+        CloseButton.MouseLeave:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         
         local toggleConnection
         CloseButton.MouseButton1Click:Connect(function()
@@ -853,14 +978,14 @@ local UILibrary = (function()
                 elseif Options.MenuStyle == "Dropdown" then NavDropdownFrame.Visible = true end
             end
             
-            PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = Minimized and UDim2.new(0, 600, 0, 40) or UDim2.new(0, 600, 0, 450)}):Play()
+            PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = Minimized and UDim2.new(0, 680, 0, 48) or UDim2.new(0, 680, 0, 500)}):Play()
         end
         MinimizeButton.MouseButton1Click:Connect(MinimizeUI)
 
         local UIVisible = true
         local function ToggleUI()
             UIVisible = not UIVisible
-            if UIVisible then MainFrame.Visible = true; PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 600, 0, 450)}):Play()
+            if UIVisible then MainFrame.Visible = true; PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 680, 0, 500)}):Play()
             else PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play(); task.delay(0.3, function() if not UIVisible then MainFrame.Visible = false end end) end
         end
 
@@ -889,26 +1014,34 @@ local UILibrary = (function()
             for _, tab in pairs(tabs) do
                 tab.Page.Visible = false
                 PlayTween(tab.Button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].SecBg, TextColor3 = Themes[Options.Theme].SubText}):Play()
+                if tab.ActiveRail then
+                    PlayTween(tab.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+                end
             end
             tabToSelect.Page.Visible = true
-            PlayTween(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Accent, TextColor3 = Themes[Options.Theme].Text}):Play()
+            PlayTween(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg, TextColor3 = Themes[Options.Theme].Text}):Play()
+            if tabToSelect.ActiveRail then
+                PlayTween(tabToSelect.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+            end
         end
 
         function window:CreateTab(name)
 
 
             local tab = { Name = name, Elements = {} }
-            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0, BorderSizePixel = 0, Size = UDim2.new(1, -20, 0, 35), Font = Enum.Font.GothamBold, Text = name, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = tabButton})
-            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 10)})
+            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0, BorderSizePixel = 0, Size = UDim2.new(1, -18, 0, 38), Font = Enum.Font.GothamBold, Text = name, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = tabButton})
+            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 14)})
+            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 8), Size = UDim2.new(0, 3, 1, -16), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
             
             local page = CreateElement("ScrollingFrame", { Name = name .. "Page", Parent = ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), ScrollBarThickness = 2, Visible = false }, {ScrollBarImageColor3 = "Stroke"})
             CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
             CreateElement("UIPadding", {Parent = page, PaddingRight = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingTop = UDim.new(0, 5)})
             
-            tab.Button = tabButton; tab.Page = page; table.insert(tabs, tab)
-            tabButton.MouseEnter:Connect(function() if not page.Visible then PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end end)
-            tabButton.MouseLeave:Connect(function() if not page.Visible then PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].SecBg}):Play() end end)
+            tab.Button = tabButton; tab.Page = page; tab.ActiveRail = activeRail; table.insert(tabs, tab)
+            tabButton.MouseEnter:Connect(function() if not page.Visible then PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end end)
+            tabButton.MouseLeave:Connect(function() if not page.Visible then PlayTween(tabButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].SecBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end end)
             tabButton.MouseButton1Click:Connect(function() window:SwitchToTab(tab) end)
             if #tabs == 1 then window:SwitchToTab(tab) end
 
@@ -1026,7 +1159,7 @@ local UILibrary = (function()
                     waiting = true; keybindButton.Text = "..."; PlayTween(keybindStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Accent}):Play()
                     local connection; connection = UserInputService.InputBegan:Connect(function(input)
                         if input.UserInputType == Enum.UserInputType.Keyboard then
-                            setKeybind(input.KeyCode, false); task.delay(0.2, function() waiting = false end)
+                            setKeybind(input.KeyCode, true); task.delay(0.2, function() waiting = false end)
                             PlayTween(keybindStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Stroke}):Play(); connection:Disconnect()
                         end
                     end)
@@ -1038,9 +1171,6 @@ local UILibrary = (function()
                         lastInput = os.clock(); pcall(callback, currentKey)
                     end
                 end)
-                if keyStore and currentKey then
-                    pcall(callback, currentKey)
-                end
                 table.insert(window.connections, keybindConnection)
                 table.insert(tab.Elements, keybindFrame)
                 return keybindFrame
@@ -1287,3 +1417,4 @@ local UILibrary = (function()
 end)()
 
 return UILibrary
+
