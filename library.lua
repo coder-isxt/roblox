@@ -31,7 +31,8 @@ local UILibrary = (function()
     local Options = {
         Theme = "Default",
         ToggleStyle = "Switch", -- "Switch", "Checkbox", "Pill", "Dot"
-        CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky", "Glow"
+        CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
+        StrokeStyle = "Outline", -- "Outline", "Glow", "TwoCornerFade", "SoftFade"
         SliderStyle = "Line", -- "Line", "Pill", "Block"
         ComboStyle = "Classic", -- "Classic", "Compact", "Soft"
         Font = "Gotham", -- FontMap keys
@@ -73,7 +74,8 @@ local UILibrary = (function()
     }
 
     local ToggleStyleSet = { Switch = true, Checkbox = true, Pill = true, Dot = true }
-    local CornerStyleSet = { Rounded = true, Slight = true, Blocky = true, Glow = true }
+    local CornerStyleSet = { Rounded = true, Slight = true, Blocky = true }
+    local StrokeStyleSet = { Outline = true, Glow = true, TwoCornerFade = true, SoftFade = true }
     local SliderStyleSet = { Line = true, Pill = true, Block = true }
     local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
 
@@ -250,8 +252,13 @@ local UILibrary = (function()
         if ToggleStyleSet[savedOptions.ToggleStyle] then
             Options.ToggleStyle = savedOptions.ToggleStyle
         end
-        if CornerStyleSet[savedOptions.CornerStyle] then
+        if savedOptions.CornerStyle == "Glow" then
+            Options.StrokeStyle = "Glow"
+        elseif CornerStyleSet[savedOptions.CornerStyle] then
             Options.CornerStyle = savedOptions.CornerStyle
+        end
+        if StrokeStyleSet[savedOptions.StrokeStyle] then
+            Options.StrokeStyle = savedOptions.StrokeStyle
         end
         if SliderStyleSet[savedOptions.SliderStyle] then
             Options.SliderStyle = savedOptions.SliderStyle
@@ -282,6 +289,7 @@ local UILibrary = (function()
             Theme = Options.Theme,
             ToggleStyle = Options.ToggleStyle,
             CornerStyle = Options.CornerStyle,
+            StrokeStyle = Options.StrokeStyle,
             SliderStyle = Options.SliderStyle,
             ComboStyle = Options.ComboStyle,
             Font = Options.Font,
@@ -419,6 +427,13 @@ local UILibrary = (function()
             elseif Options.CornerStyle == "Slight" then
                 if origRadius.Scale ~= 1 then properties.CornerRadius = UDim.new(0, math.floor(origRadius.Offset / 2)) end
             end
+        elseif class == "UIStroke" then
+            pcall(function()
+                element.LineJoinMode = Enum.LineJoinMode.Round
+            end)
+            pcall(function()
+                element.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            end)
         end
 
         for prop, value in pairs(properties) do element[prop] = value end
@@ -429,22 +444,40 @@ local UILibrary = (function()
                 element[prop] = Themes[Options.Theme][role]
             end
         end
-        if class == "UIStroke" and Options.CornerStyle == "Glow" and themeData and themeData.Color == "Stroke" then
-            element.Thickness = 1.8
-            element.Color = Themes[Options.Theme].Accent
-            element.Transparency = 0.12
-        end
         return element
     end
 
-    local function ApplyCornerStyleVisuals(themeUpdate)
-        local styleName = Options.CornerStyle
+    local function ApplyStrokeStyleVisuals(themeUpdate)
+        local styleName = Options.StrokeStyle
         local colors = Themes[Options.Theme]
         for _, item in ipairs(Registries.Theme) do
             if item.Instance and item.Instance.Parent and item.Instance:IsA("UIStroke") and item.Property == "Color" and item.Role == "Stroke" then
-                local targetThickness = styleName == "Glow" and 1.8 or 1
-                local targetColor = styleName == "Glow" and colors.Accent or colors.Stroke
-                local targetTransparency = styleName == "Glow" and 0.12 or 0
+                local targetThickness = 1
+                local targetColor = colors.Stroke
+                local targetTransparency = 0
+                local gradientTransparency = nil
+
+                if styleName == "Glow" then
+                    targetThickness = 1.8
+                    targetColor = colors.Accent
+                    targetTransparency = 0.12
+                elseif styleName == "TwoCornerFade" then
+                    gradientTransparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0),
+                        NumberSequenceKeypoint.new(0.18, 0.9),
+                        NumberSequenceKeypoint.new(0.5, 1),
+                        NumberSequenceKeypoint.new(0.82, 0.9),
+                        NumberSequenceKeypoint.new(1, 0)
+                    })
+                elseif styleName == "SoftFade" then
+                    targetTransparency = 0.15
+                    gradientTransparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0.2),
+                        NumberSequenceKeypoint.new(0.5, 0.65),
+                        NumberSequenceKeypoint.new(1, 0.2)
+                    })
+                end
+
                 if themeUpdate then
                     item.Instance.Thickness = targetThickness
                     item.Instance.Color = targetColor
@@ -455,6 +488,20 @@ local UILibrary = (function()
                         Color = targetColor,
                         Transparency = targetTransparency
                     }):Play()
+                end
+
+                local gradient = item.Instance:FindFirstChild("__UILibStrokeGradient")
+                if gradientTransparency then
+                    if not gradient then
+                        gradient = Instance.new("UIGradient")
+                        gradient.Name = "__UILibStrokeGradient"
+                        gradient.Parent = item.Instance
+                    end
+                    gradient.Rotation = 45
+                    gradient.Transparency = gradientTransparency
+                    gradient.Enabled = true
+                elseif gradient then
+                    gradient:Destroy()
                 end
             end
         end
@@ -467,7 +514,7 @@ local UILibrary = (function()
         for _, item in ipairs(Registries.Theme) do
             if item.Instance and item.Instance.Parent then PlayTween(item.Instance, TweenInfo.new(0.3), {[item.Property] = themeColors[item.Role]}):Play() end
         end
-        ApplyCornerStyleVisuals(true)
+        ApplyStrokeStyleVisuals(true)
         for _, syncFunc in ipairs(Registries.Toggle) do syncFunc(true) end
         for _, syncFunc in ipairs(Registries.Slider) do syncFunc(true) end
         for _, syncFunc in ipairs(Registries.Combo) do syncFunc(true) end
@@ -511,13 +558,17 @@ local UILibrary = (function()
                 if styleName == "Blocky" then newRadius = UDim.new(0, 0)
                 elseif styleName == "Slight" then
                     if item.Original.Scale ~= 1 then newRadius = UDim.new(0, math.floor(item.Original.Offset / 2)) end
-                elseif styleName == "Glow" then
-                    if item.Original.Scale ~= 1 then newRadius = UDim.new(0, math.max(6, item.Original.Offset)) end
                 end
                 PlayTween(item.Instance, TweenInfo.new(0.3), {CornerRadius = newRadius}):Play()
             end
         end
-        ApplyCornerStyleVisuals(false)
+        SaveLibraryOptions()
+    end
+
+    local function UpdateStrokeStyle(styleName)
+        if not StrokeStyleSet[styleName] then return end
+        Options.StrokeStyle = styleName
+        ApplyStrokeStyleVisuals(false)
         SaveLibraryOptions()
     end
 
@@ -1239,7 +1290,8 @@ local UILibrary = (function()
         CreateSettingsDropdown("Menu Style", {"Sidebar", "TopBar", "Dropdown", "Tablet"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
         CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox", "Pill", "Dot"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
-        CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky", "Glow"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
+        CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
+        CreateSettingsDropdown("Stroke Style", {"Outline", "Glow", "TwoCornerFade", "SoftFade"}, Options.StrokeStyle, function(val) UpdateStrokeStyle(val) end)
         CreateSettingsDropdown("Slider Style", {"Line", "Pill", "Block"}, Options.SliderStyle, function(val) UpdateSliderStyle(val) end)
         CreateSettingsDropdown("Combo Style", {"Classic", "Compact", "Soft"}, Options.ComboStyle, function(val) UpdateComboStyle(val) end)
         CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura", "SciFi", "Arcade", "Highway", "Garamond", "Fantasy", "Bodoni", "SourceSans"}, Options.Font, function(val) UpdateFont(val) end)
@@ -2045,7 +2097,7 @@ local UILibrary = (function()
         
         -- Initialize the correct layout immediately on startup
         for _, func in ipairs(Registries.MenuLayout) do func(Options.MenuStyle) end
-        ApplyCornerStyleVisuals(true)
+        ApplyStrokeStyleVisuals(true)
         SaveLibraryOptions()
         
         return window
