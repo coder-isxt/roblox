@@ -642,10 +642,27 @@ local UILibrary = (function()
     end
 
 
-    function UILibrary:CreateWindow(title)
+    function UILibrary:CreateWindow(titleOrOptions)
         local window = {}
         local tabs = {}
         local CurrentTab = nil
+        local windowTitle = "UI Library"
+        local includeCustomization = true
+
+        if type(titleOrOptions) == "table" then
+            if type(titleOrOptions.Title) == "string" and titleOrOptions.Title ~= "" then
+                windowTitle = titleOrOptions.Title
+            elseif type(titleOrOptions.title) == "string" and titleOrOptions.title ~= "" then
+                windowTitle = titleOrOptions.title
+            end
+            if type(titleOrOptions.IncludeCustomization) == "boolean" then
+                includeCustomization = titleOrOptions.IncludeCustomization
+            elseif type(titleOrOptions.ShowCustomization) == "boolean" then
+                includeCustomization = titleOrOptions.ShowCustomization
+            end
+        elseif type(titleOrOptions) == "string" and titleOrOptions ~= "" then
+            windowTitle = titleOrOptions
+        end
 
         window.connections = {}
         window.cleanupFunctions = {}
@@ -681,7 +698,7 @@ local UILibrary = (function()
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TopBar})
         CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
         
-        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 19, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = windowTitle, TextSize = 19, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
         local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0.5, -13), Size = UDim2.new(0, 34, 0, 26), Font = Enum.Font.GothamBold, Text = "<", TextSize = 16, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = TabletBackButton})
         
@@ -1289,21 +1306,23 @@ local UILibrary = (function()
         end
 
         -- // Initialize Global Settings Options //
-        CreateSettingsSection("Appearance")
-        CreateSettingsGroup("Visual Style", true)
-        local ThemeOptions = {}
-        for themeName, _ in pairs(Themes) do
-            table.insert(ThemeOptions, themeName)
+        if includeCustomization then
+            CreateSettingsSection("Appearance")
+            CreateSettingsGroup("Visual Style", true)
+            local ThemeOptions = {}
+            for themeName, _ in pairs(Themes) do
+                table.insert(ThemeOptions, themeName)
+            end
+            table.sort(ThemeOptions)
+            CreateSettingsDropdown("Menu Style", {"Sidebar", "TopBar", "Dropdown", "Tablet"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
+            CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
+            CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox", "Pill", "Dot"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
+            CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
+            CreateSettingsDropdown("Stroke Style", {"None", "Outline", "Glow", "TwoCornerFade", "SoftFade"}, Options.StrokeStyle, function(val) UpdateStrokeStyle(val) end)
+            CreateSettingsDropdown("Slider Style", {"Line", "Pill", "Block"}, Options.SliderStyle, function(val) UpdateSliderStyle(val) end)
+            CreateSettingsDropdown("Combo Style", {"Classic", "Compact", "Soft"}, Options.ComboStyle, function(val) UpdateComboStyle(val) end)
+            CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura", "SciFi", "Arcade", "Highway", "Garamond", "Fantasy", "Bodoni", "SourceSans"}, Options.Font, function(val) UpdateFont(val) end)
         end
-        table.sort(ThemeOptions)
-        CreateSettingsDropdown("Menu Style", {"Sidebar", "TopBar", "Dropdown", "Tablet"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
-        CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
-        CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox", "Pill", "Dot"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
-        CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
-        CreateSettingsDropdown("Stroke Style", {"None", "Outline", "Glow", "TwoCornerFade", "SoftFade"}, Options.StrokeStyle, function(val) UpdateStrokeStyle(val) end)
-        CreateSettingsDropdown("Slider Style", {"Line", "Pill", "Block"}, Options.SliderStyle, function(val) UpdateSliderStyle(val) end)
-        CreateSettingsDropdown("Combo Style", {"Classic", "Compact", "Soft"}, Options.ComboStyle, function(val) UpdateComboStyle(val) end)
-        CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura", "SciFi", "Arcade", "Highway", "Garamond", "Fantasy", "Bodoni", "SourceSans"}, Options.Font, function(val) UpdateFont(val) end)
 
         CreateSettingsSection("General")
         CreateSettingsGroup("Runtime", true)
