@@ -32,7 +32,7 @@ local UILibrary = (function()
         Theme = "Default",
         ToggleStyle = "Switch", -- "Switch", "Checkbox", "Pill", "Dot"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
-        StrokeStyle = "Outline", -- "Outline", "Glow", "TwoCornerFade", "SoftFade"
+        StrokeStyle = "Outline", -- "None", "Outline", "Glow", "TwoCornerFade", "SoftFade"
         SliderStyle = "Line", -- "Line", "Pill", "Block"
         ComboStyle = "Classic", -- "Classic", "Compact", "Soft"
         Font = "Gotham", -- FontMap keys
@@ -75,7 +75,7 @@ local UILibrary = (function()
 
     local ToggleStyleSet = { Switch = true, Checkbox = true, Pill = true, Dot = true }
     local CornerStyleSet = { Rounded = true, Slight = true, Blocky = true }
-    local StrokeStyleSet = { Outline = true, Glow = true, TwoCornerFade = true, SoftFade = true }
+    local StrokeStyleSet = { None = true, Outline = true, Glow = true, TwoCornerFade = true, SoftFade = true }
     local SliderStyleSet = { Line = true, Pill = true, Block = true }
     local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
 
@@ -452,12 +452,19 @@ local UILibrary = (function()
         local colors = Themes[Options.Theme]
         for _, item in ipairs(Registries.Theme) do
             if item.Instance and item.Instance.Parent and item.Instance:IsA("UIStroke") and item.Property == "Color" and item.Role == "Stroke" then
+                pcall(function()
+                    item.Instance.LineJoinMode = Enum.LineJoinMode.Round
+                    item.Instance.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                end)
                 local targetThickness = 1
                 local targetColor = colors.Stroke
                 local targetTransparency = 0
                 local gradientTransparency = nil
 
-                if styleName == "Glow" then
+                if styleName == "None" then
+                    targetThickness = 0
+                    targetTransparency = 1
+                elseif styleName == "Glow" then
                     targetThickness = 1.8
                     targetColor = colors.Accent
                     targetTransparency = 0.12
@@ -482,12 +489,14 @@ local UILibrary = (function()
                     item.Instance.Thickness = targetThickness
                     item.Instance.Color = targetColor
                     item.Instance.Transparency = targetTransparency
+                    item.Instance.Enabled = styleName ~= "None"
                 else
                     PlayTween(item.Instance, TweenInfo.new(0.25), {
                         Thickness = targetThickness,
                         Color = targetColor,
                         Transparency = targetTransparency
                     }):Play()
+                    item.Instance.Enabled = styleName ~= "None"
                 end
 
                 local gradient = item.Instance:FindFirstChild("__UILibStrokeGradient")
@@ -1083,7 +1092,7 @@ local UILibrary = (function()
         -- // Settings Menu // --
         local SettingsOverlay = CreateElement("Frame", { Name = "SettingsOverlay", Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, ZIndex = 20 })
 
-        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 460, 0, 320), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
+        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 560, 0, 390), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 14), Parent = SettingsFrame})
         CreateElement("UIStroke", {Thickness = 1, Parent = SettingsFrame}, {Color = "Stroke"})
         
@@ -1291,7 +1300,7 @@ local UILibrary = (function()
         CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox", "Pill", "Dot"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
         CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
-        CreateSettingsDropdown("Stroke Style", {"Outline", "Glow", "TwoCornerFade", "SoftFade"}, Options.StrokeStyle, function(val) UpdateStrokeStyle(val) end)
+        CreateSettingsDropdown("Stroke Style", {"None", "Outline", "Glow", "TwoCornerFade", "SoftFade"}, Options.StrokeStyle, function(val) UpdateStrokeStyle(val) end)
         CreateSettingsDropdown("Slider Style", {"Line", "Pill", "Block"}, Options.SliderStyle, function(val) UpdateSliderStyle(val) end)
         CreateSettingsDropdown("Combo Style", {"Classic", "Compact", "Soft"}, Options.ComboStyle, function(val) UpdateComboStyle(val) end)
         CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura", "SciFi", "Arcade", "Highway", "Garamond", "Fantasy", "Bodoni", "SourceSans"}, Options.Font, function(val) UpdateFont(val) end)
