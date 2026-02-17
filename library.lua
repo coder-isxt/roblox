@@ -33,15 +33,19 @@ local UILibrary = (function()
         ToggleStyle = "Switch", -- "Switch" or "Checkbox"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
         Font = "Gotham", -- "Gotham", "Ubuntu", "Code", "Jura"
-        MenuStyle = "Sidebar" -- "Sidebar", "SidebarCompact", "Dropdown", "Topbar", "FloatingDropdown", "Minimal"
+        MenuStyle = "Sidebar" -- "Sidebar", "SidebarCompact", "SidebarMini", "Dropdown", "DropdownCompact", "Topbar", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"
     }
 
     local MenuStyleSet = {
         Sidebar = true,
         SidebarCompact = true,
+        SidebarMini = true,
         Dropdown = true,
+        DropdownCompact = true,
         Topbar = true,
         FloatingDropdown = true,
+        FloatingLeft = true,
+        FloatingRight = true,
         Minimal = true
     }
 
@@ -49,7 +53,10 @@ local UILibrary = (function()
         Default = { MainBg = Color3.fromRGB(10, 10, 10), SecBg = Color3.fromRGB(20, 20, 20), TerBg = Color3.fromRGB(25, 25, 25), QuarBg = Color3.fromRGB(40, 40, 40), Hover = Color3.fromRGB(35, 35, 35), Accent = Color3.fromRGB(220, 40, 40), Text = Color3.fromRGB(255, 255, 255), SubText = Color3.fromRGB(150, 150, 150), Stroke = Color3.fromRGB(50, 50, 50) },
         Dark = { MainBg = Color3.fromRGB(15, 15, 15), SecBg = Color3.fromRGB(22, 22, 22), TerBg = Color3.fromRGB(30, 30, 30), QuarBg = Color3.fromRGB(45, 45, 45), Hover = Color3.fromRGB(50, 50, 50), Accent = Color3.fromRGB(150, 80, 255), Text = Color3.fromRGB(240, 240, 240), SubText = Color3.fromRGB(170, 170, 170), Stroke = Color3.fromRGB(70, 70, 70) },
         Light = { MainBg = Color3.fromRGB(245, 245, 245), SecBg = Color3.fromRGB(230, 230, 230), TerBg = Color3.fromRGB(215, 215, 215), QuarBg = Color3.fromRGB(200, 200, 200), Hover = Color3.fromRGB(180, 180, 180), Accent = Color3.fromRGB(50, 130, 255), Text = Color3.fromRGB(20, 20, 20), SubText = Color3.fromRGB(100, 100, 100), Stroke = Color3.fromRGB(180, 180, 180) },
-        Discord = { MainBg = Color3.fromRGB(54, 57, 63), SecBg = Color3.fromRGB(47, 49, 54), TerBg = Color3.fromRGB(64, 68, 75), QuarBg = Color3.fromRGB(79, 84, 92), Hover = Color3.fromRGB(114, 118, 125), Accent = Color3.fromRGB(88, 101, 242), Text = Color3.fromRGB(255, 255, 255), SubText = Color3.fromRGB(185, 187, 190), Stroke = Color3.fromRGB(32, 34, 37) }
+        Discord = { MainBg = Color3.fromRGB(54, 57, 63), SecBg = Color3.fromRGB(47, 49, 54), TerBg = Color3.fromRGB(64, 68, 75), QuarBg = Color3.fromRGB(79, 84, 92), Hover = Color3.fromRGB(114, 118, 125), Accent = Color3.fromRGB(88, 101, 242), Text = Color3.fromRGB(255, 255, 255), SubText = Color3.fromRGB(185, 187, 190), Stroke = Color3.fromRGB(32, 34, 37) },
+        Midnight = { MainBg = Color3.fromRGB(8, 12, 20), SecBg = Color3.fromRGB(14, 20, 32), TerBg = Color3.fromRGB(18, 27, 40), QuarBg = Color3.fromRGB(28, 39, 58), Hover = Color3.fromRGB(36, 49, 72), Accent = Color3.fromRGB(94, 150, 255), Text = Color3.fromRGB(234, 241, 255), SubText = Color3.fromRGB(145, 164, 198), Stroke = Color3.fromRGB(48, 65, 95) },
+        Mint = { MainBg = Color3.fromRGB(14, 26, 24), SecBg = Color3.fromRGB(20, 35, 33), TerBg = Color3.fromRGB(25, 43, 40), QuarBg = Color3.fromRGB(34, 57, 53), Hover = Color3.fromRGB(43, 71, 67), Accent = Color3.fromRGB(59, 216, 170), Text = Color3.fromRGB(226, 255, 246), SubText = Color3.fromRGB(148, 196, 180), Stroke = Color3.fromRGB(57, 88, 80) },
+        Rose = { MainBg = Color3.fromRGB(30, 16, 20), SecBg = Color3.fromRGB(39, 21, 26), TerBg = Color3.fromRGB(47, 25, 32), QuarBg = Color3.fromRGB(61, 33, 42), Hover = Color3.fromRGB(75, 43, 54), Accent = Color3.fromRGB(255, 103, 148), Text = Color3.fromRGB(255, 235, 242), SubText = Color3.fromRGB(201, 151, 169), Stroke = Color3.fromRGB(94, 56, 70) }
     }
 
     local FontMap = {
@@ -489,20 +496,21 @@ local UILibrary = (function()
         
         local ScreenGui = CreateElement("ScreenGui", { Name = "UILibWindow", Parent = game:GetService("CoreGui"), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true })
         
-        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 680, 0, 500), ClipsDescendants = true, Visible = true }, {BackgroundColor3 = "MainBg"})
+        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 560, 0, 420), ClipsDescendants = true, Visible = true }, {BackgroundColor3 = "MainBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = MainFrame})
         CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = MainFrame}, {Color = "Stroke"})
-        local expandedWidth, expandedHeight = 680, 500
+        local topBarHeight = 42
+        local expandedWidth, expandedHeight = 560, 420
         local function ComputeWindowSize()
             local camera = workspace.CurrentCamera
             local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-            local width = math.clamp(math.floor(viewport.X * 0.62), 620, 980)
-            local height = math.clamp(math.floor(viewport.Y * 0.74), 460, 760)
+            local width = math.clamp(math.floor(viewport.X * 0.48), 480, 780)
+            local height = math.clamp(math.floor(viewport.Y * 0.60), 380, 620)
             return width, height
         end
         local function UpdateWindowSize(animate)
             expandedWidth, expandedHeight = ComputeWindowSize()
-            local targetSize = Minimized and UDim2.new(0, expandedWidth, 0, 48) or UDim2.new(0, expandedWidth, 0, expandedHeight)
+            local targetSize = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight)
             if animate then
                 PlayTween(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
             else
@@ -511,11 +519,11 @@ local UILibrary = (function()
         end
         UpdateWindowSize(false)
         
-        local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 48) }, {BackgroundColor3 = "SecBg"})
+        local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, topBarHeight) }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TopBar})
-        CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -12), Size = UDim2.new(1, 0, 0, 12) }, {BackgroundColor3 = "SecBg"})
+        CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
         
-        CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 18, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.45, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = title or "UI Library", TextSize = 19, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
         
         -- // SEARCH BAR (TOPBAR) // --
 
@@ -554,7 +562,7 @@ local UILibrary = (function()
             ClearTextOnFocus = false,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 200, 0, 30),
+            Size = UDim2.new(0, 170, 0, 28),
             Font = Enum.Font.Gotham,
             TextSize = 13
         }, {
@@ -591,7 +599,7 @@ local UILibrary = (function()
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = SettingsButton})
 
         -- Sidebar Navigation Components
-        local TabContainer = CreateElement("Frame", { Name = "TabContainer", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 48), Size = UDim2.new(0, 176, 1, -48) }, {BackgroundColor3 = "SecBg"})
+        local TabContainer = CreateElement("Frame", { Name = "TabContainer", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, topBarHeight), Size = UDim2.new(0, 150, 1, -topBarHeight) }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = TabContainer})
         CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 0), Size = UDim2.new(1, 0, 0, 12) }, {BackgroundColor3 = "SecBg"})
         CreateElement("Frame", { Parent = TabContainer, BorderSizePixel = 0, Position = UDim2.new(1, -12, 0, 0), Size = UDim2.new(0, 12, 1, 0) }, {BackgroundColor3 = "SecBg"})
@@ -602,11 +610,11 @@ local UILibrary = (function()
         CreateElement("UIListLayout", { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top })
         CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 12)})
         
-        local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 176, 0, 48), Size = UDim2.new(0, 1, 1, -48), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
-        local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 188, 0, 60), Size = UDim2.new(1, -200, 1, -72) })
+        local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 150, 0, topBarHeight), Size = UDim2.new(0, 1, 1, -topBarHeight), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
+        local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 160, 0, topBarHeight + 8), Size = UDim2.new(1, -172, 1, -(topBarHeight + 20)) })
 
         -- Dropdown Navigation Components (V2)
-        local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 12, 0, 60), Size = UDim2.new(1, -24, 0, 35), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
+        local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, topBarHeight + 8), Size = UDim2.new(1, -20, 0, 32), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = NavDropdownFrame})
         CreateElement("UIStroke", {Thickness = 1, Parent = NavDropdownFrame}, {Color = "Stroke"})
 
@@ -661,110 +669,172 @@ local UILibrary = (function()
         -- Handle Layout Switching
         table.insert(Registries.MenuLayout, function(style)
             local preset = nil
+            local sidebarDefault = 150
+            local contentTop = topBarHeight + 8
             if style == "Sidebar" then
                 preset = {
                     ShowSidebar = true,
                     ShowSeparator = true,
                     ShowDropdown = false,
-                    SidebarSize = UDim2.new(0, 176, 1, -48),
-                    SidebarPos = UDim2.new(0, 0, 0, 48),
-                    SeparatorPos = UDim2.new(0, 176, 0, 48),
-                    ContentPos = UDim2.new(0, 188, 0, 60),
-                    ContentSize = UDim2.new(1, -200, 1, -72),
-                    NavPos = UDim2.new(0, 12, 0, 60),
-                    NavSize = UDim2.new(1, -24, 0, 35),
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
+                    ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 12)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 32),
                     NavAnchor = Vector2.new(0, 0),
-                    NavRow = 30
+                    NavRow = 26
                 }
             elseif style == "SidebarCompact" then
                 preset = {
                     ShowSidebar = true,
                     ShowSeparator = true,
                     ShowDropdown = false,
-                    SidebarSize = UDim2.new(0, 136, 1, -48),
-                    SidebarPos = UDim2.new(0, 0, 0, 48),
-                    SeparatorPos = UDim2.new(0, 136, 0, 48),
-                    ContentPos = UDim2.new(0, 148, 0, 60),
-                    ContentSize = UDim2.new(1, -160, 1, -72),
-                    NavPos = UDim2.new(0, 12, 0, 60),
-                    NavSize = UDim2.new(1, -24, 0, 35),
+                    SidebarSize = UDim2.new(0, 124, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, 124, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 134, 0, contentTop),
+                    ContentSize = UDim2.new(1, -146, 1, -(contentTop + 12)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 31),
                     NavAnchor = Vector2.new(0, 0),
-                    NavRow = 28
+                    NavRow = 24
+                }
+            elseif style == "SidebarMini" then
+                preset = {
+                    ShowSidebar = true,
+                    ShowSeparator = true,
+                    ShowDropdown = false,
+                    SidebarSize = UDim2.new(0, 104, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, 104, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 114, 0, contentTop),
+                    ContentSize = UDim2.new(1, -126, 1, -(contentTop + 12)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 30),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 24
                 }
             elseif style == "Dropdown" then
                 preset = {
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
-                    SidebarSize = UDim2.new(0, 176, 1, -48),
-                    SidebarPos = UDim2.new(0, 0, 0, 48),
-                    SeparatorPos = UDim2.new(0, 176, 0, 48),
-                    ContentPos = UDim2.new(0, 12, 0, 102),
-                    ContentSize = UDim2.new(1, -24, 1, -114),
-                    NavPos = UDim2.new(0, 12, 0, 60),
-                    NavSize = UDim2.new(1, -24, 0, 35),
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 48),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 60)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 32),
                     NavAnchor = Vector2.new(0, 0),
-                    NavRow = 30
+                    NavRow = 26
+                }
+            elseif style == "DropdownCompact" then
+                preset = {
+                    ShowSidebar = false,
+                    ShowSeparator = false,
+                    ShowDropdown = true,
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 44),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 56)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 30),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 24
                 }
             elseif style == "Topbar" then
                 preset = {
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
-                    SidebarSize = UDim2.new(0, 176, 1, -48),
-                    SidebarPos = UDim2.new(0, 0, 0, 48),
-                    SeparatorPos = UDim2.new(0, 176, 0, 48),
-                    ContentPos = UDim2.new(0, 12, 0, 96),
-                    ContentSize = UDim2.new(1, -24, 1, -108),
-                    NavPos = UDim2.new(0, 12, 0, 54),
-                    NavSize = UDim2.new(1, -24, 0, 34),
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 42),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 54)),
+                    NavPos = UDim2.new(0, 10, 0, topBarHeight + 4),
+                    NavSize = UDim2.new(1, -20, 0, 30),
                     NavAnchor = Vector2.new(0, 0),
-                    NavRow = 28
+                    NavRow = 24
                 }
             elseif style == "FloatingDropdown" then
                 preset = {
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = true,
-                    SidebarSize = UDim2.new(0, 176, 1, -48),
-                    SidebarPos = UDim2.new(0, 0, 0, 48),
-                    SeparatorPos = UDim2.new(0, 176, 0, 48),
-                    ContentPos = UDim2.new(0, 12, 0, 106),
-                    ContentSize = UDim2.new(1, -24, 1, -118),
-                    NavPos = UDim2.new(0.5, 0, 0, 60),
-                    NavSize = UDim2.new(0, 260, 0, 35),
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 56),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 68)),
+                    NavPos = UDim2.new(0.5, 0, 0, contentTop),
+                    NavSize = UDim2.new(0, 220, 0, 32),
                     NavAnchor = Vector2.new(0.5, 0),
-                    NavRow = 30
+                    NavRow = 26
+                }
+            elseif style == "FloatingLeft" then
+                preset = {
+                    ShowSidebar = false,
+                    ShowSeparator = false,
+                    ShowDropdown = true,
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 56),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 68)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(0, 200, 0, 32),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 26
+                }
+            elseif style == "FloatingRight" then
+                preset = {
+                    ShowSidebar = false,
+                    ShowSeparator = false,
+                    ShowDropdown = true,
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, topBarHeight + 56),
+                    ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 68)),
+                    NavPos = UDim2.new(1, -10, 0, contentTop),
+                    NavSize = UDim2.new(0, 200, 0, 32),
+                    NavAnchor = Vector2.new(1, 0),
+                    NavRow = 26
                 }
             elseif style == "Minimal" then
                 preset = {
                     ShowSidebar = false,
                     ShowSeparator = false,
                     ShowDropdown = false,
-                    SidebarSize = UDim2.new(0, 176, 1, -48),
-                    SidebarPos = UDim2.new(0, 0, 0, 48),
-                    SeparatorPos = UDim2.new(0, 176, 0, 48),
-                    ContentPos = UDim2.new(0, 12, 0, 60),
-                    ContentSize = UDim2.new(1, -24, 1, -72),
-                    NavPos = UDim2.new(0, 12, 0, 60),
-                    NavSize = UDim2.new(1, -24, 0, 35),
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, 10, 0, contentTop),
+                    ContentSize = UDim2.new(1, -20, 1, -(contentTop + 12)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 32),
                     NavAnchor = Vector2.new(0, 0),
-                    NavRow = 30
+                    NavRow = 26
                 }
             else
                 preset = {
                     ShowSidebar = true,
                     ShowSeparator = true,
                     ShowDropdown = false,
-                    SidebarSize = UDim2.new(0, 176, 1, -48),
-                    SidebarPos = UDim2.new(0, 0, 0, 48),
-                    SeparatorPos = UDim2.new(0, 176, 0, 48),
-                    ContentPos = UDim2.new(0, 188, 0, 60),
-                    ContentSize = UDim2.new(1, -200, 1, -72),
-                    NavPos = UDim2.new(0, 12, 0, 60),
-                    NavSize = UDim2.new(1, -24, 0, 35),
+                    SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
+                    SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
+                    SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
+                    ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
+                    ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 12)),
+                    NavPos = UDim2.new(0, 10, 0, contentTop),
+                    NavSize = UDim2.new(1, -20, 0, 32),
                     NavAnchor = Vector2.new(0, 0),
-                    NavRow = 30
+                    NavRow = 26
                 }
             end
 
@@ -800,7 +870,7 @@ local UILibrary = (function()
         -- // Settings Menu // --
         local SettingsOverlay = CreateElement("Frame", { Name = "SettingsOverlay", Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, ZIndex = 20 })
 
-        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 500, 0, 350), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
+        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 460, 0, 320), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 14), Parent = SettingsFrame})
         CreateElement("UIStroke", {Thickness = 1, Parent = SettingsFrame}, {Color = "Stroke"})
         
@@ -969,8 +1039,13 @@ local UILibrary = (function()
         -- // Initialize Global Settings Options //
         CreateSettingsSection("Appearance")
         CreateSettingsGroup("Visual Style", true)
-        CreateSettingsDropdown("Menu Style", {"Sidebar", "SidebarCompact", "Dropdown", "Topbar", "FloatingDropdown", "Minimal"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
-        CreateSettingsDropdown("Interface Theme", {"Default", "Dark", "Light", "Discord"}, Options.Theme, function(val) UpdateTheme(val) end)
+        local ThemeOptions = {}
+        for themeName, _ in pairs(Themes) do
+            table.insert(ThemeOptions, themeName)
+        end
+        table.sort(ThemeOptions)
+        CreateSettingsDropdown("Menu Style", {"Sidebar", "SidebarCompact", "SidebarMini", "Dropdown", "DropdownCompact", "Topbar", "FloatingDropdown", "FloatingLeft", "FloatingRight", "Minimal"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
+        CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
         CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
         CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura"}, Options.Font, function(val) UpdateFont(val) end)
