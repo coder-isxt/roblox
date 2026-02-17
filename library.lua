@@ -33,7 +33,16 @@ local UILibrary = (function()
         ToggleStyle = "Switch", -- "Switch" or "Checkbox"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
         Font = "Gotham", -- "Gotham", "Ubuntu", "Code", "Jura"
-        MenuStyle = "Sidebar" -- "Sidebar" (V1) or "Dropdown" (V2)
+        MenuStyle = "Sidebar" -- "Sidebar", "SidebarCompact", "Dropdown", "Topbar", "FloatingDropdown", "Minimal"
+    }
+
+    local MenuStyleSet = {
+        Sidebar = true,
+        SidebarCompact = true,
+        Dropdown = true,
+        Topbar = true,
+        FloatingDropdown = true,
+        Minimal = true
     }
 
     local Themes = {
@@ -229,7 +238,7 @@ local UILibrary = (function()
         if FontMap[savedOptions.Font] then
             Options.Font = savedOptions.Font
         end
-        if savedOptions.MenuStyle == "Sidebar" or savedOptions.MenuStyle == "Dropdown" then
+        if MenuStyleSet[savedOptions.MenuStyle] then
             Options.MenuStyle = savedOptions.MenuStyle
         end
     end
@@ -606,14 +615,27 @@ local UILibrary = (function()
 
         local NavIsOpen = false
         local NavOptionContainer = nil
+        local ActiveNavRowHeight = 30
+        local ActiveNavFrameSize = UDim2.new(1, -24, 0, 35)
+        local ActiveNavFramePos = UDim2.new(0, 12, 0, 60)
+        local ActiveNavAnchor = Vector2.new(0, 0)
+
+        local function GetNavOpenSize()
+            return UDim2.new(
+                ActiveNavFrameSize.X.Scale,
+                ActiveNavFrameSize.X.Offset,
+                0,
+                ActiveNavFrameSize.Y.Offset + (#tabs * ActiveNavRowHeight) + 10
+            )
+        end
 
         NavDropdownBtn.MouseButton1Click:Connect(function()
             NavIsOpen = not NavIsOpen
             if NavIsOpen then
                 if NavOptionContainer then NavOptionContainer:Destroy() end
-                NavOptionContainer = CreateElement("Frame", { Parent = NavDropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 35), Size = UDim2.new(1, 0, 0, #tabs * 30), ZIndex = 10 })
+                NavOptionContainer = CreateElement("Frame", { Parent = NavDropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, ActiveNavFrameSize.Y.Offset), Size = UDim2.new(1, 0, 0, #tabs * ActiveNavRowHeight), ZIndex = 10 })
                 for i, tab in ipairs(tabs) do
-                    local optBtn = CreateElement("TextButton", { Parent = NavOptionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*30), Size = UDim2.new(1, -20, 0, 28), Font = Enum.Font.Gotham, Text = tab.Name, TextSize = 12, AutoButtonColor = false, ZIndex = 11 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+                    local optBtn = CreateElement("TextButton", { Parent = NavOptionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*ActiveNavRowHeight), Size = UDim2.new(1, -20, 0, ActiveNavRowHeight - 2), Font = Enum.Font.Gotham, Text = tab.Name, TextSize = 12, AutoButtonColor = false, ZIndex = 11 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
                     CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
 
                     optBtn.MouseEnter:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
@@ -622,15 +644,15 @@ local UILibrary = (function()
                     optBtn.MouseButton1Click:Connect(function()
                         window:SwitchToTab(tab)
                         NavIsOpen = false
-                        PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35)}):Play()
+                        PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = ActiveNavFrameSize}):Play()
                         PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 0}):Play()
                         task.delay(0.2, function() if NavOptionContainer then NavOptionContainer:Destroy() end end)
                     end)
                 end
-                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35 + (#tabs * 30) + 10)}):Play()
+                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = GetNavOpenSize()}):Play()
                 PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 180}):Play()
             else
-                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35)}):Play()
+                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = ActiveNavFrameSize}):Play()
                 PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 0}):Play()
                 task.delay(0.2, function() if NavOptionContainer then NavOptionContainer:Destroy() end end)
             end
@@ -638,16 +660,138 @@ local UILibrary = (function()
 
         -- Handle Layout Switching
         table.insert(Registries.MenuLayout, function(style)
+            local preset = nil
             if style == "Sidebar" then
-                TabContainer.Visible = true; Separator.Visible = true; NavDropdownFrame.Visible = false
-                PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = UDim2.new(0, 188, 0, 60), Size = UDim2.new(1, -200, 1, -72)}):Play()
+                preset = {
+                    ShowSidebar = true,
+                    ShowSeparator = true,
+                    ShowDropdown = false,
+                    SidebarSize = UDim2.new(0, 176, 1, -48),
+                    SidebarPos = UDim2.new(0, 0, 0, 48),
+                    SeparatorPos = UDim2.new(0, 176, 0, 48),
+                    ContentPos = UDim2.new(0, 188, 0, 60),
+                    ContentSize = UDim2.new(1, -200, 1, -72),
+                    NavPos = UDim2.new(0, 12, 0, 60),
+                    NavSize = UDim2.new(1, -24, 0, 35),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 30
+                }
+            elseif style == "SidebarCompact" then
+                preset = {
+                    ShowSidebar = true,
+                    ShowSeparator = true,
+                    ShowDropdown = false,
+                    SidebarSize = UDim2.new(0, 136, 1, -48),
+                    SidebarPos = UDim2.new(0, 0, 0, 48),
+                    SeparatorPos = UDim2.new(0, 136, 0, 48),
+                    ContentPos = UDim2.new(0, 148, 0, 60),
+                    ContentSize = UDim2.new(1, -160, 1, -72),
+                    NavPos = UDim2.new(0, 12, 0, 60),
+                    NavSize = UDim2.new(1, -24, 0, 35),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 28
+                }
             elseif style == "Dropdown" then
-                TabContainer.Visible = false; Separator.Visible = false; NavDropdownFrame.Visible = true
-                PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = UDim2.new(0, 12, 0, 102), Size = UDim2.new(1, -24, 1, -114)}):Play()
+                preset = {
+                    ShowSidebar = false,
+                    ShowSeparator = false,
+                    ShowDropdown = true,
+                    SidebarSize = UDim2.new(0, 176, 1, -48),
+                    SidebarPos = UDim2.new(0, 0, 0, 48),
+                    SeparatorPos = UDim2.new(0, 176, 0, 48),
+                    ContentPos = UDim2.new(0, 12, 0, 102),
+                    ContentSize = UDim2.new(1, -24, 1, -114),
+                    NavPos = UDim2.new(0, 12, 0, 60),
+                    NavSize = UDim2.new(1, -24, 0, 35),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 30
+                }
+            elseif style == "Topbar" then
+                preset = {
+                    ShowSidebar = false,
+                    ShowSeparator = false,
+                    ShowDropdown = true,
+                    SidebarSize = UDim2.new(0, 176, 1, -48),
+                    SidebarPos = UDim2.new(0, 0, 0, 48),
+                    SeparatorPos = UDim2.new(0, 176, 0, 48),
+                    ContentPos = UDim2.new(0, 12, 0, 96),
+                    ContentSize = UDim2.new(1, -24, 1, -108),
+                    NavPos = UDim2.new(0, 12, 0, 54),
+                    NavSize = UDim2.new(1, -24, 0, 34),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 28
+                }
+            elseif style == "FloatingDropdown" then
+                preset = {
+                    ShowSidebar = false,
+                    ShowSeparator = false,
+                    ShowDropdown = true,
+                    SidebarSize = UDim2.new(0, 176, 1, -48),
+                    SidebarPos = UDim2.new(0, 0, 0, 48),
+                    SeparatorPos = UDim2.new(0, 176, 0, 48),
+                    ContentPos = UDim2.new(0, 12, 0, 106),
+                    ContentSize = UDim2.new(1, -24, 1, -118),
+                    NavPos = UDim2.new(0.5, 0, 0, 60),
+                    NavSize = UDim2.new(0, 260, 0, 35),
+                    NavAnchor = Vector2.new(0.5, 0),
+                    NavRow = 30
+                }
+            elseif style == "Minimal" then
+                preset = {
+                    ShowSidebar = false,
+                    ShowSeparator = false,
+                    ShowDropdown = false,
+                    SidebarSize = UDim2.new(0, 176, 1, -48),
+                    SidebarPos = UDim2.new(0, 0, 0, 48),
+                    SeparatorPos = UDim2.new(0, 176, 0, 48),
+                    ContentPos = UDim2.new(0, 12, 0, 60),
+                    ContentSize = UDim2.new(1, -24, 1, -72),
+                    NavPos = UDim2.new(0, 12, 0, 60),
+                    NavSize = UDim2.new(1, -24, 0, 35),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 30
+                }
+            else
+                preset = {
+                    ShowSidebar = true,
+                    ShowSeparator = true,
+                    ShowDropdown = false,
+                    SidebarSize = UDim2.new(0, 176, 1, -48),
+                    SidebarPos = UDim2.new(0, 0, 0, 48),
+                    SeparatorPos = UDim2.new(0, 176, 0, 48),
+                    ContentPos = UDim2.new(0, 188, 0, 60),
+                    ContentSize = UDim2.new(1, -200, 1, -72),
+                    NavPos = UDim2.new(0, 12, 0, 60),
+                    NavSize = UDim2.new(1, -24, 0, 35),
+                    NavAnchor = Vector2.new(0, 0),
+                    NavRow = 30
+                }
             end
+
+            ActiveNavFramePos = preset.NavPos
+            ActiveNavFrameSize = preset.NavSize
+            ActiveNavAnchor = preset.NavAnchor
+            ActiveNavRowHeight = preset.NavRow
+
+            TabContainer.AnchorPoint = Vector2.new(0, 0)
+            TabContainer.Position = preset.SidebarPos
+            PlayTween(TabContainer, TweenInfo.new(0.25), {Size = preset.SidebarSize}):Play()
+            PlayTween(Separator, TweenInfo.new(0.25), {Position = preset.SeparatorPos}):Play()
+            NavDropdownFrame.AnchorPoint = ActiveNavAnchor
+            NavDropdownFrame.Position = ActiveNavFramePos
+            NavDropdownFrame.Size = ActiveNavFrameSize
+
+            if preset.ShowSidebar then
+                TabContainer.Visible = true; Separator.Visible = true; NavDropdownFrame.Visible = false
+            elseif preset.ShowDropdown then
+                TabContainer.Visible = false; Separator.Visible = false; NavDropdownFrame.Visible = true
+            else
+                TabContainer.Visible = false; Separator.Visible = false; NavDropdownFrame.Visible = false
+            end
+            PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = preset.ContentPos, Size = preset.ContentSize}):Play()
             if NavIsOpen then -- Auto-collapse dropdown if open during style switch
                 NavIsOpen = false
-                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, -24, 0, 35)}):Play()
+                PlayTween(NavDropdownFrame, TweenInfo.new(0.2), {Size = ActiveNavFrameSize}):Play()
                 PlayTween(NavDropdownIcon, TweenInfo.new(0.2), {Rotation = 0}):Play()
                 if NavOptionContainer then NavOptionContainer:Destroy() end
             end
@@ -825,7 +969,7 @@ local UILibrary = (function()
         -- // Initialize Global Settings Options //
         CreateSettingsSection("Appearance")
         CreateSettingsGroup("Visual Style", true)
-        CreateSettingsDropdown("Menu Style", {"Sidebar", "Dropdown"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
+        CreateSettingsDropdown("Menu Style", {"Sidebar", "SidebarCompact", "Dropdown", "Topbar", "FloatingDropdown", "Minimal"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
         CreateSettingsDropdown("Interface Theme", {"Default", "Dark", "Light", "Discord"}, Options.Theme, function(val) UpdateTheme(val) end)
         CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
         CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
