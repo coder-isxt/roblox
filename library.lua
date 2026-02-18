@@ -2121,7 +2121,7 @@ local UILibrary = (function()
             local notificationGui = game:GetService("CoreGui"):FindFirstChild("CustomNotificationGui")
             if not notificationGui then
                 notificationGui = Instance.new("ScreenGui"); notificationGui.Name = "CustomNotificationGui"; notificationGui.Parent = game:GetService("CoreGui"); notificationGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; notificationGui.ResetOnSpawn = false
-                local container = Instance.new("Frame"); container.Name = "Container"; container.Parent = notificationGui; container.BackgroundTransparency = 1; container.AnchorPoint = Vector2.new(1, 0); container.Position = UDim2.new(1, -20, 0, 80); container.Size = UDim2.new(0, 280, 0.5, 0)
+                local container = Instance.new("Frame"); container.Name = "Container"; container.Parent = notificationGui; container.BackgroundTransparency = 1; container.AnchorPoint = Vector2.new(1, 0); container.Position = UDim2.new(1, -20, 0, 80); container.Size = UDim2.new(0, 320, 1, -100)
                 local layout = Instance.new("UIListLayout"); layout.Parent = container; layout.SortOrder = Enum.SortOrder.LayoutOrder; layout.Padding = UDim.new(0, 10); layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
             end
             
@@ -2153,10 +2153,13 @@ local UILibrary = (function()
             end
             local notifStyle = notifPalette[kind] or notifPalette.info
             local displayTitle = tostring(title)
-            local frame = CreateElement("TextButton", { Name = "Notification", Parent = container, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 74), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "SecBg"})
+            local frame = CreateElement("TextButton", { Name = "Notification", Parent = container, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 74), AutomaticSize = Enum.AutomaticSize.Y, AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "SecBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = frame})
             local stroke = CreateElement("UIStroke", {Thickness = 1.2, Transparency = 0.2, Parent = frame})
             stroke.Color = notifStyle.stroke
+            local minCard = Instance.new("UISizeConstraint")
+            minCard.MinSize = Vector2.new(0, 74)
+            minCard.Parent = frame
 
             local leftAccent = CreateElement("Frame", {
                 Parent = frame,
@@ -2204,10 +2207,25 @@ local UILibrary = (function()
             })
             closeButton.TextColor3 = Themes[Options.Theme].SubText
 
-            local titleLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 7), Size = UDim2.new(1, -76, 0, 22), Font = Enum.Font.GothamBold, Text = displayTitle, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center })
+            local titleLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 7), Size = UDim2.new(1, -84, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.GothamBold, Text = displayTitle, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true })
             titleLabel.TextColor3 = notifStyle.title
-            local contentLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 28), Size = UDim2.new(1, -56, 1, -40), Font = Enum.Font.Gotham, Text = tostring(content), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true })
+            local contentLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 30), Size = UDim2.new(1, -56, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.Gotham, Text = tostring(content), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true })
             contentLabel.TextColor3 = notifStyle.content
+            local function refreshCardLayout()
+                contentLabel.Position = UDim2.new(0, 44, 0, 10 + titleLabel.AbsoluteSize.Y + 6)
+                local bottomPad = 12
+                local timerHeight = 3
+                local topY = contentLabel.Position.Y.Offset
+                local needed = topY + contentLabel.AbsoluteSize.Y + timerHeight + bottomPad
+                if needed > 74 then
+                    frame.Size = UDim2.new(1, 0, 0, needed)
+                else
+                    frame.Size = UDim2.new(1, 0, 0, 74)
+                end
+            end
+            titleLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshCardLayout)
+            contentLabel:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshCardLayout)
+            task.defer(refreshCardLayout)
 
             local timerTrack = CreateElement("Frame", {
                 Parent = frame,
@@ -2223,13 +2241,59 @@ local UILibrary = (function()
             })
             timerFill.BackgroundColor3 = notifStyle.stroke
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = timerFill})
-            
-            PlayTween(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
+            local cardScale = Instance.new("UIScale")
+            cardScale.Scale = 0.92
+            cardScale.Parent = frame
+            local iconScale = Instance.new("UIScale")
+            iconScale.Scale = 0.78
+            iconScale.Parent = iconBg
+
+            frame.BackgroundTransparency = 1
+            stroke.Transparency = 1
+            leftAccent.BackgroundTransparency = 1
+            iconBg.BackgroundTransparency = 1
+            iconLabel.TextTransparency = 1
+            closeButton.TextTransparency = 1
+            titleLabel.TextTransparency = 1
+            contentLabel.TextTransparency = 1
+            timerTrack.BackgroundTransparency = 1
+            timerFill.BackgroundTransparency = 1
+
+            PlayTween(cardScale, TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            PlayTween(iconScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            PlayTween(frame, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+            PlayTween(stroke, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Transparency = 0.2}):Play()
+            PlayTween(leftAccent, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+            PlayTween(iconBg, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+            PlayTween(iconLabel, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            PlayTween(closeButton, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            PlayTween(titleLabel, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            PlayTween(contentLabel, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+            PlayTween(timerTrack, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+            PlayTween(timerFill, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
             PlayTween(timerFill, TweenInfo.new(math.max(0.05, duration), Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 1, 0)}):Play()
+            local closing = false
             local function close()
-                if not frame.Parent then return end
-                local tween = PlayTween(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(1.2, 0, 0, 0)})
-                tween.Completed:Connect(function() frame:Destroy() end); tween:Play()
+                if closing or (not frame.Parent) then return end
+                closing = true
+                PlayTween(cardScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.94}):Play()
+                PlayTween(iconScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
+                PlayTween(frame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                PlayTween(stroke, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Transparency = 1}):Play()
+                PlayTween(leftAccent, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                PlayTween(iconBg, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                PlayTween(iconLabel, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 1}):Play()
+                PlayTween(closeButton, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 1}):Play()
+                PlayTween(titleLabel, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 1}):Play()
+                PlayTween(contentLabel, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 1}):Play()
+                PlayTween(timerTrack, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                PlayTween(timerFill, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+                task.delay(0.22, function()
+                    if frame and frame.Parent then
+                        frame:Destroy()
+                    end
+                end)
             end
             closeButton.MouseEnter:Connect(function()
                 PlayTween(closeButton, TweenInfo.new(0.15), {TextColor3 = notifStyle.title}):Play()
