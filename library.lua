@@ -1788,9 +1788,6 @@ local UILibrary = (function()
                     setToggleState(not toggled, false)
                 end)
                 syncVisuals(true)
-                if toggleStore then
-                    pcall(callback, toggled)
-                end
                 table.insert(tab.Elements, toggleFrame)
                 return toggleFrame
             end
@@ -1935,7 +1932,7 @@ local UILibrary = (function()
                 table.insert(Registries.Slider, applySliderStyle)
                 applySliderStyle(true)
                 if sliderStore then
-                    applySliderValue(currentValue, false)
+                    applySliderValue(currentValue, true)
                 end
                 table.insert(tab.Elements, sliderFrame)
                 return sliderFrame
@@ -1981,7 +1978,7 @@ local UILibrary = (function()
                     task.wait(0.1); PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 100, 0, 22)}):Play()
                 end)
                 if cycleStore and #values > 0 then
-                    update(false)
+                    update(true)
                 end
                 table.insert(tab.Elements, cycleFrame)
                 return {
@@ -2097,7 +2094,7 @@ local UILibrary = (function()
                 end)
                 applyComboStyle(true)
                 if dropdownStore and currentValue ~= nil then
-                    setDropdownValue(currentValue, false)
+                    setDropdownValue(currentValue, true)
                 end
                 table.insert(tab.Elements, dropdownFrame)
                 return dropdownFrame
@@ -2130,13 +2127,42 @@ local UILibrary = (function()
             
             local container = notificationGui:FindFirstChild("Container")
             local title, content, duration = args.Title or "Notification", args.Content or "", args.Duration or 5
+            local kind = string.lower(tostring(args.Type or args.Kind or "info"))
+            local notifPalette = {
+                info = {
+                    stroke = Themes[Options.Theme].Accent,
+                    title = Themes[Options.Theme].Text,
+                    content = Themes[Options.Theme].SubText,
+                    icon = "i"
+                },
+                warning = {
+                    stroke = Color3.fromRGB(255, 184, 77),
+                    title = Color3.fromRGB(255, 223, 168),
+                    content = Color3.fromRGB(232, 198, 140),
+                    icon = "!"
+                },
+                error = {
+                    stroke = Color3.fromRGB(255, 90, 90),
+                    title = Color3.fromRGB(255, 205, 205),
+                    content = Color3.fromRGB(239, 166, 166),
+                    icon = "x"
+                }
+            }
+            if kind == "warn" then
+                kind = "warning"
+            end
+            local notifStyle = notifPalette[kind] or notifPalette.info
+            local displayTitle = string.format("[%s] %s", notifStyle.icon, tostring(title))
             
             local frame = CreateElement("TextButton", { Name = "Notification", Parent = container, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 60), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "SecBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = frame})
-            local stroke = CreateElement("UIStroke", {Thickness = 1.5, Transparency = 0.2, Parent = frame}, {Color = "Accent"})
+            local stroke = CreateElement("UIStroke", {Thickness = 1.5, Transparency = 0.2, Parent = frame})
+            stroke.Color = notifStyle.stroke
             
-            CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 5), Size = UDim2.new(1, -20, 0, 20), Font = Enum.Font.GothamBold, Text = title, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-            CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 25), Size = UDim2.new(1, -20, 1, -30), Font = Enum.Font.Gotham, Text = content, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true }, {TextColor3 = "SubText"})
+            local titleLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 5), Size = UDim2.new(1, -20, 0, 20), Font = Enum.Font.GothamBold, Text = displayTitle, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left })
+            titleLabel.TextColor3 = notifStyle.title
+            local contentLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 25), Size = UDim2.new(1, -20, 1, -30), Font = Enum.Font.Gotham, Text = tostring(content), TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true })
+            contentLabel.TextColor3 = notifStyle.content
             
             PlayTween(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
             local function close()
@@ -2145,6 +2171,24 @@ local UILibrary = (function()
                 tween.Completed:Connect(function() frame:Destroy() end); tween:Play()
             end
             frame.MouseButton1Click:Connect(close); task.delay(duration, close)
+        end
+
+        function UILibrary:NotifyInfo(args)
+            args = args or {}
+            args.Type = "info"
+            return UILibrary:Notify(args)
+        end
+
+        function UILibrary:NotifyWarning(args)
+            args = args or {}
+            args.Type = "warning"
+            return UILibrary:Notify(args)
+        end
+
+        function UILibrary:NotifyError(args)
+            args = args or {}
+            args.Type = "error"
+            return UILibrary:Notify(args)
         end
         
         -- Initialize the correct layout immediately on startup
