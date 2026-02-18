@@ -1118,7 +1118,15 @@ local UILibrary = (function()
         local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 16}, {TextColor3 = "SubText"})
 
         local SettingsBody = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 40), Size = UDim2.new(1, 0, 1, -40) })
-        local SettingsSidebar = CreateElement("ScrollingFrame", { Parent = SettingsBody, BackgroundTransparency = 1, Size = UDim2.new(0, 140, 1, 0), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0 })
+        local SettingsSidebar = CreateElement("ScrollingFrame", {
+            Parent = SettingsBody,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 140, 1, 0),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 2,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollingDirection = Enum.ScrollingDirection.Y
+        }, {ScrollBarImageColor3 = "Stroke"})
         CreateElement("UIListLayout", {Parent = SettingsSidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5)})
         CreateElement("UIPadding", {Parent = SettingsSidebar, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10)})
         CreateElement("Frame", { Parent = SettingsBody, BorderSizePixel = 0, Position = UDim2.new(0, 140, 0, 10), Size = UDim2.new(0, 1, 1, -20) }, {BackgroundColor3 = "Stroke"})
@@ -1631,15 +1639,31 @@ local UILibrary = (function()
 
 
             local tab = { Name = name, Elements = {} }
-            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0, BorderSizePixel = 0, Size = UDim2.new(1, -18, 0, 38), Font = Enum.Font.GothamBold, Text = name, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
+            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0, BorderSizePixel = 0, Size = UDim2.new(1, -18, 0, 36), Font = Enum.Font.GothamBold, Text = name, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = tabButton})
             CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 14)})
             local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, 8), Size = UDim2.new(0, 3, 1, -16), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
             
-            local page = CreateElement("ScrollingFrame", { Name = name .. "Page", Parent = ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), ScrollBarThickness = 2, Visible = false }, {ScrollBarImageColor3 = "Stroke"})
-            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
-            CreateElement("UIPadding", {Parent = page, PaddingRight = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingTop = UDim.new(0, 5)})
+            local page = CreateElement("ScrollingFrame", {
+                Name = name .. "Page",
+                Parent = ContentFrame,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                CanvasSize = UDim2.new(0, 0, 0, 0),
+                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                ScrollingDirection = Enum.ScrollingDirection.Y,
+                ScrollBarThickness = 3,
+                Visible = false
+            }, {ScrollBarImageColor3 = "Stroke"})
+            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10)})
+            CreateElement("UIPadding", {
+                Parent = page,
+                PaddingRight = UDim.new(0, 10),
+                PaddingLeft = UDim.new(0, 5),
+                PaddingTop = UDim.new(0, 5),
+                PaddingBottom = UDim.new(0, 10)
+            })
             local tabletTile = CreateElement("TextButton", { Name = name .. "Tile", Parent = TabletHomeFrame, BorderSizePixel = 0, AutoButtonColor = false, Text = name, Font = Enum.Font.GothamBold, TextSize = 15 }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = tabletTile})
             CreateElement("UIStroke", {Parent = tabletTile, Thickness = 1}, {Color = "Stroke"})
