@@ -2152,25 +2152,94 @@ local UILibrary = (function()
                 kind = "warning"
             end
             local notifStyle = notifPalette[kind] or notifPalette.info
-            local displayTitle = string.format("[%s] %s", notifStyle.icon, tostring(title))
-            
-            local frame = CreateElement("TextButton", { Name = "Notification", Parent = container, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 60), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "SecBg"})
+            local displayTitle = tostring(title)
+            local frame = CreateElement("TextButton", { Name = "Notification", Parent = container, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 74), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "SecBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = frame})
-            local stroke = CreateElement("UIStroke", {Thickness = 1.5, Transparency = 0.2, Parent = frame})
+            local stroke = CreateElement("UIStroke", {Thickness = 1.2, Transparency = 0.2, Parent = frame})
             stroke.Color = notifStyle.stroke
-            
-            local titleLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 5), Size = UDim2.new(1, -20, 0, 20), Font = Enum.Font.GothamBold, Text = displayTitle, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left })
+
+            local leftAccent = CreateElement("Frame", {
+                Parent = frame,
+                BorderSizePixel = 0,
+                Position = UDim2.new(0, 0, 0, 0),
+                Size = UDim2.new(0, 5, 1, 0)
+            })
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = leftAccent})
+            leftAccent.BackgroundColor3 = notifStyle.stroke
+
+            local iconBg = CreateElement("Frame", {
+                Parent = frame,
+                BorderSizePixel = 0,
+                Position = UDim2.new(0, 12, 0, 10),
+                Size = UDim2.new(0, 24, 0, 24)
+            })
+            iconBg.BackgroundColor3 = Color3.fromRGB(
+                math.floor((notifStyle.stroke.R * 255 + Themes[Options.Theme].MainBg.R * 255) * 0.5),
+                math.floor((notifStyle.stroke.G * 255 + Themes[Options.Theme].MainBg.G * 255) * 0.5),
+                math.floor((notifStyle.stroke.B * 255 + Themes[Options.Theme].MainBg.B * 255) * 0.5)
+            )
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = iconBg})
+            local iconLabel = CreateElement("TextLabel", {
+                Parent = iconBg,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 1, 0),
+                Font = Enum.Font.GothamBold,
+                Text = notifStyle.icon,
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                TextYAlignment = Enum.TextYAlignment.Center
+            })
+            iconLabel.TextColor3 = notifStyle.title
+
+            local closeButton = CreateElement("TextButton", {
+                Parent = frame,
+                BorderSizePixel = 0,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(1, -28, 0, 8),
+                Size = UDim2.new(0, 20, 0, 20),
+                Font = Enum.Font.GothamBold,
+                Text = "X",
+                TextSize = 13,
+                AutoButtonColor = false
+            })
+            closeButton.TextColor3 = Themes[Options.Theme].SubText
+
+            local titleLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 7), Size = UDim2.new(1, -76, 0, 22), Font = Enum.Font.GothamBold, Text = displayTitle, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center })
             titleLabel.TextColor3 = notifStyle.title
-            local contentLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 25), Size = UDim2.new(1, -20, 1, -30), Font = Enum.Font.Gotham, Text = tostring(content), TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true })
+            local contentLabel = CreateElement("TextLabel", { Parent = frame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 28), Size = UDim2.new(1, -56, 1, -40), Font = Enum.Font.Gotham, Text = tostring(content), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true })
             contentLabel.TextColor3 = notifStyle.content
+
+            local timerTrack = CreateElement("Frame", {
+                Parent = frame,
+                BorderSizePixel = 0,
+                Position = UDim2.new(0, 10, 1, -8),
+                Size = UDim2.new(1, -20, 0, 3)
+            }, {BackgroundColor3 = "QuarBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = timerTrack})
+            local timerFill = CreateElement("Frame", {
+                Parent = timerTrack,
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 1, 0)
+            })
+            timerFill.BackgroundColor3 = notifStyle.stroke
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = timerFill})
             
             PlayTween(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+            PlayTween(timerFill, TweenInfo.new(math.max(0.05, duration), Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {Size = UDim2.new(0, 0, 1, 0)}):Play()
             local function close()
                 if not frame.Parent then return end
                 local tween = PlayTween(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(1.2, 0, 0, 0)})
                 tween.Completed:Connect(function() frame:Destroy() end); tween:Play()
             end
-            frame.MouseButton1Click:Connect(close); task.delay(duration, close)
+            closeButton.MouseEnter:Connect(function()
+                PlayTween(closeButton, TweenInfo.new(0.15), {TextColor3 = notifStyle.title}):Play()
+            end)
+            closeButton.MouseLeave:Connect(function()
+                PlayTween(closeButton, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].SubText}):Play()
+            end)
+            frame.MouseButton1Click:Connect(close)
+            closeButton.MouseButton1Click:Connect(close)
+            task.delay(duration, close)
         end
 
         function UILibrary:NotifyInfo(args)
