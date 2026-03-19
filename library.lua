@@ -5,6 +5,13 @@ local UILibrary = (function()
     local UserInputService = game:GetService("UserInputService")
     local RunService = game:GetService("RunService")
     local HttpService = game:GetService("HttpService")
+    local PlayersServiceGlobal = game:GetService("Players")
+
+    local SharedPlayerSelection = {
+        UserId = nil,
+        Name = nil,
+        Listeners = {}
+    }
 
     -- // TWEEN POOLING // --
     local TweenPool = {}
@@ -757,6 +764,97 @@ local UILibrary = (function()
         return value
     end
 
+    local function ResolvePlayerInput(input)
+        if typeof(input) == "Instance" and input:IsA("Player") then
+            return input
+        end
+
+        if type(input) == "number" then
+            for _, player in ipairs(PlayersServiceGlobal:GetPlayers()) do
+                if player.UserId == input then
+                    return player
+                end
+            end
+            return nil
+        end
+
+        if type(input) == "string" and input ~= "" then
+            local lowered = string.lower(input)
+            local partialMatch = nil
+            for _, player in ipairs(PlayersServiceGlobal:GetPlayers()) do
+                local nameLower = string.lower(player.Name)
+                local displayLower = string.lower(player.DisplayName or player.Name)
+                if nameLower == lowered or displayLower == lowered then
+                    return player
+                end
+                if nameLower:sub(1, #lowered) == lowered or displayLower:sub(1, #lowered) == lowered then
+                    partialMatch = partialMatch or player
+                end
+            end
+            return partialMatch
+        end
+
+        return nil
+    end
+
+    local function SetSharedSelectedPlayer(player)
+        SharedPlayerSelection.UserId = player and player.UserId or nil
+        SharedPlayerSelection.Name = player and player.Name or nil
+        for _, callback in ipairs(SharedPlayerSelection.Listeners) do
+            pcall(callback, player, SharedPlayerSelection.UserId, SharedPlayerSelection.Name)
+        end
+    end
+
+    function UILibrary:SetSelectedPlayer(playerOrNameOrId)
+        local resolved = ResolvePlayerInput(playerOrNameOrId)
+        if not resolved then
+            return false
+        end
+        SetSharedSelectedPlayer(resolved)
+        return true, resolved
+    end
+
+    function UILibrary:ClearSelectedPlayer()
+        SetSharedSelectedPlayer(nil)
+    end
+
+    function UILibrary:GetSelectedPlayer()
+        if not SharedPlayerSelection.UserId then
+            return nil
+        end
+        for _, player in ipairs(PlayersServiceGlobal:GetPlayers()) do
+            if player.UserId == SharedPlayerSelection.UserId then
+                return player
+            end
+        end
+        return nil
+    end
+
+    function UILibrary:GetSelectedPlayerInfo()
+        local player = self:GetSelectedPlayer()
+        return {
+            Player = player,
+            UserId = player and player.UserId or SharedPlayerSelection.UserId,
+            Name = player and player.Name or SharedPlayerSelection.Name
+        }
+    end
+
+    function UILibrary:OnSelectedPlayerChanged(callback)
+        if type(callback) ~= "function" then
+            return function() end
+        end
+        table.insert(SharedPlayerSelection.Listeners, callback)
+        pcall(callback, self:GetSelectedPlayer(), SharedPlayerSelection.UserId, SharedPlayerSelection.Name)
+        return function()
+            for i, registered in ipairs(SharedPlayerSelection.Listeners) do
+                if registered == callback then
+                    table.remove(SharedPlayerSelection.Listeners, i)
+                    break
+                end
+            end
+        end
+    end
+
     -- // REGISTRIES (SPLIT BY TYPE) // --
     local Registries = {
         Theme = {},
@@ -1496,7 +1594,7 @@ local UILibrary = (function()
         local PlayerListCollapsedWidth = 34
         local PlayerListGap = 8
         local PlayerAdminCallbacks = {}
-        local SelectedAdminPlayer = nil
+        local SelectedAdminPlayer = UILibrary:GetSelectedPlayer()
         local PlayerTargetMode = "Selected"
         local PlayerTargetModes = {"Selected", "Others", "All"}
         local SpectateTargetPlayer = nil
@@ -1997,6 +2095,7 @@ local UILibrary = (function()
                 return
             end
             SelectedAdminPlayer = targetPlayer
+            SetSharedSelectedPlayer(targetPlayer)
             PlayerAdminNameLabel.Text = targetPlayer.DisplayName or targetPlayer.Name
             PlayerAdminUserLabel.Text = "@" .. targetPlayer.Name
             if PlayerTargetMode == "Selected" then
@@ -2136,6 +2235,8 @@ local UILibrary = (function()
                     PlayTween(playerButton, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play()
                 end)
                 playerButton.MouseButton1Click:Connect(function()
+                    SelectedAdminPlayer = targetPlayer
+                    SetSharedSelectedPlayer(targetPlayer)
                     OpenPlayerAdminMenu(targetPlayer)
                 end)
             end
@@ -3565,6 +3666,19 @@ local UILibrary = (function()
         function window:RefreshPlayerList()
             RefreshPlayerListButtons()
             return self
+        end
+
+        function window:GetSelectedPlayer()
+            return UILibrary:GetSelectedPlayer()
+        end
+
+        function window:SetSelectedPlayer(playerOrNameOrId)
+            local ok, player = UILibrary:SetSelectedPlayer(playerOrNameOrId)
+            if ok then
+                SelectedAdminPlayer = player
+                return true, player
+            end
+            return false
         end
 
         function window:CreateTab(name)
