@@ -1603,69 +1603,159 @@ local UILibrary = (function()
             if not targetRoot then
                 return false, "Target has no root part."
             end
+            local targetHumanoid = targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if not targetHumanoid then
+                return false, "Target has no humanoid."
+            end
 
             local seat = Instance.new("Seat")
-            seat.Name = "UILibSeatTrick"
-            seat.Size = Vector3.new(2.2, 1, 2.2)
+            seat.Name = "UILibSeatPull"
+            seat.Size = Vector3.new(2.4, 1, 2.4)
             seat.Transparency = 1
             seat.CanCollide = false
             seat.Anchored = true
             seat.Parent = workspace
 
-            local endTime = os.clock() + 1.2
-            local heartbeatConnection
-            heartbeatConnection = RunService.Heartbeat:Connect(function()
+            local captured = false
+            local pulled = false
+
+            local captureUntil = os.clock() + 1.35
+            while os.clock() < captureUntil do
                 local currentTargetRoot = GetTargetRootPart(targetPlayer)
-                if not currentTargetRoot or os.clock() > endTime then
-                    if heartbeatConnection then
-                        heartbeatConnection:Disconnect()
-                        heartbeatConnection = nil
-                    end
-                    if seat.Parent then
-                        seat:Destroy()
-                    end
-                    return
+                if not currentTargetRoot or not seat.Parent then
+                    break
                 end
-                seat.CFrame = CFrame.new(currentTargetRoot.Position + Vector3.new(0, -2.7, 0))
-            end)
 
-            task.delay(1.3, function()
-                if heartbeatConnection then
-                    heartbeatConnection:Disconnect()
-                    heartbeatConnection = nil
-                end
-                if seat and seat.Parent then
-                    seat:Destroy()
-                end
-            end)
+                seat.CFrame = currentTargetRoot.CFrame * CFrame.new(0, -2.65, 0)
+                pcall(function()
+                    targetHumanoid.Sit = true
+                end)
+                pcall(function()
+                    seat:Sit(targetHumanoid)
+                end)
 
+                if seat.Occupant == targetHumanoid then
+                    captured = true
+                    break
+                end
+                RunService.Heartbeat:Wait()
+            end
+
+            if captured then
+                local pullUntil = os.clock() + 0.95
+                while os.clock() < pullUntil do
+                    local localRoot = GetLocalRootPart()
+                    if not localRoot or not seat.Parent then
+                        break
+                    end
+                    seat.CFrame = localRoot.CFrame * CFrame.new(0, -2.65, -3.2)
+                    if seat.Occupant == targetHumanoid then
+                        pulled = true
+                    end
+                    RunService.Heartbeat:Wait()
+                end
+            end
+
+            if seat and seat.Parent then
+                seat:Destroy()
+            end
+
+            if not captured then
+                return false, "Could not seat target."
+            end
+            if not pulled then
+                return false, "Target seated, but pull did not stick."
+            end
             return true
         end
 
-        local function AttemptFling(targetPlayer)
-            local localRoot = GetLocalRootPart()
-            local targetRoot = GetTargetRootPart(targetPlayer)
+        local function AttemptUniversalBring(targetPlayer)
+            local localCharacter = localPlayer and localPlayer.Character
+            local targetCharacter = targetPlayer and targetPlayer.Character
+            if not localCharacter or not targetCharacter then
+                return false, "No character."
+            end
+            if not (localCharacter:IsDescendantOf(workspace) and targetCharacter:IsDescendantOf(workspace)) then
+                return false, "Character not in workspace."
+            end
+
+            local localRoot = localCharacter:FindFirstChild("HumanoidRootPart")
+            local targetRoot = targetCharacter:FindFirstChild("HumanoidRootPart")
             if not localRoot or not targetRoot then
-                return false, "Local or target root part missing."
+                return false, "No HumanoidRootPart."
             end
 
-            local startCFrame = localRoot.CFrame
-            local direction = targetRoot.Position - localRoot.Position
-            if direction.Magnitude < 1 then
-                direction = targetRoot.CFrame.LookVector
+            local from = targetRoot.CFrame
+            local fromPosition = from.Position
+            local to = localRoot.CFrame
+            local toPosition = to.Position
+            local distance = (fromPosition - toPosition).Magnitude - 3
+            if distance <= 0 then
+                return false, "Already close to target."
             end
-            direction = direction.Unit
 
-            localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -2.25)
-            localRoot.AssemblyLinearVelocity = (direction * 240) + Vector3.new(0, 120, 0)
+            local lookVector = CFrame.new(fromPosition, toPosition).LookVector
+            local velocity = 0
+            local positionOffset = fromPosition - Vector3.new(0, 2, 0)
+            toPosition = toPosition - Vector3.new(0, 2, 0)
+            local tilt = CFrame.Angles(-math.pi / 2, 0, 0)
+            local accel = 32
+            local maxSpeed = 75
+            local traveled = 0
+            local reachedMaxAt = nil
+            local now = os.clock()
+            local last = now
+            local timeoutAt = now + 4
 
-            task.delay(0.18, function()
-                if localRoot and localRoot.Parent then
-                    localRoot.AssemblyLinearVelocity = Vector3.zero
-                    localRoot.CFrame = startCFrame
+            while localCharacter:IsDescendantOf(workspace) and targetCharacter:IsDescendantOf(workspace) and os.clock() < timeoutAt do
+                now = os.clock()
+                local dt = now - last
+                last = now
+
+                if reachedMaxAt then
+                    if distance - traveled < reachedMaxAt then
+                        velocity = velocity - (dt * accel)
+                        if velocity < 0 then
+                            break
+                        end
+                    end
+                else
+                    if traveled > (distance / 2) then
+                        velocity = velocity - (dt * accel)
+                        if velocity < 0 then
+                            break
+                        end
+                    else
+                        velocity = velocity + (dt * accel)
+                        if velocity > maxSpeed then
+                            reachedMaxAt = traveled
+                            velocity = maxSpeed
+                        end
+                    end
                 end
-            end)
 
+                traveled = traveled + (velocity * dt)
+
+                local grounded = false
+                local groundedOk, groundedResult = pcall(function()
+                    return localRoot:IsGrounded()
+                end)
+                if groundedOk and groundedResult then
+                    grounded = true
+                end
+
+                if not grounded then
+                    localRoot.CFrame = CFrame.new(positionOffset + (lookVector * traveled), toPosition) * tilt
+                    localRoot.AssemblyLinearVelocity = lookVector * (velocity + 1)
+                    localRoot.AssemblyAngularVelocity = Vector3.zero
+                end
+
+                task.wait()
+            end
+
+            localRoot.CFrame = to
+            localRoot.AssemblyLinearVelocity = Vector3.zero
+            localRoot.AssemblyAngularVelocity = Vector3.zero
             return true
         end
 
@@ -1931,26 +2021,26 @@ local UILibrary = (function()
                 PlayerAdminNotify("Teleport", "Unable to teleport right now.", 2.8)
             end
         end)
-        CreatePlayerActionButton("Seat Trick (Test)", function()
+        CreatePlayerActionButton("Seat Pull (Test)", function()
             if not SelectedAdminPlayer then
                 return
             end
             local ok, err = AttemptSeatTrick(SelectedAdminPlayer)
             if ok then
-                PlayerAdminNotify("Seat Trick", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
+                PlayerAdminNotify("Seat Pull", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
             else
-                PlayerAdminNotify("Seat Trick", tostring(err or "Failed."), 2.8)
+                PlayerAdminNotify("Seat Pull", tostring(err or "Failed."), 2.8)
             end
         end)
-        CreatePlayerActionButton("Fling (Test)", function()
+        CreatePlayerActionButton("Universal Bring (Test)", function()
             if not SelectedAdminPlayer then
                 return
             end
-            local ok, err = AttemptFling(SelectedAdminPlayer)
+            local ok, err = AttemptUniversalBring(SelectedAdminPlayer)
             if ok then
-                PlayerAdminNotify("Fling", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
+                PlayerAdminNotify("Universal Bring", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
             else
-                PlayerAdminNotify("Fling", tostring(err or "Failed."), 2.8)
+                PlayerAdminNotify("Universal Bring", tostring(err or "Failed."), 2.8)
             end
         end)
         CreatePlayerActionButton("Copy Username", function()
