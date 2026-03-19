@@ -1574,44 +1574,6 @@ local UILibrary = (function()
             return successCount > 0
         end
 
-        local function FindSegwayUndoRemote()
-            local function resolveFrom(container)
-                if not container then
-                    return nil
-                end
-                for _, descendant in ipairs(container:GetDescendants()) do
-                    if descendant:IsA("Model") and descendant.Name == "HandlessSegway" then
-                        local remoteEvents = descendant:FindFirstChild("RemoteEvents")
-                        local remote = remoteEvents and remoteEvents:FindFirstChild("UndoHasWelded")
-                        if remote and remote:IsA("RemoteEvent") then
-                            return remote
-                        end
-                    end
-                end
-                return nil
-            end
-
-            return resolveFrom(workspace)
-                or resolveFrom(game:GetService("Lighting"))
-                or resolveFrom(PlayersService)
-        end
-
-        local function FireScaleRemote(remote, humanoid, scaleName)
-            local scaleValue = humanoid and humanoid:FindFirstChild(scaleName)
-            if not scaleValue then
-                return false
-            end
-            remote:FireServer({
-                Value = {
-                    Parent = {
-                        HasWelded = scaleValue
-                    },
-                    Name = "Seater"
-                }
-            })
-            return true
-        end
-
         local function RunAnimationAction(targetPlayer, actionName)
             if type(PlayerAdminCallbacks.OnAnimationAction) == "function" then
                 return pcall(PlayerAdminCallbacks.OnAnimationAction, actionName, targetPlayer)
@@ -1624,13 +1586,6 @@ local UILibrary = (function()
                 return false
             end
 
-            if actionName == "Dance" then
-                pcall(function()
-                    localHumanoid:Move(Vector3.zero, false)
-                    localHumanoid.Jump = false
-                end)
-            end
-
             local endAt = os.clock() + 2.6
             while os.clock() < endAt do
                 targetRoot = GetTargetRootPart(targetPlayer)
@@ -1640,19 +1595,6 @@ local UILibrary = (function()
                 if actionName == "Push Lock" then
                     localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2)
                     localRoot.AssemblyLinearVelocity = targetRoot.CFrame.LookVector * 95
-                elseif actionName == "Slam On" then
-                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 7, 0)
-                    localRoot.AssemblyLinearVelocity = Vector3.new(0, -160, 0)
-                elseif actionName == "Levitate On" then
-                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 9, 0)
-                    localRoot.AssemblyLinearVelocity = Vector3.new(0, 3, 0)
-                elseif actionName == "Carpet" then
-                    local t = os.clock() * 7
-                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(math.cos(t) * 4, 0, math.sin(t) * 4)
-                    localRoot.AssemblyLinearVelocity = (targetRoot.Position - localRoot.Position).Unit * 45
-                elseif actionName == "Dance" then
-                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2.8)
-                    localRoot.AssemblyLinearVelocity = Vector3.zero
                 end
                 RunService.Heartbeat:Wait()
             end
@@ -2131,88 +2073,6 @@ local UILibrary = (function()
         CreatePlayerActionButton("Push Lock", function()
             ApplyToTargets("Push Lock", function(targetPlayer)
                 return RunAnimationAction(targetPlayer, "Push Lock")
-            end)
-        end)
-        CreatePlayerActionButton("Slam On", function()
-            ApplyToTargets("Slam On", function(targetPlayer)
-                return RunAnimationAction(targetPlayer, "Slam On")
-            end)
-        end)
-        CreatePlayerActionButton("Levitate On", function()
-            ApplyToTargets("Levitate On", function(targetPlayer)
-                return RunAnimationAction(targetPlayer, "Levitate On")
-            end)
-        end)
-        CreatePlayerActionButton("Dance", function()
-            ApplyToTargets("Dance", function(targetPlayer)
-                return RunAnimationAction(targetPlayer, "Dance")
-            end)
-        end)
-        CreatePlayerActionButton("Carpet", function()
-            ApplyToTargets("Carpet", function(targetPlayer)
-                return RunAnimationAction(targetPlayer, "Carpet")
-            end)
-        end)
-        CreatePlayerActionButton("Flatten (Segway Remote)", function()
-            local remote = FindSegwayUndoRemote()
-            if not remote then
-                PlayerAdminNotify("Flatten", "UndoHasWelded remote not found in this game.", 3)
-                return
-            end
-            ApplyToTargets("Flatten", function(targetPlayer)
-                local humanoid = GetTargetHumanoid(targetPlayer)
-                return FireScaleRemote(remote, humanoid, "BodyDepthScale")
-            end)
-        end)
-        CreatePlayerActionButton("Stick (Segway Remote)", function()
-            local remote = FindSegwayUndoRemote()
-            if not remote then
-                PlayerAdminNotify("Stick", "UndoHasWelded remote not found in this game.", 3)
-                return
-            end
-            ApplyToTargets("Stick", function(targetPlayer)
-                local humanoid = GetTargetHumanoid(targetPlayer)
-                local ok1 = FireScaleRemote(remote, humanoid, "BodyDepthScale")
-                local ok2 = FireScaleRemote(remote, humanoid, "BodyWidthScale")
-                return ok1 or ok2
-            end)
-        end)
-        CreatePlayerActionButton("Remove Body (Segway Remote)", function()
-            local remote = FindSegwayUndoRemote()
-            if not remote then
-                PlayerAdminNotify("Remove Body", "UndoHasWelded remote not found in this game.", 3)
-                return
-            end
-            ApplyToTargets("Remove Body", function(targetPlayer)
-                local humanoid = GetTargetHumanoid(targetPlayer)
-                return FireScaleRemote(remote, humanoid, "BodyHeightScale")
-            end)
-        end)
-        CreatePlayerActionButton("Headless (Segway Remote)", function()
-            local remote = FindSegwayUndoRemote()
-            if not remote then
-                PlayerAdminNotify("Headless", "UndoHasWelded remote not found in this game.", 3)
-                return
-            end
-            ApplyToTargets("Headless", function(targetPlayer)
-                local humanoid = GetTargetHumanoid(targetPlayer)
-                return FireScaleRemote(remote, humanoid, "HeadScale")
-            end)
-        end)
-        CreatePlayerActionButton("Invisible (Segway Remote)", function()
-            local remote = FindSegwayUndoRemote()
-            if not remote then
-                PlayerAdminNotify("Invisible", "UndoHasWelded remote not found in this game.", 3)
-                return
-            end
-            ApplyToTargets("Invisible", function(targetPlayer)
-                local humanoid = GetTargetHumanoid(targetPlayer)
-                local any = false
-                any = FireScaleRemote(remote, humanoid, "HeadScale") or any
-                any = FireScaleRemote(remote, humanoid, "BodyHeightScale") or any
-                any = FireScaleRemote(remote, humanoid, "BodyWidthScale") or any
-                any = FireScaleRemote(remote, humanoid, "BodyDepthScale") or any
-                return any
             end)
         end)
         PlayerAdminCloseButton.MouseButton1Click:Connect(ClosePlayerAdminMenu)
