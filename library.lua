@@ -1811,30 +1811,59 @@ local UILibrary = (function()
         -- // Settings Menu // --
         local SettingsOverlay = CreateElement("Frame", { Name = "SettingsOverlay", Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, ZIndex = 20 })
 
-        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 648, 0, 446), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
+        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 680, 0, 462), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner - 1), Parent = SettingsFrame})
         CreateElement("UIStroke", {Thickness = 1.15, Parent = SettingsFrame}, {Color = "Stroke"})
         
-        local SettingsHeader = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48) })
-        CreateElement("TextLabel", { Parent = SettingsHeader, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 0), Size = UDim2.new(1, -50, 1, 0), Font = Enum.Font.GothamBold, Text = "Settings", TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+        local SettingsHeader = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 56) })
+        CreateElement("TextLabel", { Parent = SettingsHeader, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 4), Size = UDim2.new(1, -64, 0, 24), Font = Enum.Font.GothamBold, Text = "Library Settings", TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+        CreateElement("TextLabel", { Parent = SettingsHeader, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 28), Size = UDim2.new(1, -64, 0, 20), Font = Enum.Font.Gotham, Text = "Configure menu behavior, profiles and runtime tools.", TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "SubText"})
+        CreateElement("Frame", { Parent = SettingsHeader, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -1), Size = UDim2.new(1, 0, 0, 1) }, {BackgroundColor3 = "Stroke"})
         local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "X", TextSize = 14}, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = CloseSettingsButton})
 
-        local SettingsBody = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 48), Size = UDim2.new(1, 0, 1, -48) })
-        local SettingsSidebar = CreateElement("ScrollingFrame", {
+        local SettingsBody = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 56), Size = UDim2.new(1, 0, 1, -56) })
+        local SettingsSidebarPanel = CreateElement("Frame", {
             Parent = SettingsBody,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 10, 0, 10),
+            Size = UDim2.new(0, 200, 1, -20)
+        }, {BackgroundColor3 = "TerBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = SettingsSidebarPanel})
+        CreateElement("UIStroke", {Thickness = 1, Parent = SettingsSidebarPanel}, {Color = "Stroke"})
+        CreateElement("TextLabel", {
+            Parent = SettingsSidebarPanel,
             BackgroundTransparency = 1,
-            Size = UDim2.new(0, 186, 1, 0),
+            Position = UDim2.new(0, 12, 0, 8),
+            Size = UDim2.new(1, -24, 0, 18),
+            Font = Enum.Font.GothamBold,
+            Text = "SECTIONS",
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left
+        }, {TextColor3 = "SubText"})
+        local SettingsSidebar = CreateElement("ScrollingFrame", {
+            Parent = SettingsSidebarPanel,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, 28),
+            Size = UDim2.new(1, 0, 1, -34),
             CanvasSize = UDim2.new(0, 0, 0, 0),
             ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             ScrollingDirection = Enum.ScrollingDirection.Y
         }, {ScrollBarImageColor3 = "Stroke"})
-        CreateElement("UIListLayout", {Parent = SettingsSidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5)})
-        CreateElement("UIPadding", {Parent = SettingsSidebar, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10)})
-        CreateElement("Frame", { Parent = SettingsBody, BorderSizePixel = 0, Position = UDim2.new(0, 186, 0, 10), Size = UDim2.new(0, 1, 1, -20) }, {BackgroundColor3 = "Stroke"})
+        CreateElement("UIListLayout", {Parent = SettingsSidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6)})
+        CreateElement("UIPadding", {Parent = SettingsSidebar, PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8)})
 
-        local SettingsContent = CreateElement("Frame", { Parent = SettingsBody, BackgroundTransparency = 1, Position = UDim2.new(0, 196, 0, 0), Size = UDim2.new(1, -196, 1, 0) })
+        local SettingsContentPanel = CreateElement("Frame", {
+            Parent = SettingsBody,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 220, 0, 10),
+            Size = UDim2.new(1, -230, 1, -20)
+        }, {BackgroundColor3 = "MainBg"})
+        SettingsContentPanel.BackgroundTransparency = 0.12
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = SettingsContentPanel})
+        CreateElement("UIStroke", {Thickness = 1, Parent = SettingsContentPanel}, {Color = "Stroke"})
+        local SettingsContent = CreateElement("Frame", { Parent = SettingsContentPanel, BackgroundTransparency = 1, Position = UDim2.new(0, 8, 0, 8), Size = UDim2.new(1, -16, 1, -16) })
 
         local SettingsTabs = {}
         local CurrentSettingsPage = nil
@@ -1844,33 +1873,82 @@ local UILibrary = (function()
             for n, tab in pairs(SettingsTabs) do
                 tab.Page.Visible = (n == name)
                 if n == name then
-                    PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.68}):Play()
+                    PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.56}):Play()
+                    if tab.ActiveRail then
+                        PlayTween(tab.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
+                    end
                 else
-                    PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 0.9}):Play()
+                    PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 0.86}):Play()
+                    if tab.ActiveRail then
+                        PlayTween(tab.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+                    end
                 end
             end
             CurrentSettingsContainer = nil
         end
 
-        local function CreateSettingsSection(text)
+        local function CreateSettingsSection(text, description)
             if SettingsTabs[text] then return end
-            local tabBtn = CreateElement("TextButton", { Parent = SettingsSidebar, BackgroundTransparency = 0.9, Size = UDim2.new(1, -12, 0, 34), Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false }, {BackgroundColor3 = "TerBg", TextColor3 = "SubText"})
+            local tabBtn = CreateElement("TextButton", { Parent = SettingsSidebar, BackgroundTransparency = 0.86, Size = UDim2.new(1, 0, 0, 36), Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false }, {BackgroundColor3 = "TerBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = tabBtn})
             CreateElement("UIStroke", {Thickness = 1, Parent = tabBtn}, {Color = "Stroke"})
-            CreateElement("UIPadding", {Parent = tabBtn, PaddingLeft = UDim.new(0, 11)})
+            CreateElement("UIPadding", {Parent = tabBtn, PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 10)})
+            local activeRail = CreateElement("Frame", {
+                Parent = tabBtn,
+                BorderSizePixel = 0,
+                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                Size = UDim2.new(0, 3, 0, 20),
+                BackgroundTransparency = 1
+            }, {BackgroundColor3 = "Accent"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
+
             local page = CreateElement("ScrollingFrame", { Parent = SettingsContent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y })
-            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
-            CreateElement("UIPadding", {Parent = page, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)})
-            SettingsTabs[text] = {Button = tabBtn, Page = page}; CurrentSettingsPage = page; CurrentSettingsContainer = nil
+            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 9)})
+            CreateElement("UIPadding", {Parent = page, PaddingTop = UDim.new(0, 6), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4), PaddingBottom = UDim.new(0, 6)})
+
+            local introCard = CreateElement("Frame", {
+                Parent = page,
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 58),
+                LayoutOrder = 0
+            }, {BackgroundColor3 = "TerBg"})
+            introCard.BackgroundTransparency = 0.04
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = introCard})
+            CreateElement("UIStroke", {Thickness = 1, Parent = introCard}, {Color = "Stroke"})
+            CreateElement("TextLabel", {
+                Parent = introCard,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 12, 0, 8),
+                Size = UDim2.new(1, -24, 0, 20),
+                Font = Enum.Font.GothamBold,
+                Text = text,
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left
+            }, {TextColor3 = "Text"})
+            CreateElement("TextLabel", {
+                Parent = introCard,
+                BackgroundTransparency = 1,
+                Position = UDim2.new(0, 12, 0, 28),
+                Size = UDim2.new(1, -24, 0, 20),
+                Font = Enum.Font.Gotham,
+                Text = description or "Configure this section.",
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left
+            }, {TextColor3 = "SubText"})
+
+            SettingsTabs[text] = {Button = tabBtn, Page = page, ActiveRail = activeRail}
+            CurrentSettingsPage = page
+            CurrentSettingsContainer = nil
             tabBtn.MouseButton1Click:Connect(function() SwitchSettingsTab(text) end)
             tabBtn.MouseEnter:Connect(function()
                 if not page.Visible then
-                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.8}):Play()
+                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.72}):Play()
                 end
             end)
             tabBtn.MouseLeave:Connect(function()
                 if not page.Visible then
-                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 0.9}):Play()
+                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 0.86}):Play()
                 end
             end)
             if not next(SettingsTabs, next(SettingsTabs)) then SwitchSettingsTab(text) end
@@ -1928,7 +2006,7 @@ local UILibrary = (function()
                 AutomaticSize = Enum.AutomaticSize.Y
             })
             CreateElement("UIListLayout", {Parent = content, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
-            CreateElement("UIPadding", {Parent = content, PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)})
+            CreateElement("UIPadding", {Parent = content, PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
 
             local expanded = expandedByDefault ~= false
             local function syncGroup(animate)
@@ -2169,7 +2247,7 @@ local UILibrary = (function()
 
         -- // Initialize Global Settings Options //
         if includeCustomization then
-            CreateSettingsSection("Interface")
+            CreateSettingsSection("Interface", "Window sizing and scale behavior.")
             CreateSettingsGroup("Scale", true)
             CreateSettingsDropdown("Scale Mode", {"Auto", "Manual"}, Options.AutoScale and "Auto" or "Manual", function(val)
                 Options.AutoScale = (val == "Auto")
@@ -2233,7 +2311,7 @@ local UILibrary = (function()
             return "Profile_" .. os.date("%Y%m%d_%H%M%S")
         end
 
-        CreateSettingsSection("Config")
+        CreateSettingsSection("Config", "Profiles, saving, loading and import/export.")
         CreateSettingsGroup("Profiles", true)
         profilePicker = CreateSettingsCycle("Active Profile", UILibrary:GetProfiles(), selectedProfileName, function(profileName)
             if type(profileName) == "string" and profileName ~= "" then
@@ -2300,7 +2378,7 @@ local UILibrary = (function()
             end
         end)
 
-        CreateSettingsSection("General")
+        CreateSettingsSection("General", "Global runtime behavior for this library.")
         CreateSettingsGroup("Runtime", true)
         CreateSettingsKeybind("Menu Toggle Key", collapseKey, function(newKey)
             if typeof(newKey) ~= "EnumItem" then
@@ -2372,7 +2450,7 @@ local UILibrary = (function()
         end
 
         -- Performance tab and toggles
-        CreateSettingsSection("Performance")
+        CreateSettingsSection("Performance", "Optional visual reductions and FPS helpers.")
         CreateSettingsGroup("Optimization", true)
 
         CreateSettingsToggle("Performance Mode (FPS Boost)", function(state)
@@ -2449,7 +2527,7 @@ local UILibrary = (function()
             end
         end)
 
-        CreateSettingsSection("Developer")
+        CreateSettingsSection("Developer", "External tools and debugging utilities.")
         CreateSettingsGroup("Tools", true)
         CreateSettingsButton("Load Remotespy", function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578"))() end)
         CreateSettingsButton("Load DevEx", function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))() end)
