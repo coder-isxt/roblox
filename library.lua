@@ -1490,7 +1490,7 @@ local UILibrary = (function()
         local BaseContentPos = ContentFrame.Position
         local BaseContentSize = ContentFrame.Size
 
-        local EnablePlayerPanel = false
+        local EnablePlayerPanel = true
         local PlayerListCollapsed = false
         local PlayerListExpandedWidth = 162
         local PlayerListCollapsedWidth = 34
