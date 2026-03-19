@@ -1961,18 +1961,6 @@ local UILibrary = (function()
                 PlayerAdminNotify("Bring", tostring(err or "Failed."), 2.8)
             end
         end)
-        CreatePlayerActionButton("Copy Username", function()
-            if not SelectedAdminPlayer then
-                return
-            end
-            if type(setclipboard) == "function" then
-                setclipboard(SelectedAdminPlayer.Name)
-                PlayerAdminNotify("Player", "Username copied.")
-            else
-                PlayerAdminNotify("Player", "Clipboard unavailable.", 2.5)
-            end
-        end)
-
         PlayerAdminCloseButton.MouseButton1Click:Connect(ClosePlayerAdminMenu)
         PlayerAdminOverlay.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
