@@ -1594,20 +1594,8 @@ local UILibrary = (function()
                 end
                 return ok
             end
-
-            local localRoot = GetLocalRootPart()
-            local targetRoot = GetTargetRootPart(targetPlayer)
-            if not localRoot or not targetRoot then
-                return false
-            end
-
-            local ok = pcall(function()
-                targetRoot.CFrame = localRoot.CFrame * CFrame.new(0, 0, -4)
-            end)
-            if not ok then
-                PlayerAdminNotify("Bring", "Bring needs a server-side handler.", 3)
-            end
-            return ok
+            PlayerAdminNotify("Bring", "Unavailable in client-only mode.", 3)
+            return false
         end
 
         local function GetOtherPlayers()
@@ -1625,10 +1613,10 @@ local UILibrary = (function()
 
         local PlayerListFrame = CreateElement("Frame", {
             Name = "PlayerListFrame",
-            Parent = MainFrame,
+            Parent = ScreenGui,
             BorderSizePixel = 0,
-            Position = UDim2.new(1, -(PlayerListExpandedWidth + 10), 0, topBarHeight + 8),
-            Size = UDim2.new(0, PlayerListExpandedWidth, 1, -(topBarHeight + 20)),
+            Position = UDim2.fromOffset(0, 0),
+            Size = UDim2.fromOffset(PlayerListExpandedWidth, 260),
             ClipsDescendants = true
         }, {BackgroundColor3 = "SecBg"})
         PlayerListFrame.BackgroundTransparency = 0.04
@@ -1867,7 +1855,7 @@ local UILibrary = (function()
                 PlayerAdminNotify("Teleport", "Unable to teleport right now.", 2.8)
             end
         end)
-        CreatePlayerActionButton("Bring", function()
+        CreatePlayerActionButton("Bring (Server Req.)", function()
             if not SelectedAdminPlayer then
                 return
             end
@@ -1886,9 +1874,6 @@ local UILibrary = (function()
             else
                 PlayerAdminNotify("Player", "Clipboard unavailable.", 2.5)
             end
-        end)
-        CreatePlayerActionButton("Close", function()
-            ClosePlayerAdminMenu()
         end)
 
         PlayerAdminCloseButton.MouseButton1Click:Connect(ClosePlayerAdminMenu)
@@ -1957,10 +1942,17 @@ local UILibrary = (function()
         end
 
         local function GetPlayerListInsetOffset()
-            if not EnablePlayerPanel then
-                return 0
-            end
-            return (PlayerListCollapsed and PlayerListCollapsedWidth or PlayerListExpandedWidth) + PlayerListGap
+            return 0
+        end
+
+        local function ResolveFloatingPlayerListGeometry()
+            local panelWidth = PlayerListCollapsed and PlayerListCollapsedWidth or PlayerListExpandedWidth
+            local mainPos = MainFrame.AbsolutePosition
+            local mainSize = MainFrame.AbsoluteSize
+            local panelX = mainPos.X + mainSize.X + PlayerListGap
+            local panelY = mainPos.Y + topBarHeight + 8
+            local panelHeight = math.max(120, mainSize.Y - (topBarHeight + 20))
+            return panelX, panelY, panelWidth, panelHeight
         end
 
         local function ApplyPlayerListVisual(animate)
@@ -1968,9 +1960,9 @@ local UILibrary = (function()
                 PlayerListFrame.Visible = false
                 return
             end
-            local panelWidth = PlayerListCollapsed and PlayerListCollapsedWidth or PlayerListExpandedWidth
-            local panelPos = UDim2.new(1, -(panelWidth + 10), 0, topBarHeight + 8)
-            local panelSize = UDim2.new(0, panelWidth, 1, -(topBarHeight + 20))
+            local panelX, panelY, panelWidth, panelHeight = ResolveFloatingPlayerListGeometry()
+            local panelPos = UDim2.fromOffset(panelX, panelY)
+            local panelSize = UDim2.fromOffset(panelWidth, panelHeight)
             local titleVisible = not PlayerListCollapsed
             local listVisible = not PlayerListCollapsed
             PlayerListToggleButton.Text = PlayerListCollapsed and "<" or ">"
@@ -2051,6 +2043,16 @@ local UILibrary = (function()
                     RefreshSpectateButtonText()
                 end
                 RefreshPlayerListButtons()
+            end))
+            table.insert(window.connections, MainFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+                if MainFrame.Visible and not Minimized then
+                    ApplyPlayerListVisual(false)
+                end
+            end))
+            table.insert(window.connections, MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                if MainFrame.Visible and not Minimized then
+                    ApplyPlayerListVisual(false)
+                end
             end))
         end
 
