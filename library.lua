@@ -1497,6 +1497,8 @@ local UILibrary = (function()
         local PlayerListGap = 8
         local PlayerAdminCallbacks = {}
         local SelectedAdminPlayer = nil
+        local PlayerTargetMode = "Selected"
+        local PlayerTargetModes = {"Selected", "Others", "All"}
         local SpectateTargetPlayer = nil
         local SpectatePreviousSubject = nil
         local SpectateHeartbeatConnection = nil
@@ -1519,6 +1521,142 @@ local UILibrary = (function()
         local function GetTargetRootPart(targetPlayer)
             local character = targetPlayer and targetPlayer.Character
             return character and character:FindFirstChild("HumanoidRootPart")
+        end
+
+        local function GetTargetHumanoid(targetPlayer)
+            local character = targetPlayer and targetPlayer.Character
+            return character and character:FindFirstChildOfClass("Humanoid")
+        end
+
+        local function GetPlayableTargets()
+            local candidates = {}
+            if PlayerTargetMode == "All" then
+                for _, player in ipairs(PlayersService:GetPlayers()) do
+                    if player ~= localPlayer then
+                        table.insert(candidates, player)
+                    end
+                end
+            elseif PlayerTargetMode == "Others" then
+                for _, player in ipairs(PlayersService:GetPlayers()) do
+                    if player ~= localPlayer then
+                        table.insert(candidates, player)
+                    end
+                end
+            else
+                if SelectedAdminPlayer and SelectedAdminPlayer ~= localPlayer then
+                    table.insert(candidates, SelectedAdminPlayer)
+                end
+            end
+
+            local filtered = {}
+            for _, player in ipairs(candidates) do
+                if player and player.Parent == PlayersService and GetTargetRootPart(player) then
+                    table.insert(filtered, player)
+                end
+            end
+            return filtered
+        end
+
+        local function ApplyToTargets(actionName, callback)
+            local targets = GetPlayableTargets()
+            if #targets == 0 then
+                PlayerAdminNotify(actionName, "No valid targets for mode: " .. PlayerTargetMode, 2.8)
+                return false
+            end
+            local successCount = 0
+            for _, player in ipairs(targets) do
+                local ok, result = pcall(callback, player)
+                if ok and result ~= false then
+                    successCount = successCount + 1
+                end
+            end
+            PlayerAdminNotify(actionName, "Applied to " .. tostring(successCount) .. "/" .. tostring(#targets) .. " target(s).", 2.6)
+            return successCount > 0
+        end
+
+        local function FindSegwayUndoRemote()
+            local function resolveFrom(container)
+                if not container then
+                    return nil
+                end
+                for _, descendant in ipairs(container:GetDescendants()) do
+                    if descendant:IsA("Model") and descendant.Name == "HandlessSegway" then
+                        local remoteEvents = descendant:FindFirstChild("RemoteEvents")
+                        local remote = remoteEvents and remoteEvents:FindFirstChild("UndoHasWelded")
+                        if remote and remote:IsA("RemoteEvent") then
+                            return remote
+                        end
+                    end
+                end
+                return nil
+            end
+
+            return resolveFrom(workspace)
+                or resolveFrom(game:GetService("Lighting"))
+                or resolveFrom(PlayersService)
+        end
+
+        local function FireScaleRemote(remote, humanoid, scaleName)
+            local scaleValue = humanoid and humanoid:FindFirstChild(scaleName)
+            if not scaleValue then
+                return false
+            end
+            remote:FireServer({
+                Value = {
+                    Parent = {
+                        HasWelded = scaleValue
+                    },
+                    Name = "Seater"
+                }
+            })
+            return true
+        end
+
+        local function RunAnimationAction(targetPlayer, actionName)
+            if type(PlayerAdminCallbacks.OnAnimationAction) == "function" then
+                return pcall(PlayerAdminCallbacks.OnAnimationAction, actionName, targetPlayer)
+            end
+
+            local localRoot = GetLocalRootPart()
+            local localHumanoid = localPlayer and localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid")
+            local targetRoot = GetTargetRootPart(targetPlayer)
+            if not localRoot or not localHumanoid or not targetRoot then
+                return false
+            end
+
+            if actionName == "Dance" then
+                pcall(function()
+                    localHumanoid:Move(Vector3.zero, false)
+                    localHumanoid.Jump = false
+                end)
+            end
+
+            local endAt = os.clock() + 2.6
+            while os.clock() < endAt do
+                targetRoot = GetTargetRootPart(targetPlayer)
+                if not targetRoot or not localRoot.Parent then
+                    break
+                end
+                if actionName == "Push Lock" then
+                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2)
+                    localRoot.AssemblyLinearVelocity = targetRoot.CFrame.LookVector * 95
+                elseif actionName == "Slam On" then
+                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 7, 0)
+                    localRoot.AssemblyLinearVelocity = Vector3.new(0, -160, 0)
+                elseif actionName == "Levitate On" then
+                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 9, 0)
+                    localRoot.AssemblyLinearVelocity = Vector3.new(0, 3, 0)
+                elseif actionName == "Carpet" then
+                    local t = os.clock() * 7
+                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(math.cos(t) * 4, 0, math.sin(t) * 4)
+                    localRoot.AssemblyLinearVelocity = (targetRoot.Position - localRoot.Position).Unit * 45
+                elseif actionName == "Dance" then
+                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2.8)
+                    localRoot.AssemblyLinearVelocity = Vector3.zero
+                end
+                RunService.Heartbeat:Wait()
+            end
+            return true
         end
 
         local function StopSpectate()
@@ -1886,6 +2024,7 @@ local UILibrary = (function()
         end
 
         local SpectateActionButton = nil
+        local TargetModeActionButton = nil
 
         local function RefreshSpectateButtonText()
             if not SpectateActionButton then
@@ -1893,6 +2032,12 @@ local UILibrary = (function()
             end
             local watchingSelected = SpectateTargetPlayer and SelectedAdminPlayer and (SpectateTargetPlayer == SelectedAdminPlayer)
             SpectateActionButton.Text = watchingSelected and "Stop Spectating" or "Spectate"
+        end
+
+        local function RefreshTargetModeButtonText()
+            if TargetModeActionButton then
+                TargetModeActionButton.Text = "Target Mode: " .. PlayerTargetMode
+            end
         end
 
         local function ClosePlayerAdminMenu()
@@ -1912,7 +2057,13 @@ local UILibrary = (function()
             SelectedAdminPlayer = targetPlayer
             PlayerAdminNameLabel.Text = targetPlayer.DisplayName or targetPlayer.Name
             PlayerAdminUserLabel.Text = "@" .. targetPlayer.Name
+            if PlayerTargetMode == "Selected" then
+                PlayerAdminUserLabel.Text = PlayerAdminUserLabel.Text .. "  (Selected)"
+            else
+                PlayerAdminUserLabel.Text = PlayerAdminUserLabel.Text .. "  (" .. PlayerTargetMode .. " mode)"
+            end
             RefreshSpectateButtonText()
+            RefreshTargetModeButtonText()
             PlayerAdminOverlay.Visible = true
             PlayerAdminOverlay.BackgroundTransparency = 1
             PlayerAdminFrame.Position = UDim2.new(0.5, 0, 0.5, 12)
@@ -1920,6 +2071,23 @@ local UILibrary = (function()
             PlayTween(PlayerAdminOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.44}):Play()
             PlayTween(PlayerAdminFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 0}):Play()
         end
+
+        TargetModeActionButton = CreatePlayerActionButton("Target Mode: Selected", function()
+            local modeIndex = 1
+            for i, mode in ipairs(PlayerTargetModes) do
+                if mode == PlayerTargetMode then
+                    modeIndex = i
+                    break
+                end
+            end
+            modeIndex = modeIndex + 1
+            if modeIndex > #PlayerTargetModes then
+                modeIndex = 1
+            end
+            PlayerTargetMode = PlayerTargetModes[modeIndex]
+            RefreshTargetModeButtonText()
+            PlayerAdminNotify("Target Mode", "Now using: " .. PlayerTargetMode, 2.1)
+        end)
 
         SpectateActionButton = CreatePlayerActionButton("Spectate", function()
             if not SelectedAdminPlayer then
@@ -1951,15 +2119,101 @@ local UILibrary = (function()
             end
         end)
         CreatePlayerActionButton("Bring", function()
-            if not SelectedAdminPlayer then
+            ApplyToTargets("Bring", function(targetPlayer)
+                if type(PlayerAdminCallbacks.OnBringPlayer) == "function" then
+                    local ok = pcall(PlayerAdminCallbacks.OnBringPlayer, targetPlayer)
+                    return ok
+                end
+                local ok = AttemptUniversalBring(targetPlayer)
+                return ok
+            end)
+        end)
+        CreatePlayerActionButton("Push Lock", function()
+            ApplyToTargets("Push Lock", function(targetPlayer)
+                return RunAnimationAction(targetPlayer, "Push Lock")
+            end)
+        end)
+        CreatePlayerActionButton("Slam On", function()
+            ApplyToTargets("Slam On", function(targetPlayer)
+                return RunAnimationAction(targetPlayer, "Slam On")
+            end)
+        end)
+        CreatePlayerActionButton("Levitate On", function()
+            ApplyToTargets("Levitate On", function(targetPlayer)
+                return RunAnimationAction(targetPlayer, "Levitate On")
+            end)
+        end)
+        CreatePlayerActionButton("Dance", function()
+            ApplyToTargets("Dance", function(targetPlayer)
+                return RunAnimationAction(targetPlayer, "Dance")
+            end)
+        end)
+        CreatePlayerActionButton("Carpet", function()
+            ApplyToTargets("Carpet", function(targetPlayer)
+                return RunAnimationAction(targetPlayer, "Carpet")
+            end)
+        end)
+        CreatePlayerActionButton("Flatten (Segway Remote)", function()
+            local remote = FindSegwayUndoRemote()
+            if not remote then
+                PlayerAdminNotify("Flatten", "UndoHasWelded remote not found in this game.", 3)
                 return
             end
-            local ok, err = AttemptUniversalBring(SelectedAdminPlayer)
-            if ok then
-                PlayerAdminNotify("Bring", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
-            else
-                PlayerAdminNotify("Bring", tostring(err or "Failed."), 2.8)
+            ApplyToTargets("Flatten", function(targetPlayer)
+                local humanoid = GetTargetHumanoid(targetPlayer)
+                return FireScaleRemote(remote, humanoid, "BodyDepthScale")
+            end)
+        end)
+        CreatePlayerActionButton("Stick (Segway Remote)", function()
+            local remote = FindSegwayUndoRemote()
+            if not remote then
+                PlayerAdminNotify("Stick", "UndoHasWelded remote not found in this game.", 3)
+                return
             end
+            ApplyToTargets("Stick", function(targetPlayer)
+                local humanoid = GetTargetHumanoid(targetPlayer)
+                local ok1 = FireScaleRemote(remote, humanoid, "BodyDepthScale")
+                local ok2 = FireScaleRemote(remote, humanoid, "BodyWidthScale")
+                return ok1 or ok2
+            end)
+        end)
+        CreatePlayerActionButton("Remove Body (Segway Remote)", function()
+            local remote = FindSegwayUndoRemote()
+            if not remote then
+                PlayerAdminNotify("Remove Body", "UndoHasWelded remote not found in this game.", 3)
+                return
+            end
+            ApplyToTargets("Remove Body", function(targetPlayer)
+                local humanoid = GetTargetHumanoid(targetPlayer)
+                return FireScaleRemote(remote, humanoid, "BodyHeightScale")
+            end)
+        end)
+        CreatePlayerActionButton("Headless (Segway Remote)", function()
+            local remote = FindSegwayUndoRemote()
+            if not remote then
+                PlayerAdminNotify("Headless", "UndoHasWelded remote not found in this game.", 3)
+                return
+            end
+            ApplyToTargets("Headless", function(targetPlayer)
+                local humanoid = GetTargetHumanoid(targetPlayer)
+                return FireScaleRemote(remote, humanoid, "HeadScale")
+            end)
+        end)
+        CreatePlayerActionButton("Invisible (Segway Remote)", function()
+            local remote = FindSegwayUndoRemote()
+            if not remote then
+                PlayerAdminNotify("Invisible", "UndoHasWelded remote not found in this game.", 3)
+                return
+            end
+            ApplyToTargets("Invisible", function(targetPlayer)
+                local humanoid = GetTargetHumanoid(targetPlayer)
+                local any = false
+                any = FireScaleRemote(remote, humanoid, "HeadScale") or any
+                any = FireScaleRemote(remote, humanoid, "BodyHeightScale") or any
+                any = FireScaleRemote(remote, humanoid, "BodyWidthScale") or any
+                any = FireScaleRemote(remote, humanoid, "BodyDepthScale") or any
+                return any
+            end)
         end)
         PlayerAdminCloseButton.MouseButton1Click:Connect(ClosePlayerAdminMenu)
         PlayerAdminOverlay.InputBegan:Connect(function(input)
