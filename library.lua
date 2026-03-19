@@ -1598,77 +1598,6 @@ local UILibrary = (function()
             return false
         end
 
-        local function AttemptSeatTrick(targetPlayer)
-            local targetRoot = GetTargetRootPart(targetPlayer)
-            if not targetRoot then
-                return false, "Target has no root part."
-            end
-            local targetHumanoid = targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if not targetHumanoid then
-                return false, "Target has no humanoid."
-            end
-
-            local seat = Instance.new("Seat")
-            seat.Name = "UILibSeatPull"
-            seat.Size = Vector3.new(2.4, 1, 2.4)
-            seat.Transparency = 1
-            seat.CanCollide = false
-            seat.Anchored = true
-            seat.Parent = workspace
-
-            local captured = false
-            local pulled = false
-
-            local captureUntil = os.clock() + 1.35
-            while os.clock() < captureUntil do
-                local currentTargetRoot = GetTargetRootPart(targetPlayer)
-                if not currentTargetRoot or not seat.Parent then
-                    break
-                end
-
-                seat.CFrame = currentTargetRoot.CFrame * CFrame.new(0, -2.65, 0)
-                pcall(function()
-                    targetHumanoid.Sit = true
-                end)
-                pcall(function()
-                    seat:Sit(targetHumanoid)
-                end)
-
-                if seat.Occupant == targetHumanoid then
-                    captured = true
-                    break
-                end
-                RunService.Heartbeat:Wait()
-            end
-
-            if captured then
-                local pullUntil = os.clock() + 0.95
-                while os.clock() < pullUntil do
-                    local localRoot = GetLocalRootPart()
-                    if not localRoot or not seat.Parent then
-                        break
-                    end
-                    seat.CFrame = localRoot.CFrame * CFrame.new(0, -2.65, -3.2)
-                    if seat.Occupant == targetHumanoid then
-                        pulled = true
-                    end
-                    RunService.Heartbeat:Wait()
-                end
-            end
-
-            if seat and seat.Parent then
-                seat:Destroy()
-            end
-
-            if not captured then
-                return false, "Could not seat target."
-            end
-            if not pulled then
-                return false, "Target seated, but pull did not stick."
-            end
-            return true
-        end
-
         local function AttemptUniversalBring(targetPlayer)
             local localCharacter = localPlayer and localPlayer.Character
             local targetCharacter = targetPlayer and targetPlayer.Character
@@ -2021,26 +1950,15 @@ local UILibrary = (function()
                 PlayerAdminNotify("Teleport", "Unable to teleport right now.", 2.8)
             end
         end)
-        CreatePlayerActionButton("Seat Pull (Test)", function()
-            if not SelectedAdminPlayer then
-                return
-            end
-            local ok, err = AttemptSeatTrick(SelectedAdminPlayer)
-            if ok then
-                PlayerAdminNotify("Seat Pull", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
-            else
-                PlayerAdminNotify("Seat Pull", tostring(err or "Failed."), 2.8)
-            end
-        end)
-        CreatePlayerActionButton("Universal Bring (Test)", function()
+        CreatePlayerActionButton("Bring", function()
             if not SelectedAdminPlayer then
                 return
             end
             local ok, err = AttemptUniversalBring(SelectedAdminPlayer)
             if ok then
-                PlayerAdminNotify("Universal Bring", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
+                PlayerAdminNotify("Bring", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
             else
-                PlayerAdminNotify("Universal Bring", tostring(err or "Failed."), 2.8)
+                PlayerAdminNotify("Bring", tostring(err or "Failed."), 2.8)
             end
         end)
         CreatePlayerActionButton("Copy Username", function()
