@@ -1868,8 +1868,6 @@ local UILibrary = (function()
         local SettingsTabs = {}
         local CurrentSettingsPage = nil
         local CurrentSettingsContainer = nil
-        local CurrentSettingsColumns = nil
-        local CurrentSettingsColumnIndex = 1
 
         local function SwitchSettingsTab(name)
             for n, tab in pairs(SettingsTabs) do
@@ -1939,51 +1937,9 @@ local UILibrary = (function()
                 TextXAlignment = Enum.TextXAlignment.Left
             }, {TextColor3 = "SubText"})
 
-            local groupsRow = CreateElement("Frame", {
-                Parent = page,
-                BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                LayoutOrder = 1
-            })
-            local groupsLayout = CreateElement("UIListLayout", {
-                Parent = groupsRow,
-                FillDirection = Enum.FillDirection.Horizontal,
-                HorizontalAlignment = Enum.HorizontalAlignment.Left,
-                VerticalAlignment = Enum.VerticalAlignment.Top,
-                Padding = UDim.new(0, 10)
-            })
-            groupsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-            local leftColumn = CreateElement("Frame", {
-                Parent = groupsRow,
-                BackgroundTransparency = 1,
-                Size = UDim2.new(0.5, -5, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y
-            })
-            CreateElement("UIListLayout", {
-                Parent = leftColumn,
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                Padding = UDim.new(0, 9)
-            })
-
-            local rightColumn = CreateElement("Frame", {
-                Parent = groupsRow,
-                BackgroundTransparency = 1,
-                Size = UDim2.new(0.5, -5, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y
-            })
-            CreateElement("UIListLayout", {
-                Parent = rightColumn,
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                Padding = UDim.new(0, 9)
-            })
-
             SettingsTabs[text] = {Button = tabBtn, Page = page, ActiveRail = activeRail}
             CurrentSettingsPage = page
             CurrentSettingsContainer = nil
-            CurrentSettingsColumns = {leftColumn, rightColumn}
-            CurrentSettingsColumnIndex = 1
             tabBtn.MouseButton1Click:Connect(function() SwitchSettingsTab(text) end)
             tabBtn.MouseEnter:Connect(function()
                 if not page.Visible then
@@ -2003,13 +1959,8 @@ local UILibrary = (function()
         end
 
         local function CreateSettingsGroup(groupTitle, expandedByDefault)
-            local parentForGroup = CurrentSettingsPage
-            if CurrentSettingsColumns and #CurrentSettingsColumns > 0 then
-                parentForGroup = CurrentSettingsColumns[CurrentSettingsColumnIndex] or CurrentSettingsPage
-                CurrentSettingsColumnIndex = (CurrentSettingsColumnIndex % #CurrentSettingsColumns) + 1
-            end
             local groupFrame = CreateElement("Frame", {
-                Parent = parentForGroup,
+                Parent = CurrentSettingsPage,
                 BorderSizePixel = 0,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
