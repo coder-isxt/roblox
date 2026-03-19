@@ -38,14 +38,14 @@ local UILibrary = (function()
     
     -- // CONFIGURATION & THEMES // --
     local Options = {
-        Theme = "Aether",
+        Theme = "Clean",
         ToggleStyle = "Switch", -- "Switch", "Checkbox", "Pill", "Dot"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
-        StrokeStyle = "SoftFade", -- "None", "Outline", "Glow", "TwoCornerFade", "SoftFade"
+        StrokeStyle = "Outline", -- "None", "Outline", "Glow", "TwoCornerFade", "SoftFade"
         SliderStyle = "Line", -- "Line", "Pill", "Block"
         ComboStyle = "Classic", -- "Classic", "Compact", "Soft"
         Font = "Gotham", -- FontMap keys
-        MenuStyle = "Sidebar", -- "Sidebar", "TopBar", "Dropdown", "Tablet"
+        MenuStyle = "Sidebar", -- fixed for now
         AutoScale = true,
         UserScale = 1
     }
@@ -58,47 +58,58 @@ local UILibrary = (function()
     }
 
     local Themes = {
-        Aether = { MainBg = Color3.fromRGB(10, 13, 20), SecBg = Color3.fromRGB(15, 20, 31), TerBg = Color3.fromRGB(21, 27, 41), QuarBg = Color3.fromRGB(29, 37, 56), Hover = Color3.fromRGB(39, 51, 76), Accent = Color3.fromRGB(97, 173, 255), Text = Color3.fromRGB(236, 243, 255), SubText = Color3.fromRGB(156, 171, 196), Stroke = Color3.fromRGB(63, 76, 101) },
-        Graphite = { MainBg = Color3.fromRGB(13, 14, 18), SecBg = Color3.fromRGB(18, 20, 26), TerBg = Color3.fromRGB(24, 27, 35), QuarBg = Color3.fromRGB(34, 38, 49), Hover = Color3.fromRGB(45, 50, 64), Accent = Color3.fromRGB(135, 169, 255), Text = Color3.fromRGB(236, 241, 250), SubText = Color3.fromRGB(161, 170, 189), Stroke = Color3.fromRGB(63, 71, 88) },
-        Noir = { MainBg = Color3.fromRGB(7, 8, 11), SecBg = Color3.fromRGB(12, 14, 19), TerBg = Color3.fromRGB(17, 21, 29), QuarBg = Color3.fromRGB(26, 31, 42), Hover = Color3.fromRGB(37, 44, 59), Accent = Color3.fromRGB(120, 202, 255), Text = Color3.fromRGB(242, 247, 255), SubText = Color3.fromRGB(147, 160, 186), Stroke = Color3.fromRGB(46, 56, 76) },
-        Aurora = { MainBg = Color3.fromRGB(12, 18, 27), SecBg = Color3.fromRGB(17, 26, 37), TerBg = Color3.fromRGB(22, 35, 49), QuarBg = Color3.fromRGB(31, 48, 66), Hover = Color3.fromRGB(43, 63, 86), Accent = Color3.fromRGB(99, 229, 210), Text = Color3.fromRGB(230, 252, 246), SubText = Color3.fromRGB(149, 196, 188), Stroke = Color3.fromRGB(60, 91, 102) },
-        Cobalt = { MainBg = Color3.fromRGB(8, 16, 31), SecBg = Color3.fromRGB(12, 23, 42), TerBg = Color3.fromRGB(17, 31, 55), QuarBg = Color3.fromRGB(26, 43, 72), Hover = Color3.fromRGB(37, 59, 95), Accent = Color3.fromRGB(86, 170, 255), Text = Color3.fromRGB(230, 242, 255), SubText = Color3.fromRGB(145, 173, 205), Stroke = Color3.fromRGB(48, 80, 112) },
-        Emerald = { MainBg = Color3.fromRGB(9, 21, 19), SecBg = Color3.fromRGB(13, 30, 27), TerBg = Color3.fromRGB(18, 39, 35), QuarBg = Color3.fromRGB(27, 53, 48), Hover = Color3.fromRGB(39, 68, 62), Accent = Color3.fromRGB(86, 230, 179), Text = Color3.fromRGB(228, 255, 247), SubText = Color3.fromRGB(151, 198, 186), Stroke = Color3.fromRGB(52, 88, 82) },
-        Ember = { MainBg = Color3.fromRGB(26, 14, 11), SecBg = Color3.fromRGB(35, 19, 15), TerBg = Color3.fromRGB(44, 25, 20), QuarBg = Color3.fromRGB(59, 34, 27), Hover = Color3.fromRGB(76, 45, 35), Accent = Color3.fromRGB(255, 137, 81), Text = Color3.fromRGB(255, 241, 232), SubText = Color3.fromRGB(209, 171, 151), Stroke = Color3.fromRGB(94, 58, 45) },
-        Rosewood = { MainBg = Color3.fromRGB(31, 14, 22), SecBg = Color3.fromRGB(40, 19, 29), TerBg = Color3.fromRGB(51, 25, 37), QuarBg = Color3.fromRGB(66, 35, 49), Hover = Color3.fromRGB(83, 47, 64), Accent = Color3.fromRGB(255, 118, 170), Text = Color3.fromRGB(255, 237, 247), SubText = Color3.fromRGB(206, 161, 181), Stroke = Color3.fromRGB(100, 63, 80) },
-        Orchid = { MainBg = Color3.fromRGB(19, 16, 34), SecBg = Color3.fromRGB(26, 22, 45), TerBg = Color3.fromRGB(34, 29, 58), QuarBg = Color3.fromRGB(47, 40, 75), Hover = Color3.fromRGB(62, 54, 96), Accent = Color3.fromRGB(165, 135, 255), Text = Color3.fromRGB(244, 240, 255), SubText = Color3.fromRGB(179, 169, 214), Stroke = Color3.fromRGB(86, 76, 122) },
-        Solar = { MainBg = Color3.fromRGB(34, 18, 23), SecBg = Color3.fromRGB(46, 24, 31), TerBg = Color3.fromRGB(58, 31, 40), QuarBg = Color3.fromRGB(75, 41, 52), Hover = Color3.fromRGB(95, 53, 66), Accent = Color3.fromRGB(255, 154, 102), Text = Color3.fromRGB(255, 241, 232), SubText = Color3.fromRGB(215, 172, 152), Stroke = Color3.fromRGB(109, 70, 84) },
-        Carbon = { MainBg = Color3.fromRGB(17, 19, 23), SecBg = Color3.fromRGB(23, 26, 32), TerBg = Color3.fromRGB(30, 34, 42), QuarBg = Color3.fromRGB(40, 46, 56), Hover = Color3.fromRGB(53, 60, 73), Accent = Color3.fromRGB(113, 205, 255), Text = Color3.fromRGB(234, 242, 252), SubText = Color3.fromRGB(153, 169, 190), Stroke = Color3.fromRGB(69, 80, 98) },
-        Ice = { MainBg = Color3.fromRGB(232, 239, 250), SecBg = Color3.fromRGB(222, 231, 245), TerBg = Color3.fromRGB(210, 222, 239), QuarBg = Color3.fromRGB(198, 212, 233), Hover = Color3.fromRGB(187, 203, 228), Accent = Color3.fromRGB(68, 128, 232), Text = Color3.fromRGB(34, 44, 64), SubText = Color3.fromRGB(98, 113, 136), Stroke = Color3.fromRGB(173, 189, 214) },
-        Pearl = { MainBg = Color3.fromRGB(247, 249, 253), SecBg = Color3.fromRGB(239, 243, 250), TerBg = Color3.fromRGB(229, 235, 245), QuarBg = Color3.fromRGB(217, 225, 238), Hover = Color3.fromRGB(205, 215, 232), Accent = Color3.fromRGB(75, 138, 241), Text = Color3.fromRGB(33, 42, 60), SubText = Color3.fromRGB(103, 118, 142), Stroke = Color3.fromRGB(184, 198, 220) },
-        Cyber = { MainBg = Color3.fromRGB(19, 18, 28), SecBg = Color3.fromRGB(27, 25, 40), TerBg = Color3.fromRGB(36, 34, 54), QuarBg = Color3.fromRGB(49, 47, 71), Hover = Color3.fromRGB(65, 63, 93), Accent = Color3.fromRGB(255, 91, 189), Text = Color3.fromRGB(246, 238, 255), SubText = Color3.fromRGB(193, 172, 219), Stroke = Color3.fromRGB(82, 76, 111) },
-        Midnight = { MainBg = Color3.fromRGB(11, 14, 24), SecBg = Color3.fromRGB(15, 21, 33), TerBg = Color3.fromRGB(20, 29, 45), QuarBg = Color3.fromRGB(29, 42, 63), Hover = Color3.fromRGB(40, 57, 84), Accent = Color3.fromRGB(108, 174, 255), Text = Color3.fromRGB(233, 243, 255), SubText = Color3.fromRGB(149, 170, 205), Stroke = Color3.fromRGB(54, 73, 104) },
-        Sandstone = { MainBg = Color3.fromRGB(31, 26, 22), SecBg = Color3.fromRGB(40, 33, 28), TerBg = Color3.fromRGB(51, 42, 36), QuarBg = Color3.fromRGB(65, 54, 46), Hover = Color3.fromRGB(82, 69, 59), Accent = Color3.fromRGB(246, 182, 93), Text = Color3.fromRGB(254, 243, 228), SubText = Color3.fromRGB(210, 184, 149), Stroke = Color3.fromRGB(98, 83, 69) }
+        Clean = {
+            MainBg = Color3.fromRGB(14, 17, 23),
+            SecBg = Color3.fromRGB(20, 24, 33),
+            TerBg = Color3.fromRGB(26, 31, 42),
+            QuarBg = Color3.fromRGB(34, 40, 54),
+            Hover = Color3.fromRGB(43, 51, 69),
+            Accent = Color3.fromRGB(108, 182, 255),
+            Text = Color3.fromRGB(236, 242, 252),
+            SubText = Color3.fromRGB(159, 173, 196),
+            Stroke = Color3.fromRGB(70, 83, 106)
+        }
     }
 
     local ThemeAliases = {
-        Default = "Aether",
-        Dark = "Graphite",
-        Light = "Pearl",
-        Discord = "Carbon",
-        Mint = "Emerald",
-        Rose = "Rosewood",
-        Ocean = "Cobalt",
-        Forest = "Emerald",
-        Amoled = "Noir",
-        Nord = "Ice",
-        TokyoNight = "Midnight",
-        Dracula = "Orchid",
-        Cyberpunk = "Cyber",
-        Sapphire = "Cobalt",
-        Sunset = "Solar",
-        Slate = "Graphite",
-        Obsidian = "Aether",
-        GlassBlue = "Cobalt",
-        Nebula = "Orchid",
-        EmeraldNight = "Emerald",
-        Monochrome = "Graphite",
-        Arctic = "Ice"
+        Default = "Clean",
+        Dark = "Clean",
+        Light = "Clean",
+        Discord = "Clean",
+        Midnight = "Clean",
+        Mint = "Clean",
+        Rose = "Clean",
+        Ocean = "Clean",
+        Forest = "Clean",
+        Ember = "Clean",
+        Amoled = "Clean",
+        Nord = "Clean",
+        TokyoNight = "Clean",
+        Dracula = "Clean",
+        Cyberpunk = "Clean",
+        Sapphire = "Clean",
+        Sunset = "Clean",
+        Slate = "Clean",
+        Obsidian = "Clean",
+        GlassBlue = "Clean",
+        Graphite = "Clean",
+        Nebula = "Clean",
+        EmeraldNight = "Clean",
+        Monochrome = "Clean",
+        Cobalt = "Clean",
+        Carbon = "Clean",
+        Arctic = "Clean",
+        Aether = "Clean",
+        Aurora = "Clean",
+        Emerald = "Clean",
+        Rosewood = "Clean",
+        Orchid = "Clean",
+        Solar = "Clean",
+        Ice = "Clean",
+        Pearl = "Clean",
+        Cyber = "Clean",
+        Noir = "Clean",
+        Sandstone = "Clean"
     }
 
     local function BlendThemeColor(baseColor, targetColor, alpha)
@@ -508,39 +519,13 @@ local UILibrary = (function()
         if resolvedTheme then
             Options.Theme = resolvedTheme
         end
-        if ToggleStyleSet[savedOptions.ToggleStyle] then
-            Options.ToggleStyle = savedOptions.ToggleStyle
-        end
-        if savedOptions.CornerStyle == "Glow" then
-            Options.StrokeStyle = "Glow"
-        elseif CornerStyleSet[savedOptions.CornerStyle] then
-            Options.CornerStyle = savedOptions.CornerStyle
-        end
-        if StrokeStyleSet[savedOptions.StrokeStyle] then
-            Options.StrokeStyle = savedOptions.StrokeStyle
-        end
-        if SliderStyleSet[savedOptions.SliderStyle] then
-            Options.SliderStyle = savedOptions.SliderStyle
-        end
-        if ComboStyleSet[savedOptions.ComboStyle] then
-            Options.ComboStyle = savedOptions.ComboStyle
-        end
-        if FontMap[savedOptions.Font] then
-            Options.Font = savedOptions.Font
-        end
-        local savedMenuStyle = savedOptions.MenuStyle
-        if savedMenuStyle == "Topbar" then
-            savedMenuStyle = "TopBar"
-        elseif savedMenuStyle == "SidebarCompact" or savedMenuStyle == "SidebarMini" or savedMenuStyle == "Minimal" then
-            savedMenuStyle = "Sidebar"
-        elseif savedMenuStyle == "DropdownCompact" or savedMenuStyle == "FloatingDropdown" or savedMenuStyle == "FloatingLeft" or savedMenuStyle == "FloatingRight" then
-            savedMenuStyle = "Dropdown"
-        elseif savedMenuStyle == "Dashboard" then
-            savedMenuStyle = "TopBar"
-        end
-        if MenuStyleSet[savedMenuStyle] then
-            Options.MenuStyle = savedMenuStyle
-        end
+        Options.ToggleStyle = "Switch"
+        Options.CornerStyle = "Rounded"
+        Options.StrokeStyle = "Outline"
+        Options.SliderStyle = "Line"
+        Options.ComboStyle = "Classic"
+        Options.Font = "Gotham"
+        Options.MenuStyle = "Sidebar"
         if type(savedOptions.AutoScale) == "boolean" then
             Options.AutoScale = savedOptions.AutoScale
         end
@@ -1272,41 +1257,13 @@ local UILibrary = (function()
         TopAccentGradient.Rotation = 0
 
         local detachWindowThemeSync = RegisterThemeSync(function(colors)
-            MainFrameGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.MainBg, colors.Accent, 0.22)),
-                ColorSequenceKeypoint.new(0.48, colors.MainBg),
-                ColorSequenceKeypoint.new(1, BlendColor(colors.SecBg, colors.Accent, 0.12))
-            })
-            MainFrameGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.01),
-                NumberSequenceKeypoint.new(1, 0.24)
-            })
-            MainGlassGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.Text, colors.Accent, 0.42)),
-                ColorSequenceKeypoint.new(0.24, BlendColor(colors.SecBg, colors.Accent, 0.24)),
-                ColorSequenceKeypoint.new(1, colors.MainBg)
-            })
-            MainGlassGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.89),
-                NumberSequenceKeypoint.new(0.22, 0.97),
-                NumberSequenceKeypoint.new(1, 1)
-            })
-
-            TopBarGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.SecBg, colors.Accent, 0.22)),
-                ColorSequenceKeypoint.new(1, colors.SecBg)
-            })
-            TopBarGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0),
-                NumberSequenceKeypoint.new(1, 0.11)
-            })
-
-            TopAccentGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.Accent, colors.Text, 0.3)),
-                ColorSequenceKeypoint.new(1, colors.Accent)
-            })
-            MainFrame.BackgroundTransparency = 0.03
-            TopBar.BackgroundTransparency = 0.05
+            MainFrameGradient.Enabled = false
+            MainGlassGradient.Enabled = false
+            TopBarGradient.Enabled = false
+            TopAccentGradient.Enabled = false
+            TopAccentLine.Visible = false
+            MainFrame.BackgroundTransparency = 0
+            TopBar.BackgroundTransparency = 0
         end)
         table.insert(window.cleanupFunctions, detachWindowThemeSync)
 
@@ -1321,7 +1278,7 @@ local UILibrary = (function()
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = TitleDot})
 
-        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 32, 0, 0), Size = UDim2.new(0.36, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = windowTitle, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 32, 0, 0), Size = UDim2.new(0.28, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = windowTitle, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
         local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0.5, -12), Size = UDim2.new(0, 32, 0, 24), Font = Enum.Font.GothamBold, Text = "<", TextSize = 15, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = TabletBackButton})
         
@@ -1361,7 +1318,7 @@ local UILibrary = (function()
             Text = "",
             ClearTextOnFocus = false,
             AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.57, -8, 0.5, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
             Size = UDim2.new(0, VisualTokens.SearchWidth, 0, VisualTokens.SearchHeight),
             Font = Enum.Font.Gotham,
             TextSize = 11
@@ -1479,16 +1436,8 @@ local UILibrary = (function()
         })
 
         local detachSidebarThemeSync = RegisterThemeSync(function(colors)
-            TabContainer.BackgroundTransparency = 0.08
-            TabContainerGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.SecBg, colors.Accent, 0.12)),
-                ColorSequenceKeypoint.new(0.45, colors.SecBg),
-                ColorSequenceKeypoint.new(1, BlendColor(colors.MainBg, colors.Accent, 0.08))
-            })
-            TabContainerGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.02),
-                NumberSequenceKeypoint.new(1, 0.2)
-            })
+            TabContainer.BackgroundTransparency = 0
+            TabContainerGradient.Enabled = false
             SidebarHeader.BackgroundTransparency = 0.14
             SidebarFooter.BackgroundTransparency = 0.14
         end)
@@ -1536,10 +1485,10 @@ local UILibrary = (function()
             TitleDot.Visible = not visible
             if visible then
                 TitleLabel.Position = UDim2.new(0, 52, 0, 0)
-                TitleLabel.Size = UDim2.new(0.32, 0, 1, 0)
+                TitleLabel.Size = UDim2.new(0.24, 0, 1, 0)
             else
                 TitleLabel.Position = UDim2.new(0, 32, 0, 0)
-                TitleLabel.Size = UDim2.new(0.36, 0, 1, 0)
+                TitleLabel.Size = UDim2.new(0.28, 0, 1, 0)
             end
         end
 
@@ -2190,23 +2139,8 @@ local UILibrary = (function()
 
         -- // Initialize Global Settings Options //
         if includeCustomization then
-            CreateSettingsSection("Appearance")
-            CreateSettingsGroup("Visual Style", true)
-            local ThemeOptions = {}
-            for themeName, _ in pairs(Themes) do
-                table.insert(ThemeOptions, themeName)
-            end
-            table.sort(ThemeOptions)
-            CreateSettingsDropdown("Menu Style", {"Sidebar", "TopBar", "Dropdown", "Tablet"}, Options.MenuStyle, function(val) UpdateMenuStyle(val) end)
-            CreateSettingsDropdown("Interface Theme", ThemeOptions, Options.Theme, function(val) UpdateTheme(val) end)
-            CreateSettingsDropdown("Toggle Style", {"Switch", "Checkbox", "Pill", "Dot"}, Options.ToggleStyle, function(val) UpdateToggleStyles(val) end)
-            CreateSettingsDropdown("Corner Style", {"Rounded", "Slight", "Blocky"}, Options.CornerStyle, function(val) UpdateCornerStyle(val) end)
-            CreateSettingsDropdown("Stroke Style", {"None", "Outline", "Glow", "TwoCornerFade", "SoftFade"}, Options.StrokeStyle, function(val) UpdateStrokeStyle(val) end)
-            CreateSettingsDropdown("Slider Style", {"Line", "Pill", "Block"}, Options.SliderStyle, function(val) UpdateSliderStyle(val) end)
-            CreateSettingsDropdown("Combo Style", {"Classic", "Compact", "Soft"}, Options.ComboStyle, function(val) UpdateComboStyle(val) end)
-            CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura", "SciFi", "Arcade", "Highway", "Garamond", "Fantasy", "Bodoni", "SourceSans"}, Options.Font, function(val) UpdateFont(val) end)
-
-            CreateSettingsGroup("Layout & Scale", false)
+            CreateSettingsSection("Interface")
+            CreateSettingsGroup("Scale", true)
             CreateSettingsDropdown("Scale Mode", {"Auto", "Manual"}, Options.AutoScale and "Auto" or "Manual", function(val)
                 Options.AutoScale = (val == "Auto")
                 SaveLibraryOptions()
