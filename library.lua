@@ -1102,20 +1102,6 @@ local UILibrary = (function()
         
         local ScreenGui = CreateElement("ScreenGui", { Name = "UILibWindow", Parent = game:GetService("CoreGui"), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true })
 
-        local WindowShadow = CreateElement("Frame", {
-            Name = "WindowShadow",
-            Parent = ScreenGui,
-            BorderSizePixel = 0,
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 8),
-            Size = UDim2.new(0, 624, 0, 486),
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 0.56,
-            Visible = false,
-            ZIndex = 0
-        })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner + 6), Parent = WindowShadow})
-
         local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 590, 0, 440), ClipsDescendants = true, Visible = false }, {BackgroundColor3 = "MainBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner), Parent = MainFrame})
         CreateElement("UIStroke", {Thickness = 1.35, Transparency = 0.06, Parent = MainFrame}, {Color = "Stroke"})
@@ -1159,25 +1145,6 @@ local UILibrary = (function()
             local targetScale = ComputeInterfaceScale(viewport)
             return targetSize, targetScale
         end
-        local function GetShadowPosition()
-            return UDim2.new(MainFrame.Position.X.Scale, MainFrame.Position.X.Offset, MainFrame.Position.Y.Scale, MainFrame.Position.Y.Offset + 8)
-        end
-        local function GetShadowSizeForMain(mainSize)
-            return UDim2.new(mainSize.X.Scale, mainSize.X.Offset + 28, mainSize.Y.Scale, mainSize.Y.Offset + 28)
-        end
-        local function SyncWindowShadow(animate)
-            local targetPosition = GetShadowPosition()
-            local targetSize = GetShadowSizeForMain(MainFrame.Size)
-            if animate then
-                PlayTween(WindowShadow, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    Position = targetPosition,
-                    Size = targetSize
-                }):Play()
-            else
-                WindowShadow.Position = targetPosition
-                WindowShadow.Size = targetSize
-            end
-        end
         local function UpdateWindowSize(animate)
             local targetSize, targetScale = GetWindowTargetState()
             if animate then
@@ -1187,10 +1154,10 @@ local UILibrary = (function()
                 MainFrame.Size = targetSize
                 mainScale.Scale = targetScale
             end
-            SyncWindowShadow(animate)
         end
         UpdateWindowSize(false)
 
+        local PlayLoadedAnimation
         local OpenAnimationPlayed = false
         local function PlayOpenAnimation()
             if OpenAnimationPlayed then
@@ -1200,23 +1167,10 @@ local UILibrary = (function()
 
             local targetSize, targetScale = GetWindowTargetState()
             MainFrame.Visible = true
-            WindowShadow.Visible = true
 
             MainFrame.Position = UDim2.new(0.5, 0, 0.5, 14)
-            MainFrame.Size = UDim2.new(
-                0,
-                math.max(280, math.floor(targetSize.X.Offset * 0.76)),
-                0,
-                math.max(topBarHeight, math.floor(targetSize.Y.Offset * 0.76))
-            )
-            mainScale.Scale = targetScale * 0.93
-
-            WindowShadow.BackgroundTransparency = 1
-            SyncWindowShadow(false)
-
-            PlayTween(WindowShadow, TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 0.56
-            }):Play()
+            MainFrame.Size = UDim2.new(0, 0, 0, 0)
+            mainScale.Scale = targetScale * 0.95
             PlayTween(MainFrame, TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                 Position = UDim2.new(0.5, 0, 0.5, 0),
                 Size = targetSize
@@ -1224,11 +1178,29 @@ local UILibrary = (function()
             PlayTween(mainScale, TweenInfo.new(0.36, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                 Scale = targetScale
             }):Play()
+            task.delay(0.08, PlayLoadedAnimation)
         end
         
         local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, topBarHeight) }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner), Parent = TopBar})
         CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
+        local LoadingBarTrack = CreateElement("Frame", {
+            Name = "LoadingBarTrack",
+            Parent = TopBar,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 10, 1, -3),
+            Size = UDim2.new(1, -20, 0, 2),
+            BackgroundTransparency = 0.6
+        }, {BackgroundColor3 = "QuarBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = LoadingBarTrack})
+        local LoadingBarFill = CreateElement("Frame", {
+            Name = "LoadingBarFill",
+            Parent = LoadingBarTrack,
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 0, 1, 0),
+            BackgroundTransparency = 0
+        }, {BackgroundColor3 = "Accent"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = LoadingBarFill})
 
         local MainFrameGradient = Instance.new("UIGradient")
         MainFrameGradient.Name = "__UILibMainGradient"
@@ -1255,6 +1227,33 @@ local UILibrary = (function()
         TopAccentGradient.Name = "__UILibTopAccentGradient"
         TopAccentGradient.Parent = TopAccentLine
         TopAccentGradient.Rotation = 0
+
+        PlayLoadedAnimation = function()
+            LoadingBarTrack.Visible = true
+            LoadingBarTrack.BackgroundTransparency = 0.6
+            LoadingBarFill.Size = UDim2.new(0, 0, 1, 0)
+            LoadingBarFill.BackgroundTransparency = 0
+
+            PlayTween(LoadingBarFill, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(1, 0, 1, 0)
+            }):Play()
+
+            task.delay(0.45, function()
+                if LoadingBarTrack.Parent then
+                    PlayTween(LoadingBarTrack, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        BackgroundTransparency = 1
+                    }):Play()
+                    PlayTween(LoadingBarFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        BackgroundTransparency = 1
+                    }):Play()
+                    task.delay(0.22, function()
+                        if LoadingBarTrack.Parent then
+                            LoadingBarTrack.Visible = false
+                        end
+                    end)
+                end
+            end)
+        end
 
         local detachWindowThemeSync = RegisterThemeSync(function(colors)
             MainFrameGradient.Enabled = false
@@ -2458,7 +2457,6 @@ local UILibrary = (function()
             if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
                 local delta = input.Position - dragStart
                 MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                SyncWindowShadow(false)
             end
         end)
         CloseButton.MouseEnter:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Accent, TextColor3 = Themes[Options.Theme].Text}):Play() end)
@@ -2480,9 +2478,6 @@ local UILibrary = (function()
             if FPSCleanup then FPSCleanup() end
             for _, conn in ipairs(window.connections) do conn:Disconnect() end
             for _, func in ipairs(window.cleanupFunctions) do pcall(func) end
-            PlayTween(WindowShadow, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                BackgroundTransparency = 1
-            }):Play()
             PlayTween(mainScale, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                 Scale = mainScale.Scale * 0.95
             }):Play()
@@ -2512,12 +2507,9 @@ local UILibrary = (function()
             UIVisible = not UIVisible
             if UIVisible then
                 MainFrame.Visible = true
-                WindowShadow.Visible = true
                 UpdateWindowSize(false)
-                WindowShadow.BackgroundTransparency = 1
-                PlayTween(WindowShadow, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    BackgroundTransparency = 0.56
-                }):Play()
+                MainFrame.Size = UDim2.new(0, 0, 0, 0)
+                mainScale.Scale = mainScale.Scale * 0.95
                 PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                     Size = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight),
                     Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -2526,9 +2518,6 @@ local UILibrary = (function()
                     Scale = ComputeInterfaceScale(workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080))
                 }):Play()
             else
-                PlayTween(WindowShadow, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                    BackgroundTransparency = 1
-                }):Play()
                 PlayTween(mainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                     Scale = mainScale.Scale * 0.95
                 }):Play()
@@ -2538,7 +2527,6 @@ local UILibrary = (function()
                 task.delay(0.3, function()
                     if not UIVisible then
                         MainFrame.Visible = false
-                        WindowShadow.Visible = false
                     end
                 end)
             end
