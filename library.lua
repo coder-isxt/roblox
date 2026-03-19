@@ -1598,6 +1598,77 @@ local UILibrary = (function()
             return false
         end
 
+        local function AttemptSeatTrick(targetPlayer)
+            local targetRoot = GetTargetRootPart(targetPlayer)
+            if not targetRoot then
+                return false, "Target has no root part."
+            end
+
+            local seat = Instance.new("Seat")
+            seat.Name = "UILibSeatTrick"
+            seat.Size = Vector3.new(2.2, 1, 2.2)
+            seat.Transparency = 1
+            seat.CanCollide = false
+            seat.Anchored = true
+            seat.Parent = workspace
+
+            local endTime = os.clock() + 1.2
+            local heartbeatConnection
+            heartbeatConnection = RunService.Heartbeat:Connect(function()
+                local currentTargetRoot = GetTargetRootPart(targetPlayer)
+                if not currentTargetRoot or os.clock() > endTime then
+                    if heartbeatConnection then
+                        heartbeatConnection:Disconnect()
+                        heartbeatConnection = nil
+                    end
+                    if seat.Parent then
+                        seat:Destroy()
+                    end
+                    return
+                end
+                seat.CFrame = CFrame.new(currentTargetRoot.Position + Vector3.new(0, -2.7, 0))
+            end)
+
+            task.delay(1.3, function()
+                if heartbeatConnection then
+                    heartbeatConnection:Disconnect()
+                    heartbeatConnection = nil
+                end
+                if seat and seat.Parent then
+                    seat:Destroy()
+                end
+            end)
+
+            return true
+        end
+
+        local function AttemptFling(targetPlayer)
+            local localRoot = GetLocalRootPart()
+            local targetRoot = GetTargetRootPart(targetPlayer)
+            if not localRoot or not targetRoot then
+                return false, "Local or target root part missing."
+            end
+
+            local startCFrame = localRoot.CFrame
+            local direction = targetRoot.Position - localRoot.Position
+            if direction.Magnitude < 1 then
+                direction = targetRoot.CFrame.LookVector
+            end
+            direction = direction.Unit
+
+            localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -2.25)
+            localRoot.AssemblyLinearVelocity = (direction * 240) + Vector3.new(0, 120, 0)
+
+            task.delay(0.18, function()
+                if localRoot and localRoot.Parent then
+                    localRoot.AssemblyLinearVelocity = Vector3.zero
+                    localRoot.CFrame = startCFrame
+                end
+            end)
+
+            return true
+        end
+
         local function GetOtherPlayers()
             local list = {}
             for _, candidate in ipairs(PlayersService:GetPlayers()) do
@@ -1860,13 +1931,26 @@ local UILibrary = (function()
                 PlayerAdminNotify("Teleport", "Unable to teleport right now.", 2.8)
             end
         end)
-        CreatePlayerActionButton("Bring (Server Req.)", function()
+        CreatePlayerActionButton("Seat Trick (Test)", function()
             if not SelectedAdminPlayer then
                 return
             end
-            local ok = BringPlayer(SelectedAdminPlayer)
+            local ok, err = AttemptSeatTrick(SelectedAdminPlayer)
             if ok then
-                PlayerAdminNotify("Bring", "Bring request executed for " .. tostring(SelectedAdminPlayer.Name) .. ".")
+                PlayerAdminNotify("Seat Trick", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
+            else
+                PlayerAdminNotify("Seat Trick", tostring(err or "Failed."), 2.8)
+            end
+        end)
+        CreatePlayerActionButton("Fling (Test)", function()
+            if not SelectedAdminPlayer then
+                return
+            end
+            local ok, err = AttemptFling(SelectedAdminPlayer)
+            if ok then
+                PlayerAdminNotify("Fling", "Attempted on " .. tostring(SelectedAdminPlayer.Name) .. ".")
+            else
+                PlayerAdminNotify("Fling", tostring(err or "Failed."), 2.8)
             end
         end)
         CreatePlayerActionButton("Copy Username", function()
