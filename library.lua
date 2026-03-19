@@ -38,7 +38,7 @@ local UILibrary = (function()
     
     -- // CONFIGURATION & THEMES // --
     local Options = {
-        Theme = "Obsidian",
+        Theme = "Aether",
         ToggleStyle = "Switch", -- "Switch", "Checkbox", "Pill", "Dot"
         CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
         StrokeStyle = "SoftFade", -- "None", "Outline", "Glow", "TwoCornerFade", "SoftFade"
@@ -58,33 +58,47 @@ local UILibrary = (function()
     }
 
     local Themes = {
-        Default = { MainBg = Color3.fromRGB(13, 15, 19), SecBg = Color3.fromRGB(18, 21, 27), TerBg = Color3.fromRGB(24, 28, 36), QuarBg = Color3.fromRGB(33, 39, 50), Hover = Color3.fromRGB(42, 49, 63), Accent = Color3.fromRGB(84, 166, 255), Text = Color3.fromRGB(236, 241, 249), SubText = Color3.fromRGB(149, 161, 184), Stroke = Color3.fromRGB(56, 65, 82) },
-        Dark = { MainBg = Color3.fromRGB(12, 13, 18), SecBg = Color3.fromRGB(18, 19, 27), TerBg = Color3.fromRGB(25, 27, 36), QuarBg = Color3.fromRGB(36, 39, 52), Hover = Color3.fromRGB(48, 52, 68), Accent = Color3.fromRGB(161, 120, 255), Text = Color3.fromRGB(238, 239, 248), SubText = Color3.fromRGB(162, 166, 188), Stroke = Color3.fromRGB(63, 67, 88) },
-        Light = { MainBg = Color3.fromRGB(246, 248, 252), SecBg = Color3.fromRGB(236, 240, 247), TerBg = Color3.fromRGB(226, 232, 242), QuarBg = Color3.fromRGB(214, 222, 235), Hover = Color3.fromRGB(201, 212, 229), Accent = Color3.fromRGB(56, 123, 246), Text = Color3.fromRGB(31, 39, 54), SubText = Color3.fromRGB(98, 113, 137), Stroke = Color3.fromRGB(188, 199, 218) },
-        Discord = { MainBg = Color3.fromRGB(38, 41, 50), SecBg = Color3.fromRGB(43, 47, 58), TerBg = Color3.fromRGB(52, 57, 70), QuarBg = Color3.fromRGB(63, 69, 85), Hover = Color3.fromRGB(78, 85, 104), Accent = Color3.fromRGB(95, 120, 255), Text = Color3.fromRGB(241, 244, 255), SubText = Color3.fromRGB(171, 179, 204), Stroke = Color3.fromRGB(70, 78, 98) },
-        Midnight = { MainBg = Color3.fromRGB(8, 12, 20), SecBg = Color3.fromRGB(13, 19, 31), TerBg = Color3.fromRGB(18, 26, 41), QuarBg = Color3.fromRGB(27, 38, 58), Hover = Color3.fromRGB(36, 50, 76), Accent = Color3.fromRGB(102, 169, 255), Text = Color3.fromRGB(233, 242, 255), SubText = Color3.fromRGB(145, 167, 203), Stroke = Color3.fromRGB(50, 67, 99) },
-        Mint = { MainBg = Color3.fromRGB(12, 24, 23), SecBg = Color3.fromRGB(18, 33, 31), TerBg = Color3.fromRGB(24, 41, 39), QuarBg = Color3.fromRGB(33, 54, 51), Hover = Color3.fromRGB(44, 70, 66), Accent = Color3.fromRGB(77, 226, 188), Text = Color3.fromRGB(228, 255, 247), SubText = Color3.fromRGB(149, 200, 186), Stroke = Color3.fromRGB(58, 91, 84) },
-        Rose = { MainBg = Color3.fromRGB(28, 15, 21), SecBg = Color3.fromRGB(36, 20, 28), TerBg = Color3.fromRGB(45, 26, 36), QuarBg = Color3.fromRGB(59, 35, 47), Hover = Color3.fromRGB(75, 46, 60), Accent = Color3.fromRGB(255, 110, 166), Text = Color3.fromRGB(255, 236, 246), SubText = Color3.fromRGB(206, 158, 177), Stroke = Color3.fromRGB(95, 58, 74) },
-        Ocean = { MainBg = Color3.fromRGB(9, 20, 32), SecBg = Color3.fromRGB(13, 28, 43), TerBg = Color3.fromRGB(18, 38, 55), QuarBg = Color3.fromRGB(26, 51, 73), Hover = Color3.fromRGB(36, 67, 95), Accent = Color3.fromRGB(75, 198, 255), Text = Color3.fromRGB(232, 247, 255), SubText = Color3.fromRGB(145, 179, 203), Stroke = Color3.fromRGB(48, 82, 110) },
-        Forest = { MainBg = Color3.fromRGB(15, 21, 14), SecBg = Color3.fromRGB(21, 30, 20), TerBg = Color3.fromRGB(27, 39, 26), QuarBg = Color3.fromRGB(37, 52, 35), Hover = Color3.fromRGB(48, 67, 46), Accent = Color3.fromRGB(126, 211, 102), Text = Color3.fromRGB(239, 249, 233), SubText = Color3.fromRGB(163, 191, 157), Stroke = Color3.fromRGB(61, 84, 58) },
-        Ember = { MainBg = Color3.fromRGB(25, 12, 9), SecBg = Color3.fromRGB(34, 17, 13), TerBg = Color3.fromRGB(43, 22, 17), QuarBg = Color3.fromRGB(57, 30, 23), Hover = Color3.fromRGB(73, 39, 29), Accent = Color3.fromRGB(255, 134, 74), Text = Color3.fromRGB(255, 240, 229), SubText = Color3.fromRGB(210, 168, 147), Stroke = Color3.fromRGB(92, 55, 42) },
-        Amoled = { MainBg = Color3.fromRGB(4, 4, 6), SecBg = Color3.fromRGB(10, 10, 13), TerBg = Color3.fromRGB(16, 17, 22), QuarBg = Color3.fromRGB(27, 28, 35), Hover = Color3.fromRGB(39, 41, 50), Accent = Color3.fromRGB(95, 173, 255), Text = Color3.fromRGB(245, 248, 255), SubText = Color3.fromRGB(146, 155, 176), Stroke = Color3.fromRGB(44, 47, 58) },
-        Nord = { MainBg = Color3.fromRGB(36, 42, 56), SecBg = Color3.fromRGB(46, 52, 67), TerBg = Color3.fromRGB(57, 64, 82), QuarBg = Color3.fromRGB(71, 79, 99), Hover = Color3.fromRGB(88, 97, 120), Accent = Color3.fromRGB(143, 188, 187), Text = Color3.fromRGB(236, 239, 244), SubText = Color3.fromRGB(186, 194, 207), Stroke = Color3.fromRGB(90, 98, 118) },
-        TokyoNight = { MainBg = Color3.fromRGB(24, 26, 46), SecBg = Color3.fromRGB(30, 33, 57), TerBg = Color3.fromRGB(39, 43, 71), QuarBg = Color3.fromRGB(53, 58, 92), Hover = Color3.fromRGB(70, 77, 115), Accent = Color3.fromRGB(122, 162, 247), Text = Color3.fromRGB(201, 214, 255), SubText = Color3.fromRGB(146, 159, 206), Stroke = Color3.fromRGB(77, 84, 124) },
-        Dracula = { MainBg = Color3.fromRGB(31, 33, 45), SecBg = Color3.fromRGB(40, 42, 57), TerBg = Color3.fromRGB(49, 52, 70), QuarBg = Color3.fromRGB(63, 67, 88), Hover = Color3.fromRGB(81, 86, 111), Accent = Color3.fromRGB(189, 147, 249), Text = Color3.fromRGB(248, 248, 242), SubText = Color3.fromRGB(179, 182, 209), Stroke = Color3.fromRGB(89, 94, 124) },
-        Cyberpunk = { MainBg = Color3.fromRGB(17, 16, 26), SecBg = Color3.fromRGB(25, 23, 38), TerBg = Color3.fromRGB(33, 31, 51), QuarBg = Color3.fromRGB(47, 45, 68), Hover = Color3.fromRGB(62, 60, 88), Accent = Color3.fromRGB(255, 84, 184), Text = Color3.fromRGB(245, 237, 255), SubText = Color3.fromRGB(189, 168, 214), Stroke = Color3.fromRGB(76, 71, 105) },
-        Sapphire = { MainBg = Color3.fromRGB(8, 18, 34), SecBg = Color3.fromRGB(12, 27, 48), TerBg = Color3.fromRGB(18, 36, 62), QuarBg = Color3.fromRGB(27, 49, 81), Hover = Color3.fromRGB(38, 65, 105), Accent = Color3.fromRGB(78, 161, 255), Text = Color3.fromRGB(232, 244, 255), SubText = Color3.fromRGB(143, 172, 202), Stroke = Color3.fromRGB(47, 82, 114) },
-        Sunset = { MainBg = Color3.fromRGB(30, 17, 24), SecBg = Color3.fromRGB(40, 22, 31), TerBg = Color3.fromRGB(51, 28, 39), QuarBg = Color3.fromRGB(66, 38, 51), Hover = Color3.fromRGB(83, 48, 65), Accent = Color3.fromRGB(255, 139, 93), Text = Color3.fromRGB(255, 240, 232), SubText = Color3.fromRGB(208, 165, 149), Stroke = Color3.fromRGB(99, 62, 77) },
-        Slate = { MainBg = Color3.fromRGB(20, 23, 30), SecBg = Color3.fromRGB(27, 31, 40), TerBg = Color3.fromRGB(35, 40, 52), QuarBg = Color3.fromRGB(46, 53, 67), Hover = Color3.fromRGB(60, 69, 87), Accent = Color3.fromRGB(111, 202, 255), Text = Color3.fromRGB(235, 242, 252), SubText = Color3.fromRGB(154, 168, 189), Stroke = Color3.fromRGB(68, 78, 98) },
-        Obsidian = { MainBg = Color3.fromRGB(11, 13, 18), SecBg = Color3.fromRGB(16, 20, 28), TerBg = Color3.fromRGB(21, 27, 38), QuarBg = Color3.fromRGB(30, 38, 53), Hover = Color3.fromRGB(41, 51, 70), Accent = Color3.fromRGB(103, 178, 255), Text = Color3.fromRGB(236, 243, 255), SubText = Color3.fromRGB(152, 168, 194), Stroke = Color3.fromRGB(57, 69, 91) },
-        GlassBlue = { MainBg = Color3.fromRGB(10, 16, 25), SecBg = Color3.fromRGB(15, 23, 35), TerBg = Color3.fromRGB(22, 31, 47), QuarBg = Color3.fromRGB(31, 43, 63), Hover = Color3.fromRGB(43, 57, 82), Accent = Color3.fromRGB(110, 197, 255), Text = Color3.fromRGB(233, 246, 255), SubText = Color3.fromRGB(148, 179, 204), Stroke = Color3.fromRGB(56, 80, 108) },
-        Graphite = { MainBg = Color3.fromRGB(14, 15, 18), SecBg = Color3.fromRGB(20, 22, 27), TerBg = Color3.fromRGB(27, 30, 37), QuarBg = Color3.fromRGB(37, 41, 50), Hover = Color3.fromRGB(49, 54, 66), Accent = Color3.fromRGB(145, 170, 255), Text = Color3.fromRGB(236, 239, 247), SubText = Color3.fromRGB(160, 167, 184), Stroke = Color3.fromRGB(67, 74, 90) },
-        Nebula = { MainBg = Color3.fromRGB(16, 15, 28), SecBg = Color3.fromRGB(22, 20, 37), TerBg = Color3.fromRGB(30, 27, 49), QuarBg = Color3.fromRGB(42, 37, 66), Hover = Color3.fromRGB(56, 49, 86), Accent = Color3.fromRGB(138, 121, 255), Text = Color3.fromRGB(243, 239, 255), SubText = Color3.fromRGB(177, 169, 214), Stroke = Color3.fromRGB(77, 70, 108) },
-        EmeraldNight = { MainBg = Color3.fromRGB(9, 19, 19), SecBg = Color3.fromRGB(13, 27, 27), TerBg = Color3.fromRGB(18, 36, 36), QuarBg = Color3.fromRGB(27, 50, 50), Hover = Color3.fromRGB(39, 66, 65), Accent = Color3.fromRGB(90, 235, 185), Text = Color3.fromRGB(228, 255, 247), SubText = Color3.fromRGB(151, 198, 186), Stroke = Color3.fromRGB(52, 88, 84) },
-        Monochrome = { MainBg = Color3.fromRGB(16, 16, 18), Accent = Color3.fromRGB(196, 203, 218), Text = Color3.fromRGB(241, 244, 249) },
-        Cobalt = { MainBg = Color3.fromRGB(9, 17, 29), Accent = Color3.fromRGB(98, 182, 255), Text = Color3.fromRGB(233, 246, 255) },
-        Carbon = { MainBg = Color3.fromRGB(12, 14, 17), Accent = Color3.fromRGB(135, 151, 178), Text = Color3.fromRGB(235, 240, 247) },
-        Arctic = { MainBg = Color3.fromRGB(230, 237, 246), Accent = Color3.fromRGB(76, 138, 234), Text = Color3.fromRGB(33, 43, 61) }
+        Aether = { MainBg = Color3.fromRGB(10, 13, 20), SecBg = Color3.fromRGB(15, 20, 31), TerBg = Color3.fromRGB(21, 27, 41), QuarBg = Color3.fromRGB(29, 37, 56), Hover = Color3.fromRGB(39, 51, 76), Accent = Color3.fromRGB(97, 173, 255), Text = Color3.fromRGB(236, 243, 255), SubText = Color3.fromRGB(156, 171, 196), Stroke = Color3.fromRGB(63, 76, 101) },
+        Graphite = { MainBg = Color3.fromRGB(13, 14, 18), SecBg = Color3.fromRGB(18, 20, 26), TerBg = Color3.fromRGB(24, 27, 35), QuarBg = Color3.fromRGB(34, 38, 49), Hover = Color3.fromRGB(45, 50, 64), Accent = Color3.fromRGB(135, 169, 255), Text = Color3.fromRGB(236, 241, 250), SubText = Color3.fromRGB(161, 170, 189), Stroke = Color3.fromRGB(63, 71, 88) },
+        Noir = { MainBg = Color3.fromRGB(7, 8, 11), SecBg = Color3.fromRGB(12, 14, 19), TerBg = Color3.fromRGB(17, 21, 29), QuarBg = Color3.fromRGB(26, 31, 42), Hover = Color3.fromRGB(37, 44, 59), Accent = Color3.fromRGB(120, 202, 255), Text = Color3.fromRGB(242, 247, 255), SubText = Color3.fromRGB(147, 160, 186), Stroke = Color3.fromRGB(46, 56, 76) },
+        Aurora = { MainBg = Color3.fromRGB(12, 18, 27), SecBg = Color3.fromRGB(17, 26, 37), TerBg = Color3.fromRGB(22, 35, 49), QuarBg = Color3.fromRGB(31, 48, 66), Hover = Color3.fromRGB(43, 63, 86), Accent = Color3.fromRGB(99, 229, 210), Text = Color3.fromRGB(230, 252, 246), SubText = Color3.fromRGB(149, 196, 188), Stroke = Color3.fromRGB(60, 91, 102) },
+        Cobalt = { MainBg = Color3.fromRGB(8, 16, 31), SecBg = Color3.fromRGB(12, 23, 42), TerBg = Color3.fromRGB(17, 31, 55), QuarBg = Color3.fromRGB(26, 43, 72), Hover = Color3.fromRGB(37, 59, 95), Accent = Color3.fromRGB(86, 170, 255), Text = Color3.fromRGB(230, 242, 255), SubText = Color3.fromRGB(145, 173, 205), Stroke = Color3.fromRGB(48, 80, 112) },
+        Emerald = { MainBg = Color3.fromRGB(9, 21, 19), SecBg = Color3.fromRGB(13, 30, 27), TerBg = Color3.fromRGB(18, 39, 35), QuarBg = Color3.fromRGB(27, 53, 48), Hover = Color3.fromRGB(39, 68, 62), Accent = Color3.fromRGB(86, 230, 179), Text = Color3.fromRGB(228, 255, 247), SubText = Color3.fromRGB(151, 198, 186), Stroke = Color3.fromRGB(52, 88, 82) },
+        Ember = { MainBg = Color3.fromRGB(26, 14, 11), SecBg = Color3.fromRGB(35, 19, 15), TerBg = Color3.fromRGB(44, 25, 20), QuarBg = Color3.fromRGB(59, 34, 27), Hover = Color3.fromRGB(76, 45, 35), Accent = Color3.fromRGB(255, 137, 81), Text = Color3.fromRGB(255, 241, 232), SubText = Color3.fromRGB(209, 171, 151), Stroke = Color3.fromRGB(94, 58, 45) },
+        Rosewood = { MainBg = Color3.fromRGB(31, 14, 22), SecBg = Color3.fromRGB(40, 19, 29), TerBg = Color3.fromRGB(51, 25, 37), QuarBg = Color3.fromRGB(66, 35, 49), Hover = Color3.fromRGB(83, 47, 64), Accent = Color3.fromRGB(255, 118, 170), Text = Color3.fromRGB(255, 237, 247), SubText = Color3.fromRGB(206, 161, 181), Stroke = Color3.fromRGB(100, 63, 80) },
+        Orchid = { MainBg = Color3.fromRGB(19, 16, 34), SecBg = Color3.fromRGB(26, 22, 45), TerBg = Color3.fromRGB(34, 29, 58), QuarBg = Color3.fromRGB(47, 40, 75), Hover = Color3.fromRGB(62, 54, 96), Accent = Color3.fromRGB(165, 135, 255), Text = Color3.fromRGB(244, 240, 255), SubText = Color3.fromRGB(179, 169, 214), Stroke = Color3.fromRGB(86, 76, 122) },
+        Solar = { MainBg = Color3.fromRGB(34, 18, 23), SecBg = Color3.fromRGB(46, 24, 31), TerBg = Color3.fromRGB(58, 31, 40), QuarBg = Color3.fromRGB(75, 41, 52), Hover = Color3.fromRGB(95, 53, 66), Accent = Color3.fromRGB(255, 154, 102), Text = Color3.fromRGB(255, 241, 232), SubText = Color3.fromRGB(215, 172, 152), Stroke = Color3.fromRGB(109, 70, 84) },
+        Carbon = { MainBg = Color3.fromRGB(17, 19, 23), SecBg = Color3.fromRGB(23, 26, 32), TerBg = Color3.fromRGB(30, 34, 42), QuarBg = Color3.fromRGB(40, 46, 56), Hover = Color3.fromRGB(53, 60, 73), Accent = Color3.fromRGB(113, 205, 255), Text = Color3.fromRGB(234, 242, 252), SubText = Color3.fromRGB(153, 169, 190), Stroke = Color3.fromRGB(69, 80, 98) },
+        Ice = { MainBg = Color3.fromRGB(232, 239, 250), SecBg = Color3.fromRGB(222, 231, 245), TerBg = Color3.fromRGB(210, 222, 239), QuarBg = Color3.fromRGB(198, 212, 233), Hover = Color3.fromRGB(187, 203, 228), Accent = Color3.fromRGB(68, 128, 232), Text = Color3.fromRGB(34, 44, 64), SubText = Color3.fromRGB(98, 113, 136), Stroke = Color3.fromRGB(173, 189, 214) },
+        Pearl = { MainBg = Color3.fromRGB(247, 249, 253), SecBg = Color3.fromRGB(239, 243, 250), TerBg = Color3.fromRGB(229, 235, 245), QuarBg = Color3.fromRGB(217, 225, 238), Hover = Color3.fromRGB(205, 215, 232), Accent = Color3.fromRGB(75, 138, 241), Text = Color3.fromRGB(33, 42, 60), SubText = Color3.fromRGB(103, 118, 142), Stroke = Color3.fromRGB(184, 198, 220) },
+        Cyber = { MainBg = Color3.fromRGB(19, 18, 28), SecBg = Color3.fromRGB(27, 25, 40), TerBg = Color3.fromRGB(36, 34, 54), QuarBg = Color3.fromRGB(49, 47, 71), Hover = Color3.fromRGB(65, 63, 93), Accent = Color3.fromRGB(255, 91, 189), Text = Color3.fromRGB(246, 238, 255), SubText = Color3.fromRGB(193, 172, 219), Stroke = Color3.fromRGB(82, 76, 111) },
+        Midnight = { MainBg = Color3.fromRGB(11, 14, 24), SecBg = Color3.fromRGB(15, 21, 33), TerBg = Color3.fromRGB(20, 29, 45), QuarBg = Color3.fromRGB(29, 42, 63), Hover = Color3.fromRGB(40, 57, 84), Accent = Color3.fromRGB(108, 174, 255), Text = Color3.fromRGB(233, 243, 255), SubText = Color3.fromRGB(149, 170, 205), Stroke = Color3.fromRGB(54, 73, 104) },
+        Sandstone = { MainBg = Color3.fromRGB(31, 26, 22), SecBg = Color3.fromRGB(40, 33, 28), TerBg = Color3.fromRGB(51, 42, 36), QuarBg = Color3.fromRGB(65, 54, 46), Hover = Color3.fromRGB(82, 69, 59), Accent = Color3.fromRGB(246, 182, 93), Text = Color3.fromRGB(254, 243, 228), SubText = Color3.fromRGB(210, 184, 149), Stroke = Color3.fromRGB(98, 83, 69) }
+    }
+
+    local ThemeAliases = {
+        Default = "Aether",
+        Dark = "Graphite",
+        Light = "Pearl",
+        Discord = "Carbon",
+        Mint = "Emerald",
+        Rose = "Rosewood",
+        Ocean = "Cobalt",
+        Forest = "Emerald",
+        Amoled = "Noir",
+        Nord = "Ice",
+        TokyoNight = "Midnight",
+        Dracula = "Orchid",
+        Cyberpunk = "Cyber",
+        Sapphire = "Cobalt",
+        Sunset = "Solar",
+        Slate = "Graphite",
+        Obsidian = "Aether",
+        GlassBlue = "Cobalt",
+        Nebula = "Orchid",
+        EmeraldNight = "Emerald",
+        Monochrome = "Graphite",
+        Arctic = "Ice"
     }
 
     local function BlendThemeColor(baseColor, targetColor, alpha)
@@ -96,6 +110,20 @@ local UILibrary = (function()
         )
     end
 
+    local function ResolveThemeName(themeName)
+        if type(themeName) ~= "string" or themeName == "" then
+            return nil
+        end
+        if Themes[themeName] then
+            return themeName
+        end
+        local alias = ThemeAliases[themeName]
+        if alias and Themes[alias] then
+            return alias
+        end
+        return nil
+    end
+
     local function NormalizeThemePalette(theme)
         local mainBg = theme.MainBg or Color3.fromRGB(18, 20, 25)
         local isLightTheme = ((mainBg.R + mainBg.G + mainBg.B) / 3) > 0.5
@@ -103,14 +131,14 @@ local UILibrary = (function()
         local black = Color3.fromRGB(0, 0, 0)
         local contrastTarget = isLightTheme and black or white
 
-        local secBg = theme.SecBg or BlendThemeColor(mainBg, contrastTarget, isLightTheme and 0.035 or 0.07)
-        local terBg = theme.TerBg or BlendThemeColor(secBg, contrastTarget, isLightTheme and 0.04 or 0.075)
-        local quarBg = theme.QuarBg or BlendThemeColor(terBg, contrastTarget, isLightTheme and 0.05 or 0.085)
+        local secBg = theme.SecBg or BlendThemeColor(mainBg, contrastTarget, isLightTheme and 0.028 or 0.062)
+        local terBg = theme.TerBg or BlendThemeColor(secBg, contrastTarget, isLightTheme and 0.032 or 0.068)
+        local quarBg = theme.QuarBg or BlendThemeColor(terBg, contrastTarget, isLightTheme and 0.038 or 0.078)
         local accent = theme.Accent or (isLightTheme and Color3.fromRGB(76, 138, 234) or Color3.fromRGB(98, 182, 255))
         local text = theme.Text or (isLightTheme and Color3.fromRGB(30, 40, 56) or Color3.fromRGB(236, 242, 252))
-        local subText = theme.SubText or BlendThemeColor(text, secBg, isLightTheme and 0.48 or 0.36)
-        local stroke = theme.Stroke or BlendThemeColor(quarBg, text, isLightTheme and 0.22 or 0.18)
-        local hover = theme.Hover or BlendThemeColor(quarBg, accent, isLightTheme and 0.1 or 0.16)
+        local subText = theme.SubText or BlendThemeColor(text, secBg, isLightTheme and 0.52 or 0.4)
+        local stroke = theme.Stroke or BlendThemeColor(quarBg, text, isLightTheme and 0.2 or 0.16)
+        local hover = theme.Hover or BlendThemeColor(quarBg, accent, isLightTheme and 0.12 or 0.2)
 
         return {
             MainBg = mainBg,
@@ -148,6 +176,18 @@ local UILibrary = (function()
     local StrokeStyleSet = { None = true, Outline = true, Glow = true, TwoCornerFade = true, SoftFade = true }
     local SliderStyleSet = { Line = true, Pill = true, Block = true }
     local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
+    local VisualTokens = {
+        WindowCorner = 14,
+        SurfaceCorner = 10,
+        ControlCorner = 8,
+        TopBarHeight = 46,
+        SidebarWidth = 168,
+        SearchWidth = 210,
+        SearchHeight = 32,
+        ControlHeight = 40,
+        SectionGap = 8,
+        CardStroke = 1
+    }
 
     local PersistConfig = {
         SchemaVersion = 3,
@@ -464,8 +504,9 @@ local UILibrary = (function()
         local savedOptions = PersistConfig.Data.LibraryOptions
         if type(savedOptions) ~= "table" then return end
 
-        if Themes[savedOptions.Theme] then
-            Options.Theme = savedOptions.Theme
+        local resolvedTheme = ResolveThemeName(savedOptions.Theme)
+        if resolvedTheme then
+            Options.Theme = resolvedTheme
         end
         if ToggleStyleSet[savedOptions.ToggleStyle] then
             Options.ToggleStyle = savedOptions.ToggleStyle
@@ -898,9 +939,12 @@ local UILibrary = (function()
     end
 
     local function UpdateTheme(themeName)
-        if not Themes[themeName] then return end
-        Options.Theme = themeName; CleanRegistries()
-        local themeColors = Themes[themeName]
+        local resolvedTheme = ResolveThemeName(themeName)
+        if not resolvedTheme then
+            return
+        end
+        Options.Theme = resolvedTheme; CleanRegistries()
+        local themeColors = Themes[resolvedTheme]
         for _, item in ipairs(Registries.Theme) do
             if item.Instance and item.Instance.Parent then PlayTween(item.Instance, TweenInfo.new(0.3), {[item.Property] = themeColors[item.Role]}):Play() end
         end
@@ -1079,17 +1123,17 @@ local UILibrary = (function()
             BorderSizePixel = 0,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 8),
-            Size = UDim2.new(0, 590, 0, 450),
+            Size = UDim2.new(0, 624, 0, 486),
             BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 0.62,
+            BackgroundTransparency = 0.56,
             Visible = false,
             ZIndex = 0
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 18), Parent = WindowShadow})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner + 6), Parent = WindowShadow})
 
-        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 560, 0, 420), ClipsDescendants = true, Visible = false }, {BackgroundColor3 = "MainBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 16), Parent = MainFrame})
-        CreateElement("UIStroke", {Thickness = 1.2, Transparency = 0.08, Parent = MainFrame}, {Color = "Stroke"})
+        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 590, 0, 440), ClipsDescendants = true, Visible = false }, {BackgroundColor3 = "MainBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner), Parent = MainFrame})
+        CreateElement("UIStroke", {Thickness = 1.35, Transparency = 0.06, Parent = MainFrame}, {Color = "Stroke"})
         local MainGlassLayer = CreateElement("Frame", {
             Name = "MainGlassLayer",
             Parent = MainFrame,
@@ -1098,7 +1142,7 @@ local UILibrary = (function()
             Size = UDim2.new(1, 0, 1, 0),
             ZIndex = 0
         })
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 16), Parent = MainGlassLayer})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner), Parent = MainGlassLayer})
         local MainGlassGradient = Instance.new("UIGradient")
         MainGlassGradient.Name = "__UILibGlassGradient"
         MainGlassGradient.Rotation = 120
@@ -1107,8 +1151,8 @@ local UILibrary = (function()
         mainScale.Scale = 1
         mainScale.Parent = MainFrame
 
-        local topBarHeight = 44
-        local expandedWidth, expandedHeight = 560, 420
+        local topBarHeight = VisualTokens.TopBarHeight
+        local expandedWidth, expandedHeight = 590, 440
         local function ComputeInterfaceScale(viewport)
             local vp = viewport or Vector2.new(1920, 1080)
             local shortestEdge = math.max(math.min(vp.X, vp.Y), 1)
@@ -1119,8 +1163,8 @@ local UILibrary = (function()
         local function ComputeWindowSize()
             local camera = workspace.CurrentCamera
             local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-            local width = math.clamp(math.floor(viewport.X * 0.44), 460, 740)
-            local height = math.clamp(math.floor(viewport.Y * 0.56), 360, 580)
+            local width = math.clamp(math.floor(viewport.X * 0.45), 500, 780)
+            local height = math.clamp(math.floor(viewport.Y * 0.58), 380, 610)
             return width, height, viewport
         end
         local function GetWindowTargetState()
@@ -1134,7 +1178,7 @@ local UILibrary = (function()
             return UDim2.new(MainFrame.Position.X.Scale, MainFrame.Position.X.Offset, MainFrame.Position.Y.Scale, MainFrame.Position.Y.Offset + 8)
         end
         local function GetShadowSizeForMain(mainSize)
-            return UDim2.new(mainSize.X.Scale, mainSize.X.Offset + 24, mainSize.Y.Scale, mainSize.Y.Offset + 24)
+            return UDim2.new(mainSize.X.Scale, mainSize.X.Offset + 28, mainSize.Y.Scale, mainSize.Y.Offset + 28)
         end
         local function SyncWindowShadow(animate)
             local targetPosition = GetShadowPosition()
@@ -1173,20 +1217,20 @@ local UILibrary = (function()
             MainFrame.Visible = true
             WindowShadow.Visible = true
 
-            MainFrame.Position = UDim2.new(0.5, 0, 0.5, 10)
+            MainFrame.Position = UDim2.new(0.5, 0, 0.5, 14)
             MainFrame.Size = UDim2.new(
                 0,
                 math.max(280, math.floor(targetSize.X.Offset * 0.76)),
                 0,
                 math.max(topBarHeight, math.floor(targetSize.Y.Offset * 0.76))
             )
-            mainScale.Scale = targetScale * 0.95
+            mainScale.Scale = targetScale * 0.93
 
             WindowShadow.BackgroundTransparency = 1
             SyncWindowShadow(false)
 
             PlayTween(WindowShadow, TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 0.62
+                BackgroundTransparency = 0.56
             }):Play()
             PlayTween(MainFrame, TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
                 Position = UDim2.new(0.5, 0, 0.5, 0),
@@ -1198,7 +1242,7 @@ local UILibrary = (function()
         end
         
         local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, topBarHeight) }, {BackgroundColor3 = "SecBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 16), Parent = TopBar})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner), Parent = TopBar})
         CreateElement("Frame", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -10), Size = UDim2.new(1, 0, 0, 10) }, {BackgroundColor3 = "SecBg"})
 
         local MainFrameGradient = Instance.new("UIGradient")
@@ -1229,57 +1273,57 @@ local UILibrary = (function()
 
         local detachWindowThemeSync = RegisterThemeSync(function(colors)
             MainFrameGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.MainBg, colors.Accent, 0.18)),
-                ColorSequenceKeypoint.new(0.55, colors.MainBg),
-                ColorSequenceKeypoint.new(1, BlendColor(colors.SecBg, colors.Accent, 0.08))
+                ColorSequenceKeypoint.new(0, BlendColor(colors.MainBg, colors.Accent, 0.22)),
+                ColorSequenceKeypoint.new(0.48, colors.MainBg),
+                ColorSequenceKeypoint.new(1, BlendColor(colors.SecBg, colors.Accent, 0.12))
             })
             MainFrameGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.03),
-                NumberSequenceKeypoint.new(1, 0.2)
+                NumberSequenceKeypoint.new(0, 0.01),
+                NumberSequenceKeypoint.new(1, 0.24)
             })
             MainGlassGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.Text, colors.Accent, 0.35)),
-                ColorSequenceKeypoint.new(0.25, BlendColor(colors.SecBg, colors.Accent, 0.18)),
+                ColorSequenceKeypoint.new(0, BlendColor(colors.Text, colors.Accent, 0.42)),
+                ColorSequenceKeypoint.new(0.24, BlendColor(colors.SecBg, colors.Accent, 0.24)),
                 ColorSequenceKeypoint.new(1, colors.MainBg)
             })
             MainGlassGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.93),
-                NumberSequenceKeypoint.new(0.22, 0.98),
+                NumberSequenceKeypoint.new(0, 0.89),
+                NumberSequenceKeypoint.new(0.22, 0.97),
                 NumberSequenceKeypoint.new(1, 1)
             })
 
             TopBarGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.SecBg, colors.Accent, 0.14)),
+                ColorSequenceKeypoint.new(0, BlendColor(colors.SecBg, colors.Accent, 0.22)),
                 ColorSequenceKeypoint.new(1, colors.SecBg)
             })
             TopBarGradient.Transparency = NumberSequence.new({
                 NumberSequenceKeypoint.new(0, 0),
-                NumberSequenceKeypoint.new(1, 0.16)
+                NumberSequenceKeypoint.new(1, 0.11)
             })
 
             TopAccentGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, BlendColor(colors.Accent, colors.Text, 0.22)),
+                ColorSequenceKeypoint.new(0, BlendColor(colors.Accent, colors.Text, 0.3)),
                 ColorSequenceKeypoint.new(1, colors.Accent)
             })
-            MainFrame.BackgroundTransparency = 0.05
-            TopBar.BackgroundTransparency = 0.08
+            MainFrame.BackgroundTransparency = 0.03
+            TopBar.BackgroundTransparency = 0.05
         end)
         table.insert(window.cleanupFunctions, detachWindowThemeSync)
 
         local TitleDot = CreateElement("Frame", {
             Parent = TopBar,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 14, 0.5, 0),
-            Size = UDim2.new(0, 7, 0, 7),
+            Position = UDim2.new(0, 16, 0.5, 0),
+            Size = UDim2.new(0, 8, 0, 8),
             BorderSizePixel = 0
         }, {
             BackgroundColor3 = "Accent"
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = TitleDot})
 
-        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 28, 0, 0), Size = UDim2.new(0.42, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = windowTitle, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 32, 0, 0), Size = UDim2.new(0.36, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = windowTitle, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
         local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0.5, -12), Size = UDim2.new(0, 32, 0, 24), Font = Enum.Font.GothamBold, Text = "<", TextSize = 15, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = TabletBackButton})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = TabletBackButton})
         
         -- // SEARCH BAR (TOPBAR) // --
 
@@ -1317,10 +1361,10 @@ local UILibrary = (function()
             Text = "",
             ClearTextOnFocus = false,
             AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 196, 0, 30),
+            Position = UDim2.new(0.57, -8, 0.5, 0),
+            Size = UDim2.new(0, VisualTokens.SearchWidth, 0, VisualTokens.SearchHeight),
             Font = Enum.Font.Gotham,
-            TextSize = 12
+            TextSize = 11
         }, {
             BackgroundColor3 = "TerBg",
             TextColor3 = "Text",
@@ -1338,6 +1382,7 @@ local UILibrary = (function()
         }, {
             Color = "Stroke"
         })
+        CreateElement("UIPadding", {Parent = SearchBox, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
 
         SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
             ApplySearch(SearchBox.Text)
@@ -1345,18 +1390,18 @@ local UILibrary = (function()
 
 
 
-        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "X", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = CloseButton})
-        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -48, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "-", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = MinimizeButton})
-        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "S", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = SettingsButton})
+        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0, 28, 0, 28), Font = Enum.Font.GothamBold, Text = "X", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = CloseButton})
+        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -48, 0.5, 0), Size = UDim2.new(0, 28, 0, 28), Font = Enum.Font.GothamBold, Text = "-", TextSize = 15 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = MinimizeButton})
+        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), Size = UDim2.new(0, 28, 0, 28), Font = Enum.Font.GothamBold, Text = "S", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = SettingsButton})
 
         -- Sidebar Navigation Components
-        local sidebarWidth = 156
+        local sidebarWidth = VisualTokens.SidebarWidth
         local TabContainer = CreateElement("Frame", { Name = "TabContainer", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 0, 0, topBarHeight), Size = UDim2.new(0, sidebarWidth, 1, -topBarHeight) }, {BackgroundColor3 = "SecBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 14), Parent = TabContainer})
-        CreateElement("UIStroke", {Thickness = 1, Parent = TabContainer}, {Color = "Stroke"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner - 1), Parent = TabContainer})
+        CreateElement("UIStroke", {Thickness = 1.1, Parent = TabContainer}, {Color = "Stroke"})
         local TabContainerGradient = Instance.new("UIGradient")
         TabContainerGradient.Name = "__UILibSidebarGradient"
         TabContainerGradient.Rotation = 90
@@ -1367,20 +1412,20 @@ local UILibrary = (function()
             Parent = TabContainer,
             BorderSizePixel = 0,
             Position = UDim2.new(0, 8, 0, 8),
-            Size = UDim2.new(1, -16, 0, 30)
+            Size = UDim2.new(1, -16, 0, 32)
         }, {
             BackgroundColor3 = "TerBg"
         })
-        SidebarHeader.BackgroundTransparency = 0.2
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = SidebarHeader})
+        SidebarHeader.BackgroundTransparency = 0.14
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = SidebarHeader})
         CreateElement("TextLabel", {
             Parent = SidebarHeader,
             BackgroundTransparency = 1,
             Position = UDim2.new(0, 10, 0, 0),
             Size = UDim2.new(1, -10, 1, 0),
             Font = Enum.Font.GothamBold,
-            Text = "Navigation",
-            TextSize = 11,
+            Text = "SECTIONS",
+            TextSize = 10,
             TextXAlignment = Enum.TextXAlignment.Left
         }, {
             TextColor3 = "SubText"
@@ -1392,18 +1437,18 @@ local UILibrary = (function()
             BorderSizePixel = 0,
             AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.new(0, 8, 1, -8),
-            Size = UDim2.new(1, -16, 0, 44)
+            Size = UDim2.new(1, -16, 0, 50)
         }, {
             BackgroundColor3 = "TerBg"
         })
-        SidebarFooter.BackgroundTransparency = 0.2
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = SidebarFooter})
+        SidebarFooter.BackgroundTransparency = 0.14
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = SidebarFooter})
         local FooterAvatar = CreateElement("Frame", {
             Parent = SidebarFooter,
             BorderSizePixel = 0,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 9, 0.5, 0),
-            Size = UDim2.new(0, 24, 0, 24)
+            Position = UDim2.new(0, 10, 0.5, 0),
+            Size = UDim2.new(0, 26, 0, 26)
         }, {
             BackgroundColor3 = "QuarBg"
         })
@@ -1411,7 +1456,7 @@ local UILibrary = (function()
         local FooterName = CreateElement("TextLabel", {
             Parent = SidebarFooter,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 39, 0, 6),
+            Position = UDim2.new(0, 42, 0, 6),
             Size = UDim2.new(1, -43, 0, 16),
             Font = Enum.Font.GothamBold,
             Text = (localPlayer and (localPlayer.DisplayName or localPlayer.Name)) or "Local Player",
@@ -1423,7 +1468,7 @@ local UILibrary = (function()
         local FooterHandle = CreateElement("TextLabel", {
             Parent = SidebarFooter,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 39, 0, 22),
+            Position = UDim2.new(0, 42, 0, 24),
             Size = UDim2.new(1, -43, 0, 14),
             Font = Enum.Font.Gotham,
             Text = localPlayer and ("@" .. localPlayer.Name) or "@guest",
@@ -1434,7 +1479,7 @@ local UILibrary = (function()
         })
 
         local detachSidebarThemeSync = RegisterThemeSync(function(colors)
-            TabContainer.BackgroundTransparency = 0.12
+            TabContainer.BackgroundTransparency = 0.08
             TabContainerGradient.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, BlendColor(colors.SecBg, colors.Accent, 0.12)),
                 ColorSequenceKeypoint.new(0.45, colors.SecBg),
@@ -1444,8 +1489,8 @@ local UILibrary = (function()
                 NumberSequenceKeypoint.new(0, 0.02),
                 NumberSequenceKeypoint.new(1, 0.2)
             })
-            SidebarHeader.BackgroundTransparency = 0.2
-            SidebarFooter.BackgroundTransparency = 0.2
+            SidebarHeader.BackgroundTransparency = 0.14
+            SidebarFooter.BackgroundTransparency = 0.14
         end)
         table.insert(window.cleanupFunctions, detachSidebarThemeSync)
 
@@ -1455,17 +1500,17 @@ local UILibrary = (function()
 
         local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, sidebarWidth, 0, topBarHeight), Size = UDim2.new(0, 1, 1, -topBarHeight), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
         local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, sidebarWidth + 10, 0, topBarHeight + 8), Size = UDim2.new(1, -(sidebarWidth + 22), 1, -(topBarHeight + 20)), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
-        ContentFrame.BackgroundTransparency = 0.08
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 12), Parent = ContentFrame})
-        CreateElement("UIStroke", {Thickness = 1, Parent = ContentFrame}, {Color = "Stroke"})
+        ContentFrame.BackgroundTransparency = 0.04
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner + 2), Parent = ContentFrame})
+        CreateElement("UIStroke", {Thickness = 1.2, Parent = ContentFrame}, {Color = "Stroke"})
         local TabletHomeFrame = CreateElement("ScrollingFrame", { Name = "TabletHomeFrame", Parent = ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), ScrollBarThickness = 2, Visible = false, AutomaticCanvasSize = Enum.AutomaticSize.Y }, {ScrollBarImageColor3 = "Stroke"})
         local TabletGridPadding = CreateElement("UIPadding", { Parent = TabletHomeFrame, PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4) })
         local TabletGridLayout = CreateElement("UIGridLayout", { Parent = TabletHomeFrame, CellPadding = UDim2.new(0, 8, 0, 8), CellSize = UDim2.new(0.5, -8, 0, 72), SortOrder = Enum.SortOrder.LayoutOrder, FillDirectionMaxCells = 2 })
 
         -- Dropdown Navigation Components (V2)
-        local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, topBarHeight + 8), Size = UDim2.new(1, -20, 0, 36), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = NavDropdownFrame})
-        CreateElement("UIStroke", {Thickness = 1, Parent = NavDropdownFrame}, {Color = "Stroke"})
+        local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, topBarHeight + 8), Size = UDim2.new(1, -20, 0, 38), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = NavDropdownFrame})
+        CreateElement("UIStroke", {Thickness = 1.1, Parent = NavDropdownFrame}, {Color = "Stroke"})
 
         local NavDropdownBtn = CreateElement("TextButton", { Parent = NavDropdownFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 35), Font = Enum.Font.GothamBold, Text = "Select Tab", TextSize = 14, ZIndex = 11 }, {TextColor3 = "Text"})
         local NavDropdownIcon = CreateElement("TextLabel", { Parent = NavDropdownBtn, BackgroundTransparency = 1, Position = UDim2.new(1, -25, 0, 0), Size = UDim2.new(0, 20, 1, 0), Font = Enum.Font.GothamBold, Text = "v", TextSize = 12, ZIndex = 11 }, {TextColor3 = "SubText"})
@@ -1473,7 +1518,7 @@ local UILibrary = (function()
         local NavIsOpen = false
         local NavOptionContainer = nil
         local ActiveNavRowHeight = 28
-        local ActiveNavFrameSize = UDim2.new(1, -24, 0, 36)
+        local ActiveNavFrameSize = UDim2.new(1, -24, 0, 38)
         local ActiveNavFramePos = UDim2.new(0, 12, 0, 60)
         local ActiveNavAnchor = Vector2.new(0, 0)
         local CurrentTabButtonMode = "Sidebar"
@@ -1491,10 +1536,10 @@ local UILibrary = (function()
             TitleDot.Visible = not visible
             if visible then
                 TitleLabel.Position = UDim2.new(0, 52, 0, 0)
-                TitleLabel.Size = UDim2.new(0.38, 0, 1, 0)
+                TitleLabel.Size = UDim2.new(0.32, 0, 1, 0)
             else
-                TitleLabel.Position = UDim2.new(0, 28, 0, 0)
-                TitleLabel.Size = UDim2.new(0.42, 0, 1, 0)
+                TitleLabel.Position = UDim2.new(0, 32, 0, 0)
+                TitleLabel.Size = UDim2.new(0.36, 0, 1, 0)
             end
         end
 
@@ -1526,9 +1571,9 @@ local UILibrary = (function()
 
         local function GetTabButtonColors()
             if CurrentTabButtonMode == "Top" then
-                return Themes[Options.Theme].TerBg, BlendColor(Themes[Options.Theme].QuarBg, Themes[Options.Theme].Accent, 0.16)
+                return BlendColor(Themes[Options.Theme].TerBg, Themes[Options.Theme].MainBg, 0.15), BlendColor(Themes[Options.Theme].QuarBg, Themes[Options.Theme].Accent, 0.2)
             end
-            return BlendColor(Themes[Options.Theme].SecBg, Themes[Options.Theme].MainBg, 0.3), BlendColor(Themes[Options.Theme].TerBg, Themes[Options.Theme].Accent, 0.18)
+            return BlendColor(Themes[Options.Theme].SecBg, Themes[Options.Theme].MainBg, 0.2), BlendColor(Themes[Options.Theme].TerBg, Themes[Options.Theme].Accent, 0.24)
         end
 
         local function ApplyTabHolderMode(mode)
@@ -1662,7 +1707,7 @@ local UILibrary = (function()
                     ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
                     ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 12)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 36),
+                    NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
@@ -1680,7 +1725,7 @@ local UILibrary = (function()
                     ContentPos = UDim2.new(0, 10, 0, topBarHeight + 54),
                     ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 66)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 36),
+                    NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
@@ -1696,7 +1741,7 @@ local UILibrary = (function()
                     ContentPos = UDim2.new(0, 10, 0, topBarHeight + 48),
                     ContentSize = UDim2.new(1, -20, 1, -(topBarHeight + 60)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 36),
+                    NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
@@ -1712,7 +1757,7 @@ local UILibrary = (function()
                     ContentPos = UDim2.new(0, 10, 0, contentTop),
                     ContentSize = UDim2.new(1, -20, 1, -(contentTop + 12)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 36),
+                    NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
@@ -1728,7 +1773,7 @@ local UILibrary = (function()
                     ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
                     ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 12)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
-                    NavSize = UDim2.new(1, -20, 0, 36),
+                    NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
                     NavRow = 26
                 }
@@ -1787,29 +1832,30 @@ local UILibrary = (function()
         -- // Settings Menu // --
         local SettingsOverlay = CreateElement("Frame", { Name = "SettingsOverlay", Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, ZIndex = 20 })
 
-        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 620, 0, 430), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 14), Parent = SettingsFrame})
-        CreateElement("UIStroke", {Thickness = 1, Parent = SettingsFrame}, {Color = "Stroke"})
+        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 648, 0, 446), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner - 1), Parent = SettingsFrame})
+        CreateElement("UIStroke", {Thickness = 1.15, Parent = SettingsFrame}, {Color = "Stroke"})
         
-        local SettingsHeader = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44) })
-        CreateElement("TextLabel", { Parent = SettingsHeader, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 0), Size = UDim2.new(1, -50, 1, 0), Font = Enum.Font.GothamBold, Text = "Settings", TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-        local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 16}, {TextColor3 = "SubText"})
+        local SettingsHeader = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 48) })
+        CreateElement("TextLabel", { Parent = SettingsHeader, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 0), Size = UDim2.new(1, -50, 1, 0), Font = Enum.Font.GothamBold, Text = "Settings", TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+        local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "X", TextSize = 14}, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = CloseSettingsButton})
 
-        local SettingsBody = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 44), Size = UDim2.new(1, 0, 1, -44) })
+        local SettingsBody = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 48), Size = UDim2.new(1, 0, 1, -48) })
         local SettingsSidebar = CreateElement("ScrollingFrame", {
             Parent = SettingsBody,
             BackgroundTransparency = 1,
-            Size = UDim2.new(0, 168, 1, 0),
+            Size = UDim2.new(0, 186, 1, 0),
             CanvasSize = UDim2.new(0, 0, 0, 0),
-            ScrollBarThickness = 2,
+            ScrollBarThickness = 3,
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             ScrollingDirection = Enum.ScrollingDirection.Y
         }, {ScrollBarImageColor3 = "Stroke"})
         CreateElement("UIListLayout", {Parent = SettingsSidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5)})
         CreateElement("UIPadding", {Parent = SettingsSidebar, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10)})
-        CreateElement("Frame", { Parent = SettingsBody, BorderSizePixel = 0, Position = UDim2.new(0, 168, 0, 10), Size = UDim2.new(0, 1, 1, -20) }, {BackgroundColor3 = "Stroke"})
+        CreateElement("Frame", { Parent = SettingsBody, BorderSizePixel = 0, Position = UDim2.new(0, 186, 0, 10), Size = UDim2.new(0, 1, 1, -20) }, {BackgroundColor3 = "Stroke"})
 
-        local SettingsContent = CreateElement("Frame", { Parent = SettingsBody, BackgroundTransparency = 1, Position = UDim2.new(0, 178, 0, 0), Size = UDim2.new(1, -178, 1, 0) })
+        local SettingsContent = CreateElement("Frame", { Parent = SettingsBody, BackgroundTransparency = 1, Position = UDim2.new(0, 196, 0, 0), Size = UDim2.new(1, -196, 1, 0) })
 
         local SettingsTabs = {}
         local CurrentSettingsPage = nil
@@ -1818,16 +1864,20 @@ local UILibrary = (function()
         local function SwitchSettingsTab(name)
             for n, tab in pairs(SettingsTabs) do
                 tab.Page.Visible = (n == name)
-                if n == name then PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.78}):Play()
-                else PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 1}):Play() end
+                if n == name then
+                    PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.68}):Play()
+                else
+                    PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 0.9}):Play()
+                end
             end
             CurrentSettingsContainer = nil
         end
 
         local function CreateSettingsSection(text)
             if SettingsTabs[text] then return end
-            local tabBtn = CreateElement("TextButton", { Parent = SettingsSidebar, BackgroundTransparency = 1, BackgroundColor3 = Color3.fromRGB(255, 255, 255), Size = UDim2.new(1, -12, 0, 32), Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false }, {TextColor3 = "SubText"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = tabBtn})
+            local tabBtn = CreateElement("TextButton", { Parent = SettingsSidebar, BackgroundTransparency = 0.9, Size = UDim2.new(1, -12, 0, 34), Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false }, {BackgroundColor3 = "TerBg", TextColor3 = "SubText"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = tabBtn})
+            CreateElement("UIStroke", {Thickness = 1, Parent = tabBtn}, {Color = "Stroke"})
             CreateElement("UIPadding", {Parent = tabBtn, PaddingLeft = UDim.new(0, 11)})
             local page = CreateElement("ScrollingFrame", { Parent = SettingsContent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y })
             CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
@@ -1836,12 +1886,12 @@ local UILibrary = (function()
             tabBtn.MouseButton1Click:Connect(function() SwitchSettingsTab(text) end)
             tabBtn.MouseEnter:Connect(function()
                 if not page.Visible then
-                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.88}):Play()
+                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.8}):Play()
                 end
             end)
             tabBtn.MouseLeave:Connect(function()
                 if not page.Visible then
-                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 1}):Play()
+                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 0.9}):Play()
                 end
             end)
             if not next(SettingsTabs, next(SettingsTabs)) then SwitchSettingsTab(text) end
@@ -1859,13 +1909,14 @@ local UILibrary = (function()
                 AutomaticSize = Enum.AutomaticSize.Y,
                 ClipsDescendants = true
             }, {BackgroundColor3 = "TerBg"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = groupFrame})
-            CreateElement("UIStroke", {Thickness = 1, Parent = groupFrame}, {Color = "Stroke"})
+            groupFrame.BackgroundTransparency = 0.06
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = groupFrame})
+            CreateElement("UIStroke", {Thickness = 1.05, Parent = groupFrame}, {Color = "Stroke"})
 
             local headerButton = CreateElement("TextButton", {
                 Parent = groupFrame,
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 34),
+                Size = UDim2.new(1, 0, 0, 36),
                 BorderSizePixel = 0,
                 Text = ""
             })
@@ -1876,7 +1927,7 @@ local UILibrary = (function()
                 Size = UDim2.new(1, -34, 1, 0),
                 Font = Enum.Font.GothamBold,
                 Text = groupTitle,
-                TextSize = 13,
+                TextSize = 12,
                 TextXAlignment = Enum.TextXAlignment.Left
             }, {TextColor3 = "Text"})
             local arrow = CreateElement("TextLabel", {
@@ -1893,7 +1944,7 @@ local UILibrary = (function()
             local content = CreateElement("Frame", {
                 Parent = groupFrame,
                 BackgroundTransparency = 1,
-                Position = UDim2.new(0, 0, 0, 34),
+                Position = UDim2.new(0, 0, 0, 36),
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y
             })
@@ -1934,21 +1985,22 @@ local UILibrary = (function()
 
         local function CreateSettingsButton(text, callback)
             local button = CreateElement("TextButton", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 40), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = button})
-            CreateElement("UIStroke", {Thickness = 1, Parent = button}, {Color = "Stroke"})
-            CreateElement("TextLabel", { Parent = button, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(1, -15, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+            button.Size = UDim2.new(1, 0, 0, 42)
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = button})
+            CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Parent = button}, {Color = "Stroke"})
+            CreateElement("TextLabel", { Parent = button, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(1, -15, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
             button.MouseEnter:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
             button.MouseLeave:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play() end)
-            button.MouseButton1Click:Connect(function() pcall(callback); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -2, 0, 38)}):Play(); task.wait(0.1); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 40)}):Play() end)
+            button.MouseButton1Click:Connect(function() pcall(callback); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -2, 0, 40)}):Play(); task.wait(0.1); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 42)}):Play() end)
         end
 
         local function CreateSettingsCycle(text, values, defaultValue, callback)
-            local cycleFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45) }, {BackgroundColor3 = "TerBg"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = cycleFrame})
-            CreateElement("UIStroke", {Thickness = 1, Parent = cycleFrame}, {Color = "Stroke"})
-            CreateElement("TextLabel", { Parent = cycleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.55, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-            local cycleButton = CreateElement("TextButton", { Parent = cycleFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 156, 0, 28), Font = Enum.Font.GothamBold, Text = tostring(defaultValue or "None"), TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = cycleButton})
+            local cycleFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 46) }, {BackgroundColor3 = "TerBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = cycleFrame})
+            CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Parent = cycleFrame}, {Color = "Stroke"})
+            CreateElement("TextLabel", { Parent = cycleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.5, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+            local cycleButton = CreateElement("TextButton", { Parent = cycleFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 164, 0, 30), Font = Enum.Font.GothamBold, Text = tostring(defaultValue or "None"), TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner - 1), Parent = cycleButton})
             CreateElement("UIStroke", {Thickness = 1, Parent = cycleButton}, {Color = "Stroke"})
 
             local options = values or {}
@@ -2006,23 +2058,23 @@ local UILibrary = (function()
         end
 
         local function CreateSettingsDropdown(text, options, default, callback)
-            local dropdownFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), ClipsDescendants = true }, {BackgroundColor3 = "TerBg"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = dropdownFrame})
-            CreateElement("UIStroke", {Thickness = 1, Parent = dropdownFrame}, {Color = "Stroke"})
-            local titleLabel = CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.5, 0, 0, 45), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+            local dropdownFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 46), ClipsDescendants = true }, {BackgroundColor3 = "TerBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = dropdownFrame})
+            CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Parent = dropdownFrame}, {Color = "Stroke"})
+            local titleLabel = CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.5, 0, 0, 46), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
 
-            local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -15, 0, 8), Size = UDim2.new(0, 120, 0, 28), Font = Enum.Font.GothamBold, Text = default or options[1] or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
+            local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 8), Size = UDim2.new(0, 128, 0, 30), Font = Enum.Font.GothamBold, Text = default or options[1] or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner - 1), Parent = dropdownButton})
             
             local isOpen = false; local optionContainer
-            local headerHeight, rowHeight = 45, 30
+            local headerHeight, rowHeight = 46, 30
             local function resolveComboMetrics()
                 if Options.ComboStyle == "Compact" then
-                    return 40, 26, 108, 24
+                    return 42, 26, 114, 24
                 elseif Options.ComboStyle == "Soft" then
-                    return 48, 32, 130, 32
+                    return 50, 32, 136, 32
                 end
-                return 45, 30, 120, 28
+                return 46, 30, 128, 30
             end
             local function applyComboStyle(themeUpdate)
                 local _, _, btnW, btnH = resolveComboMetrics()
@@ -2065,13 +2117,13 @@ local UILibrary = (function()
         end
 
         local function CreateSettingsKeybind(text, defaultKey, callback)
-            local keybindFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45) }, {BackgroundColor3 = "TerBg"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = keybindFrame})
-            CreateElement("UIStroke", {Thickness = 1, Parent = keybindFrame}, {Color = "Stroke"})
-            CreateElement("TextLabel", { Parent = keybindFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.55, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+            local keybindFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 46) }, {BackgroundColor3 = "TerBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = keybindFrame})
+            CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Parent = keybindFrame}, {Color = "Stroke"})
+            CreateElement("TextLabel", { Parent = keybindFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.55, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
 
-            local keybindButton = CreateElement("TextButton", { Parent = keybindFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 110, 0, 28), Font = Enum.Font.GothamBold, Text = "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = keybindButton})
+            local keybindButton = CreateElement("TextButton", { Parent = keybindFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 120, 0, 30), Font = Enum.Font.GothamBold, Text = "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner - 1), Parent = keybindButton})
             local keybindStroke = CreateElement("UIStroke", {Thickness = 1, Parent = keybindButton}, {Color = "Stroke"})
 
             local currentKey = (typeof(defaultKey) == "EnumItem") and defaultKey or Enum.KeyCode.Insert
@@ -2296,12 +2348,13 @@ local UILibrary = (function()
             end
         end)
         local function CreateSettingsToggle(text, callback)
-            local toggleButton = CreateElement("TextButton", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = toggleButton})
-            local stroke = CreateElement("UIStroke", {Thickness = 1, Parent = toggleButton}, {Color = "Stroke"})
-            CreateElement("TextLabel", { Parent = toggleButton, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.7, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+            local toggleButton = CreateElement("TextButton", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 46), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
+            toggleButton.BackgroundTransparency = 0.05
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = toggleButton})
+            local stroke = CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Parent = toggleButton}, {Color = "Stroke"})
+            CreateElement("TextLabel", { Parent = toggleButton, BackgroundTransparency = 1, Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(0.7, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
             
-            local toggleContainer = CreateElement("Frame", { Parent = toggleButton, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 44, 0, 22) })
+            local toggleContainer = CreateElement("Frame", { Parent = toggleButton, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 44, 0, 22) })
             
             local switchBg = CreateElement("Frame", { Parent = toggleContainer, BorderSizePixel = 0, Size = UDim2.new(1, 0, 1, 0) }, {BackgroundColor3 = "QuarBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = switchBg})
@@ -2440,11 +2493,11 @@ local UILibrary = (function()
         local function ToggleSettings()
             if SettingsOverlay.Visible then
                 PlayTween(SettingsOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-                PlayTween(SettingsFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 10), BackgroundTransparency = 1}):Play()
+                PlayTween(SettingsFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 12), BackgroundTransparency = 1}):Play()
                 task.delay(0.2, function() SettingsOverlay.Visible = false end)
             else
-                SettingsOverlay.Visible = true; SettingsOverlay.BackgroundTransparency = 1; SettingsFrame.Position = UDim2.new(0.5, 0, 0.5, 10); SettingsFrame.BackgroundTransparency = 1
-                PlayTween(SettingsOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.5}):Play()
+                SettingsOverlay.Visible = true; SettingsOverlay.BackgroundTransparency = 1; SettingsFrame.Position = UDim2.new(0.5, 0, 0.5, 12); SettingsFrame.BackgroundTransparency = 1
+                PlayTween(SettingsOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.42}):Play()
                 PlayTween(SettingsFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 0}):Play()
             end
         end
@@ -2480,6 +2533,8 @@ local UILibrary = (function()
         MinimizeButton.MouseLeave:Connect(function() PlayTween(MinimizeButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         SettingsButton.MouseEnter:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         SettingsButton.MouseLeave:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
+        CloseSettingsButton.MouseEnter:Connect(function() PlayTween(CloseSettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
+        CloseSettingsButton.MouseLeave:Connect(function() PlayTween(CloseSettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         TabletBackButton.MouseEnter:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         TabletBackButton.MouseLeave:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         TabletBackButton.MouseButton1Click:Connect(function()
@@ -2527,7 +2582,7 @@ local UILibrary = (function()
                 UpdateWindowSize(false)
                 WindowShadow.BackgroundTransparency = 1
                 PlayTween(WindowShadow, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    BackgroundTransparency = 0.62
+                    BackgroundTransparency = 0.56
                 }):Play()
                 PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                     Size = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight),
@@ -2618,10 +2673,10 @@ local UILibrary = (function()
 
 
             local tab = { Name = name, Elements = {} }
-            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.12, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -16, 0, 40), Font = Enum.Font.GothamBold, Text = name, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 9), Parent = tabButton})
-            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 14)})
-            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0, 3, 0, 22), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
+            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.1, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -16, 0, 42), Font = Enum.Font.GothamBold, Text = name, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = tabButton})
+            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 15)})
+            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0, 4, 0, 24), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
             
             local page = CreateElement("ScrollingFrame", {
@@ -2635,17 +2690,17 @@ local UILibrary = (function()
                 ScrollBarThickness = 3,
                 Visible = false
             }, {ScrollBarImageColor3 = "Stroke"})
-            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 10)})
+            CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, VisualTokens.SectionGap)})
             CreateElement("UIPadding", {
                 Parent = page,
                 PaddingRight = UDim.new(0, 10),
                 PaddingLeft = UDim.new(0, 5),
                 PaddingTop = UDim.new(0, 5),
-                PaddingBottom = UDim.new(0, 10)
+                PaddingBottom = UDim.new(0, 8)
             })
             local tabletTile = CreateElement("TextButton", { Name = name .. "Tile", Parent = TabletHomeFrame, BorderSizePixel = 0, AutoButtonColor = false, Text = name, Font = Enum.Font.GothamBold, TextSize = 15 }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = tabletTile})
-            CreateElement("UIStroke", {Parent = tabletTile, Thickness = 1}, {Color = "Stroke"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = tabletTile})
+            CreateElement("UIStroke", {Parent = tabletTile, Thickness = 1.1}, {Color = "Stroke"})
             
             tab.Button = tabButton; tab.Page = page; tab.ActiveRail = activeRail; tab.TabletTile = tabletTile; table.insert(tabs, tab)
             ApplyTabButtonMode(tab)
@@ -2689,22 +2744,24 @@ local UILibrary = (function()
             end
 
             function tab:CreateButton(text, callback)
-                local button = CreateElement("TextButton", { Parent = page, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, 38), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = button})
+                local button = CreateElement("TextButton", { Parent = page, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
+                button.BackgroundTransparency = 0.05
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = button})
                 CreateElement("UIPadding", {Parent = button, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)})
-                local buttonStroke = CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = button}, {Color = "Stroke"})
+                local buttonStroke = CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = button}, {Color = "Stroke"})
                 
                 button.MouseEnter:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play(); PlayTween(buttonStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Accent}):Play() end)
                 button.MouseLeave:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play(); PlayTween(buttonStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Stroke}):Play() end)
-                button.MouseButton1Click:Connect(function() pcall(callback); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -4, 0, 34)}):Play(); task.wait(0.1); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 38)}):Play() end)
+                button.MouseButton1Click:Connect(function() pcall(callback); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -4, 0, VisualTokens.ControlHeight - 4)}):Play(); task.wait(0.1); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight)}):Play() end)
                 table.insert(tab.Elements, button)
                 return button
             end
 
             function tab:CreateToggle(text, callback, defaultState, saveKey)
-                local toggleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 38), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = toggleFrame})
-                CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = toggleFrame}, {Color = "Stroke"})
+                local toggleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
+                toggleFrame.BackgroundTransparency = 0.05
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = toggleFrame})
+                CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = toggleFrame}, {Color = "Stroke"})
                 
                 CreateElement("TextLabel", { Parent = toggleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.7, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
                 local toggleButton = CreateElement("TextButton", { Parent = toggleFrame, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 40, 0, 20), Text = "" })
@@ -2773,9 +2830,10 @@ local UILibrary = (function()
             end
 
             function tab:CreateKeybind(text, callback, defaultKey, saveKey)
-                local keybindFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 38), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = keybindFrame})
-                CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = keybindFrame}, {Color = "Stroke"})
+                local keybindFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
+                keybindFrame.BackgroundTransparency = 0.05
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = keybindFrame})
+                CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = keybindFrame}, {Color = "Stroke"})
                 
                 CreateElement("TextLabel", { Parent = keybindFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.6, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
                 local keybindButton = CreateElement("TextButton", { Parent = keybindFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 84, 0, 22), Font = Enum.Font.GothamBold, Text = "None", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
@@ -2827,9 +2885,10 @@ local UILibrary = (function()
             end
 
             function tab:CreateSlider(text, min, max, default, callback, saveKey)
-                local sliderFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 56), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = sliderFrame})
-                CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = sliderFrame}, {Color = "Stroke"})
+                local sliderFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 58), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
+                sliderFrame.BackgroundTransparency = 0.05
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = sliderFrame})
+                CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = sliderFrame}, {Color = "Stroke"})
                 local fallbackValue = tonumber(default) or min
                 fallbackValue = math.clamp(fallbackValue, min, max)
                 local loadedValue, sliderStore = ResolvePersistedValue(saveKey, fallbackValue)
@@ -2919,9 +2978,10 @@ local UILibrary = (function()
             end
 
             function tab:CreateCycleButton(text, values, default, callback, saveKey)
-                local cycleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 38), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = cycleFrame})
-                CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = cycleFrame}, {Color = "Stroke"})
+                local cycleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
+                cycleFrame.BackgroundTransparency = 0.05
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = cycleFrame})
+                CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = cycleFrame}, {Color = "Stroke"})
                 local fallbackValue = default or values[1]
                 local loadedValue, cycleStore = ResolvePersistedValue(saveKey, fallbackValue)
 
@@ -2986,8 +3046,9 @@ local UILibrary = (function()
 
             function tab:CreateDropdown(text, options, default, callback, saveKey)
                 local dropdownFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 48), ClipsDescendants = true, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = dropdownFrame})
-                CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = dropdownFrame}, {Color = "Stroke"})
+                dropdownFrame.BackgroundTransparency = 0.05
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = dropdownFrame})
+                CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = dropdownFrame}, {Color = "Stroke"})
                 local titleLabel = CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.5, 0, 0, 48), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
 
                 local fallbackValue = default or options[1]
@@ -3007,14 +3068,14 @@ local UILibrary = (function()
                 local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 124, 0, 30), Font = Enum.Font.GothamBold, Text = currentValue or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = dropdownButton}, {Color = "Stroke"})
-                local headerHeight, rowHeight = 45, 30
+                local headerHeight, rowHeight = 46, 30
                 local function resolveComboMetrics()
                     if Options.ComboStyle == "Compact" then
-                        return 40, 26, 110, 24
+                        return 42, 26, 116, 24
                     elseif Options.ComboStyle == "Soft" then
-                        return 48, 32, 132, 32
+                        return 50, 32, 136, 32
                     end
-                    return 45, 30, 120, 30
+                    return 46, 30, 126, 30
                 end
                 
                 local function setDropdownValue(value, skipCallback)
@@ -3127,8 +3188,9 @@ local UILibrary = (function()
 
             function tab:CreateParagraph(title, content)
                 local paragraphFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = paragraphFrame})
-                CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = paragraphFrame}, {Color = "Stroke"})
+                paragraphFrame.BackgroundTransparency = 0.04
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = paragraphFrame})
+                CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = paragraphFrame}, {Color = "Stroke"})
                 CreateElement("TextLabel", { Parent = paragraphFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 10), Size = UDim2.new(1, -24, 0, 15), Font = Enum.Font.GothamBold, Text = title, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
                 CreateElement("TextLabel", { Parent = paragraphFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 30), Size = UDim2.new(1, -24, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.Gotham, Text = content, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true }, {TextColor3 = "SubText"})
                 CreateElement("UIPadding", {Parent = paragraphFrame, PaddingBottom = UDim.new(0, 12)})
@@ -3361,4 +3423,5 @@ local UILibrary = (function()
 end)()
 
 return UILibrary
+
 
