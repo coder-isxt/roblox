@@ -1490,6 +1490,7 @@ local UILibrary = (function()
         local BaseContentPos = ContentFrame.Position
         local BaseContentSize = ContentFrame.Size
 
+        local EnablePlayerPanel = false
         local PlayerListCollapsed = false
         local PlayerListExpandedWidth = 162
         local PlayerListCollapsedWidth = 34
@@ -1903,6 +1904,9 @@ local UILibrary = (function()
         end)
 
         local function RefreshPlayerListButtons()
+            if not EnablePlayerPanel then
+                return
+            end
             for _, child in ipairs(PlayerListScroll:GetChildren()) do
                 if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
                     child:Destroy()
@@ -1953,10 +1957,17 @@ local UILibrary = (function()
         end
 
         local function GetPlayerListInsetOffset()
+            if not EnablePlayerPanel then
+                return 0
+            end
             return (PlayerListCollapsed and PlayerListCollapsedWidth or PlayerListExpandedWidth) + PlayerListGap
         end
 
         local function ApplyPlayerListVisual(animate)
+            if not EnablePlayerPanel then
+                PlayerListFrame.Visible = false
+                return
+            end
             local panelWidth = PlayerListCollapsed and PlayerListCollapsedWidth or PlayerListExpandedWidth
             local panelPos = UDim2.new(1, -(panelWidth + 10), 0, topBarHeight + 8)
             local panelSize = UDim2.new(0, panelWidth, 1, -(topBarHeight + 20))
@@ -2011,9 +2022,14 @@ local UILibrary = (function()
             PlayTween(PlayerListToggleButton, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play()
         end)
 
-        RefreshPlayerListButtons()
-        ApplyPlayerListVisual(false)
-        ApplyContentFrameLayout(false)
+        if EnablePlayerPanel then
+            RefreshPlayerListButtons()
+            ApplyPlayerListVisual(false)
+            ApplyContentFrameLayout(false)
+        else
+            PlayerListFrame.Visible = false
+            ApplyContentFrameLayout(false)
+        end
 
         table.insert(window.cleanupFunctions, function()
             StopSpectate()
@@ -2021,20 +2037,22 @@ local UILibrary = (function()
         table.insert(window.cleanupFunctions, function()
             ClosePlayerAdminMenu()
         end)
-        table.insert(window.connections, PlayersService.PlayerAdded:Connect(function()
-            RefreshPlayerListButtons()
-        end))
-        table.insert(window.connections, PlayersService.PlayerRemoving:Connect(function(leavingPlayer)
-            if SelectedAdminPlayer and leavingPlayer == SelectedAdminPlayer then
-                ClosePlayerAdminMenu()
-                SelectedAdminPlayer = nil
-            end
-            if SpectateTargetPlayer and leavingPlayer == SpectateTargetPlayer then
-                StopSpectate()
-                RefreshSpectateButtonText()
-            end
-            RefreshPlayerListButtons()
-        end))
+        if EnablePlayerPanel then
+            table.insert(window.connections, PlayersService.PlayerAdded:Connect(function()
+                RefreshPlayerListButtons()
+            end))
+            table.insert(window.connections, PlayersService.PlayerRemoving:Connect(function(leavingPlayer)
+                if SelectedAdminPlayer and leavingPlayer == SelectedAdminPlayer then
+                    ClosePlayerAdminMenu()
+                    SelectedAdminPlayer = nil
+                end
+                if SpectateTargetPlayer and leavingPlayer == SpectateTargetPlayer then
+                    StopSpectate()
+                    RefreshSpectateButtonText()
+                end
+                RefreshPlayerListButtons()
+            end))
+        end
 
         -- Dropdown Navigation Components (V2)
         local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, topBarHeight + 8), Size = UDim2.new(1, -20, 0, 38), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
@@ -3159,7 +3177,7 @@ local UILibrary = (function()
                 PlayerAdminOverlay.Visible = false
             else
                 ContentFrame.Visible = true
-                PlayerListFrame.Visible = true
+                PlayerListFrame.Visible = EnablePlayerPanel
                 TabContainer.Visible = ActiveLayoutState.ShowSidebar
                 Separator.Visible = ActiveLayoutState.ShowSeparator
                 NavDropdownFrame.Visible = ActiveLayoutState.ShowDropdown
@@ -3176,7 +3194,7 @@ local UILibrary = (function()
             UIVisible = not UIVisible
             if UIVisible then
                 MainFrame.Visible = true
-                PlayerListFrame.Visible = not Minimized
+                PlayerListFrame.Visible = EnablePlayerPanel and (not Minimized)
                 UpdateWindowSize(false)
                 MainFrame.Size = UDim2.new(0, 0, 0, 0)
                 mainScale.Scale = mainScale.Scale * 0.95
