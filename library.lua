@@ -1072,8 +1072,22 @@ local UILibrary = (function()
         local localPlayer = game:GetService("Players").LocalPlayer
         
         local ScreenGui = CreateElement("ScreenGui", { Name = "UILibWindow", Parent = game:GetService("CoreGui"), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true })
-        
-        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 560, 0, 420), ClipsDescendants = true, Visible = true }, {BackgroundColor3 = "MainBg"})
+
+        local WindowShadow = CreateElement("Frame", {
+            Name = "WindowShadow",
+            Parent = ScreenGui,
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 8),
+            Size = UDim2.new(0, 590, 0, 450),
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 0.62,
+            Visible = false,
+            ZIndex = 0
+        })
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, 18), Parent = WindowShadow})
+
+        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 560, 0, 420), ClipsDescendants = true, Visible = false }, {BackgroundColor3 = "MainBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 16), Parent = MainFrame})
         CreateElement("UIStroke", {Thickness = 1.2, Transparency = 0.08, Parent = MainFrame}, {Color = "Stroke"})
         local MainGlassLayer = CreateElement("Frame", {
@@ -1093,7 +1107,7 @@ local UILibrary = (function()
         mainScale.Scale = 1
         mainScale.Parent = MainFrame
 
-        local topBarHeight = 42
+        local topBarHeight = 44
         local expandedWidth, expandedHeight = 560, 420
         local function ComputeInterfaceScale(viewport)
             local vp = viewport or Vector2.new(1920, 1080)
@@ -1109,11 +1123,34 @@ local UILibrary = (function()
             local height = math.clamp(math.floor(viewport.Y * 0.56), 360, 580)
             return width, height, viewport
         end
-        local function UpdateWindowSize(animate)
+        local function GetWindowTargetState()
             local viewport
             expandedWidth, expandedHeight, viewport = ComputeWindowSize()
             local targetSize = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight)
             local targetScale = ComputeInterfaceScale(viewport)
+            return targetSize, targetScale
+        end
+        local function GetShadowPosition()
+            return UDim2.new(MainFrame.Position.X.Scale, MainFrame.Position.X.Offset, MainFrame.Position.Y.Scale, MainFrame.Position.Y.Offset + 8)
+        end
+        local function GetShadowSizeForMain(mainSize)
+            return UDim2.new(mainSize.X.Scale, mainSize.X.Offset + 24, mainSize.Y.Scale, mainSize.Y.Offset + 24)
+        end
+        local function SyncWindowShadow(animate)
+            local targetPosition = GetShadowPosition()
+            local targetSize = GetShadowSizeForMain(MainFrame.Size)
+            if animate then
+                PlayTween(WindowShadow, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = targetPosition,
+                    Size = targetSize
+                }):Play()
+            else
+                WindowShadow.Position = targetPosition
+                WindowShadow.Size = targetSize
+            end
+        end
+        local function UpdateWindowSize(animate)
+            local targetSize, targetScale = GetWindowTargetState()
             if animate then
                 PlayTween(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
                 PlayTween(mainScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
@@ -1121,8 +1158,44 @@ local UILibrary = (function()
                 MainFrame.Size = targetSize
                 mainScale.Scale = targetScale
             end
+            SyncWindowShadow(animate)
         end
         UpdateWindowSize(false)
+
+        local OpenAnimationPlayed = false
+        local function PlayOpenAnimation()
+            if OpenAnimationPlayed then
+                return
+            end
+            OpenAnimationPlayed = true
+
+            local targetSize, targetScale = GetWindowTargetState()
+            MainFrame.Visible = true
+            WindowShadow.Visible = true
+
+            MainFrame.Position = UDim2.new(0.5, 0, 0.5, 10)
+            MainFrame.Size = UDim2.new(
+                0,
+                math.max(280, math.floor(targetSize.X.Offset * 0.76)),
+                0,
+                math.max(topBarHeight, math.floor(targetSize.Y.Offset * 0.76))
+            )
+            mainScale.Scale = targetScale * 0.95
+
+            WindowShadow.BackgroundTransparency = 1
+            SyncWindowShadow(false)
+
+            PlayTween(WindowShadow, TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 0.62
+            }):Play()
+            PlayTween(MainFrame, TweenInfo.new(0.42, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0.5, 0, 0.5, 0),
+                Size = targetSize
+            }):Play()
+            PlayTween(mainScale, TweenInfo.new(0.36, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                Scale = targetScale
+            }):Play()
+        end
         
         local TopBar = CreateElement("Frame", { Name = "TopBar", Parent = MainFrame, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, topBarHeight) }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 16), Parent = TopBar})
@@ -1240,12 +1313,12 @@ local UILibrary = (function()
 
         local SearchBox = CreateElement("TextBox", {
             Parent = TopBar,
-            PlaceholderText = "Search...",
+            PlaceholderText = "Search controls...",
             Text = "",
             ClearTextOnFocus = false,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 176, 0, 28),
+            Size = UDim2.new(0, 196, 0, 30),
             Font = Enum.Font.Gotham,
             TextSize = 12
         }, {
@@ -1272,11 +1345,11 @@ local UILibrary = (function()
 
 
 
-        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "X", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = CloseButton})
-        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -42, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "-", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -48, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "-", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = MinimizeButton})
-        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -74, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "⚙", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), Size = UDim2.new(0, 26, 0, 26), Font = Enum.Font.GothamBold, Text = "S", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = SettingsButton})
 
         -- Sidebar Navigation Components
@@ -2398,6 +2471,7 @@ local UILibrary = (function()
             if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
                 local delta = input.Position - dragStart
                 MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                SyncWindowShadow(false)
             end
         end)
         CloseButton.MouseEnter:Connect(function() PlayTween(CloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Accent, TextColor3 = Themes[Options.Theme].Text}):Play() end)
@@ -2417,6 +2491,12 @@ local UILibrary = (function()
             if FPSCleanup then FPSCleanup() end
             for _, conn in ipairs(window.connections) do conn:Disconnect() end
             for _, func in ipairs(window.cleanupFunctions) do pcall(func) end
+            PlayTween(WindowShadow, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                BackgroundTransparency = 1
+            }):Play()
+            PlayTween(mainScale, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Scale = mainScale.Scale * 0.95
+            }):Play()
             PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play()
             task.wait(0.3); ScreenGui:Destroy()
         end)
@@ -2443,9 +2523,36 @@ local UILibrary = (function()
             UIVisible = not UIVisible
             if UIVisible then
                 MainFrame.Visible = true
+                WindowShadow.Visible = true
                 UpdateWindowSize(false)
-                PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight)}):Play()
-            else PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play(); task.delay(0.3, function() if not UIVisible then MainFrame.Visible = false end end) end
+                WindowShadow.BackgroundTransparency = 1
+                PlayTween(WindowShadow, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    BackgroundTransparency = 0.62
+                }):Play()
+                PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Size = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight),
+                    Position = UDim2.new(0.5, 0, 0.5, 0)
+                }):Play()
+                PlayTween(mainScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Scale = ComputeInterfaceScale(workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080))
+                }):Play()
+            else
+                PlayTween(WindowShadow, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    BackgroundTransparency = 1
+                }):Play()
+                PlayTween(mainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Scale = mainScale.Scale * 0.95
+                }):Play()
+                PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                    Size = UDim2.new(0, 0, 0, 0)
+                }):Play()
+                task.delay(0.3, function()
+                    if not UIVisible then
+                        MainFrame.Visible = false
+                        WindowShadow.Visible = false
+                    end
+                end)
+            end
         end
 
         toggleConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -3246,6 +3353,7 @@ local UILibrary = (function()
         for _, func in ipairs(Registries.MenuLayout) do func(Options.MenuStyle) end
         ApplyStrokeStyleVisuals(true)
         SaveLibraryOptions()
+        task.defer(PlayOpenAnimation)
         
         return window
     end
