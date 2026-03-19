@@ -3,6 +3,7 @@ local UILibrary = (function()
     local UILibrary = {}
     local TweenService = game:GetService("TweenService")
     local UserInputService = game:GetService("UserInputService")
+    local RunService = game:GetService("RunService")
     local HttpService = game:GetService("HttpService")
 
     -- // TWEEN POOLING // --
@@ -1098,7 +1099,8 @@ local UILibrary = (function()
         end)
         local FPSCleanup = nil
         local Minimized = false
-        local localPlayer = game:GetService("Players").LocalPlayer
+        local PlayersService = game:GetService("Players")
+        local localPlayer = PlayersService.LocalPlayer
         
         local ScreenGui = CreateElement("ScreenGui", { Name = "UILibWindow", Parent = game:GetService("CoreGui"), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true })
 
@@ -1485,6 +1487,554 @@ local UILibrary = (function()
         local TabletHomeFrame = CreateElement("ScrollingFrame", { Name = "TabletHomeFrame", Parent = ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), ScrollBarThickness = 2, Visible = false, AutomaticCanvasSize = Enum.AutomaticSize.Y }, {ScrollBarImageColor3 = "Stroke"})
         local TabletGridPadding = CreateElement("UIPadding", { Parent = TabletHomeFrame, PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4) })
         local TabletGridLayout = CreateElement("UIGridLayout", { Parent = TabletHomeFrame, CellPadding = UDim2.new(0, 8, 0, 8), CellSize = UDim2.new(0.5, -8, 0, 72), SortOrder = Enum.SortOrder.LayoutOrder, FillDirectionMaxCells = 2 })
+        local BaseContentPos = ContentFrame.Position
+        local BaseContentSize = ContentFrame.Size
+
+        local PlayerListCollapsed = false
+        local PlayerListExpandedWidth = 162
+        local PlayerListCollapsedWidth = 34
+        local PlayerListGap = 8
+        local PlayerAdminCallbacks = {}
+        local SelectedAdminPlayer = nil
+        local SpectateTargetPlayer = nil
+        local SpectatePreviousSubject = nil
+        local SpectateHeartbeatConnection = nil
+
+        local function PlayerAdminNotify(title, content, duration)
+            pcall(function()
+                UILibrary:Notify({
+                    Title = title,
+                    Content = content,
+                    Duration = duration or 2.4
+                })
+            end)
+        end
+
+        local function GetLocalRootPart()
+            local character = localPlayer and localPlayer.Character
+            return character and character:FindFirstChild("HumanoidRootPart")
+        end
+
+        local function GetTargetRootPart(targetPlayer)
+            local character = targetPlayer and targetPlayer.Character
+            return character and character:FindFirstChild("HumanoidRootPart")
+        end
+
+        local function StopSpectate()
+            if SpectateHeartbeatConnection then
+                SpectateHeartbeatConnection:Disconnect()
+                SpectateHeartbeatConnection = nil
+            end
+            SpectateTargetPlayer = nil
+            local currentCamera = workspace.CurrentCamera
+            if currentCamera then
+                if SpectatePreviousSubject then
+                    currentCamera.CameraSubject = SpectatePreviousSubject
+                elseif localPlayer and localPlayer.Character then
+                    local localHumanoid = localPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if localHumanoid then
+                        currentCamera.CameraSubject = localHumanoid
+                    end
+                end
+            end
+            SpectatePreviousSubject = nil
+        end
+
+        local function StartSpectate(targetPlayer)
+            if not targetPlayer then
+                return false
+            end
+            local targetCharacter = targetPlayer.Character
+            local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+            local currentCamera = workspace.CurrentCamera
+            if not currentCamera or not targetHumanoid then
+                return false
+            end
+
+            StopSpectate()
+            SpectateTargetPlayer = targetPlayer
+            SpectatePreviousSubject = currentCamera.CameraSubject
+            currentCamera.CameraSubject = targetHumanoid
+
+            SpectateHeartbeatConnection = RunService.Heartbeat:Connect(function()
+                if not SpectateTargetPlayer then
+                    return
+                end
+                local spectateCharacter = SpectateTargetPlayer.Character
+                local spectateHumanoid = spectateCharacter and spectateCharacter:FindFirstChildOfClass("Humanoid")
+                local camera = workspace.CurrentCamera
+                if not spectateHumanoid or not camera then
+                    StopSpectate()
+                    return
+                end
+                if camera.CameraSubject ~= spectateHumanoid then
+                    camera.CameraSubject = spectateHumanoid
+                end
+            end)
+
+            return true
+        end
+
+        local function TeleportToPlayer(targetPlayer)
+            local localRoot = GetLocalRootPart()
+            local targetRoot = GetTargetRootPart(targetPlayer)
+            if not localRoot or not targetRoot then
+                return false
+            end
+            localRoot.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+            return true
+        end
+
+        local function BringPlayer(targetPlayer)
+            if type(PlayerAdminCallbacks.OnBringPlayer) == "function" then
+                local ok, err = pcall(PlayerAdminCallbacks.OnBringPlayer, targetPlayer)
+                if not ok then
+                    PlayerAdminNotify("Bring", "Callback failed: " .. tostring(err), 3)
+                end
+                return ok
+            end
+
+            local localRoot = GetLocalRootPart()
+            local targetRoot = GetTargetRootPart(targetPlayer)
+            if not localRoot or not targetRoot then
+                return false
+            end
+
+            local ok = pcall(function()
+                targetRoot.CFrame = localRoot.CFrame * CFrame.new(0, 0, -4)
+            end)
+            if not ok then
+                PlayerAdminNotify("Bring", "Bring needs a server-side handler.", 3)
+            end
+            return ok
+        end
+
+        local function GetOtherPlayers()
+            local list = {}
+            for _, candidate in ipairs(PlayersService:GetPlayers()) do
+                if candidate ~= localPlayer then
+                    table.insert(list, candidate)
+                end
+            end
+            table.sort(list, function(a, b)
+                return string.lower(a.Name) < string.lower(b.Name)
+            end)
+            return list
+        end
+
+        local PlayerListFrame = CreateElement("Frame", {
+            Name = "PlayerListFrame",
+            Parent = MainFrame,
+            BorderSizePixel = 0,
+            Position = UDim2.new(1, -(PlayerListExpandedWidth + 10), 0, topBarHeight + 8),
+            Size = UDim2.new(0, PlayerListExpandedWidth, 1, -(topBarHeight + 20)),
+            ClipsDescendants = true
+        }, {BackgroundColor3 = "SecBg"})
+        PlayerListFrame.BackgroundTransparency = 0.04
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner + 2), Parent = PlayerListFrame})
+        CreateElement("UIStroke", {Thickness = 1.2, Parent = PlayerListFrame}, {Color = "Stroke"})
+
+        local PlayerListHeader = CreateElement("Frame", {
+            Parent = PlayerListFrame,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 0, 34)
+        }, {BackgroundColor3 = "TerBg"})
+        PlayerListHeader.BackgroundTransparency = 0.08
+        CreateElement("TextLabel", {
+            Parent = PlayerListHeader,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 10, 0, 0),
+            Size = UDim2.new(1, -36, 1, 0),
+            Font = Enum.Font.GothamBold,
+            Text = "Players",
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left
+        }, {TextColor3 = "Text"})
+        local PlayerListToggleButton = CreateElement("TextButton", {
+            Parent = PlayerListHeader,
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -6, 0.5, 0),
+            Size = UDim2.new(0, 22, 0, 22),
+            Font = Enum.Font.GothamBold,
+            Text = ">",
+            TextSize = 12,
+            AutoButtonColor = false
+        }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner - 1), Parent = PlayerListToggleButton})
+        CreateElement("Frame", { Parent = PlayerListHeader, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -1), Size = UDim2.new(1, 0, 0, 1) }, {BackgroundColor3 = "Stroke"})
+
+        local PlayerListScroll = CreateElement("ScrollingFrame", {
+            Name = "PlayerListScroll",
+            Parent = PlayerListFrame,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, 34),
+            Size = UDim2.new(1, 0, 1, -34),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 2,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y
+        }, {ScrollBarImageColor3 = "Stroke"})
+        local PlayerListLayout = CreateElement("UIListLayout", {
+            Parent = PlayerListScroll,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 6)
+        })
+        CreateElement("UIPadding", {
+            Parent = PlayerListScroll,
+            PaddingTop = UDim.new(0, 8),
+            PaddingLeft = UDim.new(0, 8),
+            PaddingRight = UDim.new(0, 8),
+            PaddingBottom = UDim.new(0, 8)
+        })
+
+        local PlayerAdminOverlay = CreateElement("Frame", {
+            Name = "PlayerAdminOverlay",
+            Parent = MainFrame,
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            Visible = false,
+            ZIndex = 24
+        })
+        local PlayerAdminFrame = CreateElement("Frame", {
+            Name = "PlayerAdminFrame",
+            Parent = PlayerAdminOverlay,
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 12),
+            Size = UDim2.new(0, 520, 0, 372),
+            ClipsDescendants = true,
+            ZIndex = 25
+        }, {BackgroundColor3 = "SecBg"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner - 1), Parent = PlayerAdminFrame})
+        CreateElement("UIStroke", {Thickness = 1.15, Parent = PlayerAdminFrame}, {Color = "Stroke"})
+
+        local PlayerAdminHeader = CreateElement("Frame", {
+            Parent = PlayerAdminFrame,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 56),
+            ZIndex = 26
+        })
+        local PlayerAdminNameLabel = CreateElement("TextLabel", {
+            Parent = PlayerAdminHeader,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 16, 0, 6),
+            Size = UDim2.new(1, -54, 0, 24),
+            Font = Enum.Font.GothamBold,
+            Text = "Player",
+            TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 26
+        }, {TextColor3 = "Text"})
+        local PlayerAdminUserLabel = CreateElement("TextLabel", {
+            Parent = PlayerAdminHeader,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 16, 0, 29),
+            Size = UDim2.new(1, -54, 0, 20),
+            Font = Enum.Font.Gotham,
+            Text = "@username",
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 26
+        }, {TextColor3 = "SubText"})
+        local PlayerAdminCloseButton = CreateElement("TextButton", {
+            Parent = PlayerAdminHeader,
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -12, 0.5, 0),
+            Size = UDim2.new(0, 26, 0, 26),
+            Font = Enum.Font.GothamBold,
+            Text = "X",
+            TextSize = 13,
+            ZIndex = 26
+        }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = PlayerAdminCloseButton})
+        CreateElement("Frame", { Parent = PlayerAdminHeader, BorderSizePixel = 0, Position = UDim2.new(0, 0, 1, -1), Size = UDim2.new(1, 0, 0, 1), ZIndex = 26 }, {BackgroundColor3 = "Stroke"})
+
+        local PlayerAdminActionScroll = CreateElement("ScrollingFrame", {
+            Parent = PlayerAdminFrame,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, 56),
+            Size = UDim2.new(1, 0, 1, -56),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 2,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ZIndex = 25
+        }, {ScrollBarImageColor3 = "Stroke"})
+        CreateElement("UIListLayout", {
+            Parent = PlayerAdminActionScroll,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 8)
+        })
+        CreateElement("UIPadding", {
+            Parent = PlayerAdminActionScroll,
+            PaddingTop = UDim.new(0, 10),
+            PaddingLeft = UDim.new(0, 10),
+            PaddingRight = UDim.new(0, 10),
+            PaddingBottom = UDim.new(0, 10)
+        })
+
+        local function CreatePlayerActionButton(label, onClick)
+            local button = CreateElement("TextButton", {
+                Parent = PlayerAdminActionScroll,
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 40),
+                Font = Enum.Font.GothamBold,
+                Text = label,
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                AutoButtonColor = false,
+                ZIndex = 25
+            }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = button})
+            CreateElement("UIStroke", {Thickness = 1, Parent = button}, {Color = "Stroke"})
+            CreateElement("UIPadding", {Parent = button, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 10)})
+            button.MouseEnter:Connect(function()
+                PlayTween(button, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play()
+            end)
+            button.MouseLeave:Connect(function()
+                PlayTween(button, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play()
+            end)
+            button.MouseButton1Click:Connect(function()
+                pcall(onClick)
+            end)
+            return button
+        end
+
+        local SpectateActionButton = nil
+
+        local function RefreshSpectateButtonText()
+            if not SpectateActionButton then
+                return
+            end
+            local watchingSelected = SpectateTargetPlayer and SelectedAdminPlayer and (SpectateTargetPlayer == SelectedAdminPlayer)
+            SpectateActionButton.Text = watchingSelected and "Stop Spectating" or "Spectate"
+        end
+
+        local function ClosePlayerAdminMenu()
+            PlayTween(PlayerAdminOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+            PlayTween(PlayerAdminFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 12), BackgroundTransparency = 1}):Play()
+            task.delay(0.2, function()
+                if PlayerAdminOverlay.Parent then
+                    PlayerAdminOverlay.Visible = false
+                end
+            end)
+        end
+
+        local function OpenPlayerAdminMenu(targetPlayer)
+            if not targetPlayer then
+                return
+            end
+            SelectedAdminPlayer = targetPlayer
+            PlayerAdminNameLabel.Text = targetPlayer.DisplayName or targetPlayer.Name
+            PlayerAdminUserLabel.Text = "@" .. targetPlayer.Name
+            RefreshSpectateButtonText()
+            PlayerAdminOverlay.Visible = true
+            PlayerAdminOverlay.BackgroundTransparency = 1
+            PlayerAdminFrame.Position = UDim2.new(0.5, 0, 0.5, 12)
+            PlayerAdminFrame.BackgroundTransparency = 1
+            PlayTween(PlayerAdminOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.44}):Play()
+            PlayTween(PlayerAdminFrame, TweenInfo.new(0.2), {Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 0}):Play()
+        end
+
+        SpectateActionButton = CreatePlayerActionButton("Spectate", function()
+            if not SelectedAdminPlayer then
+                return
+            end
+            if SpectateTargetPlayer == SelectedAdminPlayer then
+                StopSpectate()
+                RefreshSpectateButtonText()
+                PlayerAdminNotify("Spectate", "Stopped spectating.")
+                return
+            end
+            local ok = StartSpectate(SelectedAdminPlayer)
+            RefreshSpectateButtonText()
+            if ok then
+                PlayerAdminNotify("Spectate", "Now watching " .. tostring(SelectedAdminPlayer.Name) .. ".")
+            else
+                PlayerAdminNotify("Spectate", "Target is not available.", 2.8)
+            end
+        end)
+        CreatePlayerActionButton("Teleport To", function()
+            if not SelectedAdminPlayer then
+                return
+            end
+            local ok = TeleportToPlayer(SelectedAdminPlayer)
+            if ok then
+                PlayerAdminNotify("Teleport", "Teleported to " .. tostring(SelectedAdminPlayer.Name) .. ".")
+            else
+                PlayerAdminNotify("Teleport", "Unable to teleport right now.", 2.8)
+            end
+        end)
+        CreatePlayerActionButton("Bring", function()
+            if not SelectedAdminPlayer then
+                return
+            end
+            local ok = BringPlayer(SelectedAdminPlayer)
+            if ok then
+                PlayerAdminNotify("Bring", "Bring request executed for " .. tostring(SelectedAdminPlayer.Name) .. ".")
+            end
+        end)
+        CreatePlayerActionButton("Copy Username", function()
+            if not SelectedAdminPlayer then
+                return
+            end
+            if type(setclipboard) == "function" then
+                setclipboard(SelectedAdminPlayer.Name)
+                PlayerAdminNotify("Player", "Username copied.")
+            else
+                PlayerAdminNotify("Player", "Clipboard unavailable.", 2.5)
+            end
+        end)
+        CreatePlayerActionButton("Close", function()
+            ClosePlayerAdminMenu()
+        end)
+
+        PlayerAdminCloseButton.MouseButton1Click:Connect(ClosePlayerAdminMenu)
+        PlayerAdminOverlay.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                local pos = input.Position
+                local framePos = PlayerAdminFrame.AbsolutePosition
+                local frameSize = PlayerAdminFrame.AbsoluteSize
+                if pos.X < framePos.X or pos.X > framePos.X + frameSize.X or pos.Y < framePos.Y or pos.Y > framePos.Y + frameSize.Y then
+                    ClosePlayerAdminMenu()
+                end
+            end
+        end)
+
+        local function RefreshPlayerListButtons()
+            for _, child in ipairs(PlayerListScroll:GetChildren()) do
+                if child:IsA("GuiObject") and not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+                    child:Destroy()
+                end
+            end
+
+            local players = GetOtherPlayers()
+            if #players == 0 then
+                local emptyLabel = CreateElement("TextLabel", {
+                    Parent = PlayerListScroll,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 26),
+                    Font = Enum.Font.Gotham,
+                    Text = "No players",
+                    TextSize = 11,
+                    TextXAlignment = Enum.TextXAlignment.Left
+                }, {TextColor3 = "SubText"})
+                emptyLabel.LayoutOrder = 1
+                return
+            end
+
+            for i, targetPlayer in ipairs(players) do
+                local displayText = (targetPlayer.DisplayName or targetPlayer.Name) .. "  @" .. targetPlayer.Name
+                local playerButton = CreateElement("TextButton", {
+                    Parent = PlayerListScroll,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(1, 0, 0, 32),
+                    Font = Enum.Font.GothamBold,
+                    Text = displayText,
+                    TextSize = 11,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    AutoButtonColor = false
+                }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
+                playerButton.LayoutOrder = i
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner - 1), Parent = playerButton})
+                CreateElement("UIPadding", {Parent = playerButton, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 6)})
+                CreateElement("UIStroke", {Thickness = 1, Parent = playerButton}, {Color = "Stroke"})
+                playerButton.MouseEnter:Connect(function()
+                    PlayTween(playerButton, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play()
+                end)
+                playerButton.MouseLeave:Connect(function()
+                    PlayTween(playerButton, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play()
+                end)
+                playerButton.MouseButton1Click:Connect(function()
+                    OpenPlayerAdminMenu(targetPlayer)
+                end)
+            end
+        end
+
+        local function GetPlayerListInsetOffset()
+            return (PlayerListCollapsed and PlayerListCollapsedWidth or PlayerListExpandedWidth) + PlayerListGap
+        end
+
+        local function ApplyPlayerListVisual(animate)
+            local panelWidth = PlayerListCollapsed and PlayerListCollapsedWidth or PlayerListExpandedWidth
+            local panelPos = UDim2.new(1, -(panelWidth + 10), 0, topBarHeight + 8)
+            local panelSize = UDim2.new(0, panelWidth, 1, -(topBarHeight + 20))
+            local titleVisible = not PlayerListCollapsed
+            local listVisible = not PlayerListCollapsed
+            PlayerListToggleButton.Text = PlayerListCollapsed and "<" or ">"
+            if animate then
+                PlayTween(PlayerListFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = panelPos,
+                    Size = panelSize
+                }):Play()
+            else
+                PlayerListFrame.Position = panelPos
+                PlayerListFrame.Size = panelSize
+            end
+            PlayerListScroll.Visible = listVisible
+            for _, child in ipairs(PlayerListHeader:GetChildren()) do
+                if child:IsA("TextLabel") then
+                    child.Visible = titleVisible
+                end
+            end
+        end
+
+        local function ApplyContentFrameLayout(animate)
+            local inset = GetPlayerListInsetOffset()
+            local adjustedSize = UDim2.new(
+                BaseContentSize.X.Scale,
+                BaseContentSize.X.Offset - inset,
+                BaseContentSize.Y.Scale,
+                BaseContentSize.Y.Offset
+            )
+            if animate then
+                PlayTween(ContentFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = BaseContentPos,
+                    Size = adjustedSize
+                }):Play()
+            else
+                ContentFrame.Position = BaseContentPos
+                ContentFrame.Size = adjustedSize
+            end
+        end
+
+        PlayerListToggleButton.MouseButton1Click:Connect(function()
+            PlayerListCollapsed = not PlayerListCollapsed
+            ApplyPlayerListVisual(true)
+            ApplyContentFrameLayout(true)
+        end)
+        PlayerListToggleButton.MouseEnter:Connect(function()
+            PlayTween(PlayerListToggleButton, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play()
+        end)
+        PlayerListToggleButton.MouseLeave:Connect(function()
+            PlayTween(PlayerListToggleButton, TweenInfo.new(0.15), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play()
+        end)
+
+        RefreshPlayerListButtons()
+        ApplyPlayerListVisual(false)
+        ApplyContentFrameLayout(false)
+
+        table.insert(window.cleanupFunctions, function()
+            StopSpectate()
+        end)
+        table.insert(window.cleanupFunctions, function()
+            ClosePlayerAdminMenu()
+        end)
+        table.insert(window.connections, PlayersService.PlayerAdded:Connect(function()
+            RefreshPlayerListButtons()
+        end))
+        table.insert(window.connections, PlayersService.PlayerRemoving:Connect(function(leavingPlayer)
+            if SelectedAdminPlayer and leavingPlayer == SelectedAdminPlayer then
+                ClosePlayerAdminMenu()
+                SelectedAdminPlayer = nil
+            end
+            if SpectateTargetPlayer and leavingPlayer == SpectateTargetPlayer then
+                StopSpectate()
+                RefreshSpectateButtonText()
+            end
+            RefreshPlayerListButtons()
+        end))
 
         -- Dropdown Navigation Components (V2)
         local NavDropdownFrame = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, topBarHeight + 8), Size = UDim2.new(1, -20, 0, 38), ClipsDescendants = true, Visible = false, ZIndex = 10 }, {BackgroundColor3 = "TerBg"})
@@ -1784,7 +2334,10 @@ local UILibrary = (function()
             TabContainer.Visible = preset.ShowSidebar
             Separator.Visible = preset.ShowSeparator
             NavDropdownFrame.Visible = preset.ShowDropdown
-            PlayTween(ContentFrame, TweenInfo.new(0.3), {Position = preset.ContentPos, Size = preset.ContentSize}):Play()
+            BaseContentPos = preset.ContentPos
+            BaseContentSize = preset.ContentSize
+            ApplyContentFrameLayout(true)
+            ApplyPlayerListVisual(true)
             UpdateTabletGridSizing()
             if style == "Tablet" then
                 if IsTabletHomeVisible or not CurrentTab then
@@ -2576,6 +3129,8 @@ local UILibrary = (function()
         SettingsButton.MouseLeave:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         CloseSettingsButton.MouseEnter:Connect(function() PlayTween(CloseSettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         CloseSettingsButton.MouseLeave:Connect(function() PlayTween(CloseSettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
+        PlayerAdminCloseButton.MouseEnter:Connect(function() PlayTween(PlayerAdminCloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
+        PlayerAdminCloseButton.MouseLeave:Connect(function() PlayTween(PlayerAdminCloseButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         TabletBackButton.MouseEnter:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         TabletBackButton.MouseLeave:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         TabletBackButton.MouseButton1Click:Connect(function()
@@ -2600,11 +3155,16 @@ local UILibrary = (function()
             -- Preserve Layout specific visibility
             if Minimized then
                 TabContainer.Visible = false; ContentFrame.Visible = false; NavDropdownFrame.Visible = false
+                PlayerListFrame.Visible = false
+                PlayerAdminOverlay.Visible = false
             else
                 ContentFrame.Visible = true
+                PlayerListFrame.Visible = true
                 TabContainer.Visible = ActiveLayoutState.ShowSidebar
                 Separator.Visible = ActiveLayoutState.ShowSeparator
                 NavDropdownFrame.Visible = ActiveLayoutState.ShowDropdown
+                ApplyPlayerListVisual(false)
+                ApplyContentFrameLayout(false)
             end
             
             UpdateWindowSize(true)
@@ -2616,6 +3176,7 @@ local UILibrary = (function()
             UIVisible = not UIVisible
             if UIVisible then
                 MainFrame.Visible = true
+                PlayerListFrame.Visible = not Minimized
                 UpdateWindowSize(false)
                 MainFrame.Size = UDim2.new(0, 0, 0, 0)
                 mainScale.Scale = mainScale.Scale * 0.95
@@ -2627,6 +3188,7 @@ local UILibrary = (function()
                     Scale = ComputeInterfaceScale(workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080))
                 }):Play()
             else
+                PlayerAdminOverlay.Visible = false
                 PlayTween(mainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                     Scale = mainScale.Scale * 0.95
                 }):Play()
@@ -2698,6 +3260,27 @@ local UILibrary = (function()
             else
                 SetTabletBackVisible(false)
             end
+        end
+
+        function window:SetPlayerAdminCallbacks(callbacks)
+            if type(callbacks) == "table" then
+                PlayerAdminCallbacks = callbacks
+            else
+                PlayerAdminCallbacks = {}
+            end
+            return self
+        end
+
+        function window:SetPlayerListCollapsed(state)
+            PlayerListCollapsed = state and true or false
+            ApplyPlayerListVisual(true)
+            ApplyContentFrameLayout(true)
+            return self
+        end
+
+        function window:RefreshPlayerList()
+            RefreshPlayerListButtons()
+            return self
         end
 
         function window:CreateTab(name)
