@@ -1409,6 +1409,35 @@ local UILibrary = (function()
             BackgroundColor3 = "QuarBg"
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = FooterAvatar})
+        local FooterAvatarImage = CreateElement("ImageLabel", {
+            Parent = FooterAvatar,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 1, 0),
+            Image = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+            ScaleType = Enum.ScaleType.Crop
+        })
+        CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = FooterAvatarImage})
+        local FooterAvatarStroke = CreateElement("UIStroke", {
+            Parent = FooterAvatarImage,
+            Thickness = 1
+        }, {
+            Color = "Stroke"
+        })
+        if localPlayer then
+            task.spawn(function()
+                local ok, content = pcall(function()
+                    return game:GetService("Players"):GetUserThumbnailAsync(
+                        localPlayer.UserId,
+                        Enum.ThumbnailType.HeadShot,
+                        Enum.ThumbnailSize.Size100x100
+                    )
+                end)
+                if ok and type(content) == "string" and FooterAvatarImage.Parent then
+                    FooterAvatarImage.Image = content
+                end
+            end)
+        end
         local FooterName = CreateElement("TextLabel", {
             Parent = SidebarFooter,
             BackgroundTransparency = 1,
