@@ -2922,6 +2922,34 @@ local UILibrary = (function()
                 end
 
                 local isOpen = false; local optionContainer
+                local function optionExists(value)
+                    for _, option in ipairs(options) do
+                        if option == value then
+                            return true
+                        end
+                    end
+                    return false
+                end
+
+                local function rebuildOptionContainer()
+                    if optionContainer then
+                        optionContainer:Destroy()
+                    end
+                    optionContainer = CreateElement("Frame", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, headerHeight), Size = UDim2.new(1, 0, 0, #options * rowHeight) })
+                    for i, opt in ipairs(options) do
+                        local optBtn = CreateElement("TextButton", { Parent = optionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*rowHeight), Size = UDim2.new(1, -20, 0, rowHeight - 2), Font = Enum.Font.Gotham, Text = opt, TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "TerBg", TextColor3 = "SubText"})
+                        CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
+                        optBtn.MouseEnter:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
+                        optBtn.MouseLeave:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play() end)
+                        optBtn.MouseButton1Click:Connect(function()
+                            setDropdownValue(opt, false)
+                            isOpen = false
+                            PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight)}):Play()
+                            task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
+                        end)
+                    end
+                end
+
                 local function applyComboStyle(themeUpdate)
                     local _, _, btnW, btnH = resolveComboMetrics()
                     headerHeight, rowHeight = resolveComboMetrics()
@@ -2946,20 +2974,7 @@ local UILibrary = (function()
                 dropdownButton.MouseButton1Click:Connect(function()
                     isOpen = not isOpen
                     if isOpen then
-                        if optionContainer then optionContainer:Destroy() end
-                        optionContainer = CreateElement("Frame", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, headerHeight), Size = UDim2.new(1, 0, 0, #options * rowHeight) })
-                        for i, opt in ipairs(options) do
-                            local optBtn = CreateElement("TextButton", { Parent = optionContainer, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0, (i-1)*rowHeight), Size = UDim2.new(1, -20, 0, rowHeight - 2), Font = Enum.Font.Gotham, Text = opt, TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "TerBg", TextColor3 = "SubText"})
-                            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = optBtn})
-                            optBtn.MouseEnter:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
-                            optBtn.MouseLeave:Connect(function() PlayTween(optBtn, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play() end)
-                            optBtn.MouseButton1Click:Connect(function()
-                                setDropdownValue(opt, false)
-                                isOpen = false
-                                PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight)}):Play()
-                                task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
-                            end)
-                        end
+                        rebuildOptionContainer()
                         PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight + (#options * rowHeight) + 10)}):Play()
                     else
                         PlayTween(dropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, headerHeight)}):Play(); task.delay(0.2, function() if optionContainer then optionContainer:Destroy() end end)
@@ -2970,7 +2985,37 @@ local UILibrary = (function()
                     setDropdownValue(currentValue, true)
                 end
                 table.insert(tab.Elements, dropdownFrame)
-                return dropdownFrame
+                return {
+                    Frame = dropdownFrame,
+                    SetValues = function(_, newOptions)
+                        options = {}
+                        for _, option in ipairs(newOptions or {}) do
+                            table.insert(options, option)
+                        end
+                        if #options == 0 then
+                            table.insert(options, "None")
+                        end
+                        if not optionExists(currentValue) then
+                            setDropdownValue(options[1], true)
+                        else
+                            setDropdownValue(currentValue, true)
+                        end
+                        if isOpen then
+                            rebuildOptionContainer()
+                        end
+                        applyComboStyle(true)
+                    end,
+                    SetValue = function(_, value)
+                        if optionExists(value) then
+                            setDropdownValue(value, true)
+                        elseif #options > 0 then
+                            setDropdownValue(options[1], true)
+                        end
+                    end,
+                    GetValue = function()
+                        return currentValue
+                    end
+                }
             end
 
             function tab:CreateParagraph(title, content)
