@@ -8,8 +8,17 @@ local UILibrary = (function()
     -- // TWEEN POOLING // --
     local TweenPool = {}
 
+    local function BuildTweenKey(instance, props)
+        local propertyNames = {}
+        for propertyName in pairs(props or {}) do
+            table.insert(propertyNames, tostring(propertyName))
+        end
+        table.sort(propertyNames)
+        return instance:GetDebugId() .. "|" .. table.concat(propertyNames, ",")
+    end
+
     local function PlayTween(instance, info, props)
-        local key = instance:GetDebugId() .. tostring(props)
+        local key = BuildTweenKey(instance, props)
 
         if TweenPool[key] then
             TweenPool[key]:Cancel()
@@ -36,7 +45,9 @@ local UILibrary = (function()
         SliderStyle = "Line", -- "Line", "Pill", "Block"
         ComboStyle = "Classic", -- "Classic", "Compact", "Soft"
         Font = "Gotham", -- FontMap keys
-        MenuStyle = "Sidebar" -- "Sidebar", "TopBar", "Dropdown", "Tablet"
+        MenuStyle = "Sidebar", -- "Sidebar", "TopBar", "Dropdown", "Tablet"
+        AutoScale = true,
+        UserScale = 1
     }
 
     local MenuStyleSet = {
@@ -69,8 +80,54 @@ local UILibrary = (function()
         GlassBlue = { MainBg = Color3.fromRGB(10, 16, 25), SecBg = Color3.fromRGB(15, 23, 35), TerBg = Color3.fromRGB(22, 31, 47), QuarBg = Color3.fromRGB(31, 43, 63), Hover = Color3.fromRGB(43, 57, 82), Accent = Color3.fromRGB(110, 197, 255), Text = Color3.fromRGB(233, 246, 255), SubText = Color3.fromRGB(148, 179, 204), Stroke = Color3.fromRGB(56, 80, 108) },
         Graphite = { MainBg = Color3.fromRGB(14, 15, 18), SecBg = Color3.fromRGB(20, 22, 27), TerBg = Color3.fromRGB(27, 30, 37), QuarBg = Color3.fromRGB(37, 41, 50), Hover = Color3.fromRGB(49, 54, 66), Accent = Color3.fromRGB(145, 170, 255), Text = Color3.fromRGB(236, 239, 247), SubText = Color3.fromRGB(160, 167, 184), Stroke = Color3.fromRGB(67, 74, 90) },
         Nebula = { MainBg = Color3.fromRGB(16, 15, 28), SecBg = Color3.fromRGB(22, 20, 37), TerBg = Color3.fromRGB(30, 27, 49), QuarBg = Color3.fromRGB(42, 37, 66), Hover = Color3.fromRGB(56, 49, 86), Accent = Color3.fromRGB(138, 121, 255), Text = Color3.fromRGB(243, 239, 255), SubText = Color3.fromRGB(177, 169, 214), Stroke = Color3.fromRGB(77, 70, 108) },
-        EmeraldNight = { MainBg = Color3.fromRGB(9, 19, 19), SecBg = Color3.fromRGB(13, 27, 27), TerBg = Color3.fromRGB(18, 36, 36), QuarBg = Color3.fromRGB(27, 50, 50), Hover = Color3.fromRGB(39, 66, 65), Accent = Color3.fromRGB(90, 235, 185), Text = Color3.fromRGB(228, 255, 247), SubText = Color3.fromRGB(151, 198, 186), Stroke = Color3.fromRGB(52, 88, 84) }
+        EmeraldNight = { MainBg = Color3.fromRGB(9, 19, 19), SecBg = Color3.fromRGB(13, 27, 27), TerBg = Color3.fromRGB(18, 36, 36), QuarBg = Color3.fromRGB(27, 50, 50), Hover = Color3.fromRGB(39, 66, 65), Accent = Color3.fromRGB(90, 235, 185), Text = Color3.fromRGB(228, 255, 247), SubText = Color3.fromRGB(151, 198, 186), Stroke = Color3.fromRGB(52, 88, 84) },
+        Monochrome = { MainBg = Color3.fromRGB(16, 16, 18), Accent = Color3.fromRGB(196, 203, 218), Text = Color3.fromRGB(241, 244, 249) },
+        Cobalt = { MainBg = Color3.fromRGB(9, 17, 29), Accent = Color3.fromRGB(98, 182, 255), Text = Color3.fromRGB(233, 246, 255) },
+        Carbon = { MainBg = Color3.fromRGB(12, 14, 17), Accent = Color3.fromRGB(135, 151, 178), Text = Color3.fromRGB(235, 240, 247) },
+        Arctic = { MainBg = Color3.fromRGB(230, 237, 246), Accent = Color3.fromRGB(76, 138, 234), Text = Color3.fromRGB(33, 43, 61) }
     }
+
+    local function BlendThemeColor(baseColor, targetColor, alpha)
+        alpha = math.clamp(alpha or 0, 0, 1)
+        return Color3.new(
+            baseColor.R + ((targetColor.R - baseColor.R) * alpha),
+            baseColor.G + ((targetColor.G - baseColor.G) * alpha),
+            baseColor.B + ((targetColor.B - baseColor.B) * alpha)
+        )
+    end
+
+    local function NormalizeThemePalette(theme)
+        local mainBg = theme.MainBg or Color3.fromRGB(18, 20, 25)
+        local isLightTheme = ((mainBg.R + mainBg.G + mainBg.B) / 3) > 0.5
+        local white = Color3.fromRGB(255, 255, 255)
+        local black = Color3.fromRGB(0, 0, 0)
+        local contrastTarget = isLightTheme and black or white
+
+        local secBg = theme.SecBg or BlendThemeColor(mainBg, contrastTarget, isLightTheme and 0.035 or 0.07)
+        local terBg = theme.TerBg or BlendThemeColor(secBg, contrastTarget, isLightTheme and 0.04 or 0.075)
+        local quarBg = theme.QuarBg or BlendThemeColor(terBg, contrastTarget, isLightTheme and 0.05 or 0.085)
+        local accent = theme.Accent or (isLightTheme and Color3.fromRGB(76, 138, 234) or Color3.fromRGB(98, 182, 255))
+        local text = theme.Text or (isLightTheme and Color3.fromRGB(30, 40, 56) or Color3.fromRGB(236, 242, 252))
+        local subText = theme.SubText or BlendThemeColor(text, secBg, isLightTheme and 0.48 or 0.36)
+        local stroke = theme.Stroke or BlendThemeColor(quarBg, text, isLightTheme and 0.22 or 0.18)
+        local hover = theme.Hover or BlendThemeColor(quarBg, accent, isLightTheme and 0.1 or 0.16)
+
+        return {
+            MainBg = mainBg,
+            SecBg = secBg,
+            TerBg = terBg,
+            QuarBg = quarBg,
+            Hover = hover,
+            Accent = accent,
+            Text = text,
+            SubText = subText,
+            Stroke = stroke
+        }
+    end
+
+    for themeName, palette in pairs(Themes) do
+        Themes[themeName] = NormalizeThemePalette(palette)
+    end
 
     local FontMap = {
         Gotham = { Regular = Enum.Font.Gotham, Bold = Enum.Font.GothamBold, Black = Enum.Font.GothamBlack },
@@ -93,13 +150,19 @@ local UILibrary = (function()
     local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
 
     local PersistConfig = {
-        SchemaVersion = 2,
+        SchemaVersion = 3,
+        DefaultProfile = "Default",
+        ProfileNameMaxLength = 36,
+        WriteDebounce = 0.18,
+        WriteQueued = false,
         Folder = "XenoUILibrary",
         FileName = "settings.json",
         Data = {
             Meta = {
-                Version = 2
+                Version = 3,
+                ActiveProfile = "Default"
             },
+            Profiles = {},
             LibraryOptions = {},
             Values = {}
         },
@@ -122,6 +185,83 @@ local UILibrary = (function()
         else
             pcall(makefolder, PersistConfig.Folder)
         end
+    end
+
+    local function CloneTable(source)
+        if typeof(source) ~= "table" then
+            return source
+        end
+        local cloned = {}
+        for key, value in pairs(source) do
+            cloned[key] = CloneTable(value)
+        end
+        return cloned
+    end
+
+    local function NormalizeProfileName(name)
+        if type(name) ~= "string" then
+            return nil
+        end
+        local cleaned = name:gsub("^%s+", ""):gsub("%s+$", "")
+        cleaned = cleaned:gsub("[^%w_%-%s]", "")
+        cleaned = cleaned:gsub("%s+", "_")
+        cleaned = cleaned:gsub("_+", "_")
+        if cleaned == "" then
+            return nil
+        end
+        if #cleaned > PersistConfig.ProfileNameMaxLength then
+            cleaned = cleaned:sub(1, PersistConfig.ProfileNameMaxLength)
+        end
+        return cleaned
+    end
+
+    local function EnsureProfilesTable()
+        if type(PersistConfig.Data.Profiles) ~= "table" then
+            PersistConfig.Data.Profiles = {}
+        end
+    end
+
+    local function EnsureProfile(profileName)
+        local resolvedName = NormalizeProfileName(profileName) or PersistConfig.DefaultProfile
+        EnsureProfilesTable()
+        local existing = PersistConfig.Data.Profiles[resolvedName]
+        if type(existing) ~= "table" then
+            existing = {}
+            PersistConfig.Data.Profiles[resolvedName] = existing
+        end
+        if type(existing.LibraryOptions) ~= "table" then
+            existing.LibraryOptions = {}
+        end
+        if type(existing.Values) ~= "table" then
+            existing.Values = {}
+        end
+        return resolvedName, existing
+    end
+
+    local function GetActiveProfileName()
+        local meta = PersistConfig.Data.Meta
+        if type(meta) ~= "table" then
+            PersistConfig.Data.Meta = {}
+            meta = PersistConfig.Data.Meta
+        end
+        local resolvedName = NormalizeProfileName(meta.ActiveProfile) or PersistConfig.DefaultProfile
+        meta.ActiveProfile = resolvedName
+        return resolvedName
+    end
+
+    local function SnapshotActiveProfile()
+        local profileName, profile = EnsureProfile(GetActiveProfileName())
+        profile.LibraryOptions = CloneTable(PersistConfig.Data.LibraryOptions or {})
+        profile.Values = CloneTable(PersistConfig.Data.Values or {})
+        PersistConfig.Data.Meta.ActiveProfile = profileName
+    end
+
+    local function HydrateFromProfile(profileName)
+        local resolvedName, profile = EnsureProfile(profileName)
+        PersistConfig.Data.Meta.ActiveProfile = resolvedName
+        PersistConfig.Data.LibraryOptions = CloneTable(profile.LibraryOptions or {})
+        PersistConfig.Data.Values = CloneTable(profile.Values or {})
+        return resolvedName
     end
 
     local function EncodePersistValue(value)
@@ -182,12 +322,15 @@ local UILibrary = (function()
         return decoded
     end
 
-    local function SavePersistConfig()
+    local function SavePersistConfigNow()
         if not CanPersist() then return false end
 
         EnsureConfigFolder()
+        SnapshotActiveProfile()
         PersistConfig.Data.Meta = PersistConfig.Data.Meta or {}
         PersistConfig.Data.Meta.Version = PersistConfig.SchemaVersion
+        PersistConfig.Data.Meta.ActiveProfile = GetActiveProfileName()
+        PersistConfig.Data.Meta.LastSaved = os.time()
 
         local ok, encoded = pcall(function()
             return HttpService:JSONEncode(PersistConfig.Data)
@@ -199,13 +342,36 @@ local UILibrary = (function()
         return writeOk
     end
 
+    local function SavePersistConfig(immediate)
+        if immediate then
+            PersistConfig.WriteQueued = false
+            return SavePersistConfigNow()
+        end
+
+        if not CanPersist() then
+            return false
+        end
+        if PersistConfig.WriteQueued then
+            return true
+        end
+
+        PersistConfig.WriteQueued = true
+        task.delay(PersistConfig.WriteDebounce, function()
+            PersistConfig.WriteQueued = false
+            SavePersistConfigNow()
+        end)
+        return true
+    end
+
     local function LoadPersistConfig()
         if not CanPersist() then return end
 
         PersistConfig.Data = {
             Meta = {
-                Version = PersistConfig.SchemaVersion
+                Version = PersistConfig.SchemaVersion,
+                ActiveProfile = PersistConfig.DefaultProfile
             },
+            Profiles = {},
             LibraryOptions = {},
             Values = {}
         }
@@ -238,20 +404,59 @@ local UILibrary = (function()
         end
 
         local version = tonumber(migrated.Meta.Version) or 1
-        if version < 2 then
-            migrated.Meta.Version = 2
+
+        if type(migrated.LibraryOptions) ~= "table" then
+            migrated.LibraryOptions = {}
+        end
+        if type(migrated.Values) ~= "table" then
+            migrated.Values = {}
+        end
+        if type(migrated.Profiles) ~= "table" then
+            migrated.Profiles = {}
         end
 
-        if type(migrated.LibraryOptions) == "table" then
-            PersistConfig.Data.LibraryOptions = migrated.LibraryOptions
+        if version < 3 then
+            migrated.Profiles = {
+                [PersistConfig.DefaultProfile] = {
+                    LibraryOptions = CloneTable(migrated.LibraryOptions),
+                    Values = CloneTable(migrated.Values)
+                }
+            }
+            migrated.Meta.ActiveProfile = PersistConfig.DefaultProfile
+            migrated.Meta.Version = 3
+        else
+            local sanitizedProfiles = {}
+            for profileName, profileData in pairs(migrated.Profiles) do
+                local cleanName = NormalizeProfileName(profileName)
+                if cleanName and type(profileData) == "table" then
+                    sanitizedProfiles[cleanName] = {
+                        LibraryOptions = type(profileData.LibraryOptions) == "table" and CloneTable(profileData.LibraryOptions) or {},
+                        Values = type(profileData.Values) == "table" and CloneTable(profileData.Values) or {}
+                    }
+                end
+            end
+            migrated.Profiles = sanitizedProfiles
         end
-        if type(migrated.Values) == "table" then
-            PersistConfig.Data.Values = migrated.Values
-        end
+
         PersistConfig.Data.Meta = migrated.Meta
+        PersistConfig.Data.Profiles = migrated.Profiles
+        PersistConfig.Data.LibraryOptions = CloneTable(migrated.LibraryOptions)
+        PersistConfig.Data.Values = CloneTable(migrated.Values)
+
+        local activeProfileName = NormalizeProfileName(PersistConfig.Data.Meta.ActiveProfile) or PersistConfig.DefaultProfile
+        if not PersistConfig.Data.Profiles[activeProfileName] then
+            activeProfileName = PersistConfig.DefaultProfile
+        end
+        if not PersistConfig.Data.Profiles[activeProfileName] then
+            PersistConfig.Data.Profiles[activeProfileName] = {
+                LibraryOptions = CloneTable(PersistConfig.Data.LibraryOptions),
+                Values = CloneTable(PersistConfig.Data.Values)
+            }
+        end
+        HydrateFromProfile(activeProfileName)
 
         if version < PersistConfig.SchemaVersion then
-            SavePersistConfig()
+            SavePersistConfig(true)
         end
     end
 
@@ -295,6 +500,12 @@ local UILibrary = (function()
         if MenuStyleSet[savedMenuStyle] then
             Options.MenuStyle = savedMenuStyle
         end
+        if type(savedOptions.AutoScale) == "boolean" then
+            Options.AutoScale = savedOptions.AutoScale
+        end
+        if type(savedOptions.UserScale) == "number" then
+            Options.UserScale = math.clamp(savedOptions.UserScale, 0.78, 1.18)
+        end
     end
 
     local function SaveLibraryOptions()
@@ -306,9 +517,11 @@ local UILibrary = (function()
             SliderStyle = Options.SliderStyle,
             ComboStyle = Options.ComboStyle,
             Font = Options.Font,
-            MenuStyle = Options.MenuStyle
+            MenuStyle = Options.MenuStyle,
+            AutoScale = Options.AutoScale,
+            UserScale = Options.UserScale
         }
-        SavePersistConfig()
+        SavePersistConfig(false)
     end
 
     LoadPersistConfig()
@@ -326,7 +539,136 @@ local UILibrary = (function()
         LoadPersistConfig()
         ApplyLoadedLibraryOptions()
         SaveLibraryOptions()
+        SavePersistConfig(true)
         return self
+    end
+
+    function UILibrary:GetActiveProfile()
+        return GetActiveProfileName()
+    end
+
+    function UILibrary:GetProfiles()
+        EnsureProfilesTable()
+        local names = {}
+        for profileName, _ in pairs(PersistConfig.Data.Profiles) do
+            table.insert(names, profileName)
+        end
+        if #names == 0 then
+            table.insert(names, PersistConfig.DefaultProfile)
+        end
+        table.sort(names, function(a, b)
+            return string.lower(a) < string.lower(b)
+        end)
+        return names
+    end
+
+    function UILibrary:SaveProfile(profileName)
+        local resolvedName = NormalizeProfileName(profileName) or GetActiveProfileName()
+        local _, profile = EnsureProfile(resolvedName)
+        profile.LibraryOptions = CloneTable(PersistConfig.Data.LibraryOptions or {})
+        profile.Values = CloneTable(PersistConfig.Data.Values or {})
+        PersistConfig.Data.Meta.ActiveProfile = resolvedName
+        SavePersistConfig(true)
+        return resolvedName
+    end
+
+    function UILibrary:LoadProfile(profileName)
+        local resolvedName = NormalizeProfileName(profileName)
+        if not resolvedName then
+            return false
+        end
+        EnsureProfilesTable()
+        if type(PersistConfig.Data.Profiles[resolvedName]) ~= "table" then
+            return false
+        end
+
+        HydrateFromProfile(resolvedName)
+        PersistConfig.RuntimeValues = {}
+        for key, encoded in pairs(PersistConfig.Data.Values or {}) do
+            PersistConfig.RuntimeValues[key] = DecodePersistValue(encoded)
+        end
+        SavePersistConfig(true)
+        return true
+    end
+
+    function UILibrary:DeleteProfile(profileName)
+        local resolvedName = NormalizeProfileName(profileName)
+        if not resolvedName then
+            return false
+        end
+        EnsureProfilesTable()
+        if resolvedName == PersistConfig.DefaultProfile then
+            return false
+        end
+        if type(PersistConfig.Data.Profiles[resolvedName]) ~= "table" then
+            return false
+        end
+
+        PersistConfig.Data.Profiles[resolvedName] = nil
+        if GetActiveProfileName() == resolvedName then
+            HydrateFromProfile(PersistConfig.DefaultProfile)
+        end
+        SavePersistConfig(true)
+        return true
+    end
+
+    function UILibrary:ExportConfig(profileName)
+        local resolvedName = NormalizeProfileName(profileName) or GetActiveProfileName()
+        EnsureProfilesTable()
+        local profile = PersistConfig.Data.Profiles[resolvedName]
+        if type(profile) ~= "table" then
+            return nil
+        end
+
+        local payload = {
+            Meta = {
+                ExportVersion = 1,
+                Profile = resolvedName,
+                Timestamp = os.time()
+            },
+            LibraryOptions = CloneTable(profile.LibraryOptions or {}),
+            Values = CloneTable(profile.Values or {})
+        }
+        local ok, encoded = pcall(function()
+            return HttpService:JSONEncode(payload)
+        end)
+        if not ok then
+            return nil
+        end
+        return encoded
+    end
+
+    function UILibrary:ImportConfig(raw, profileName, activate)
+        if type(raw) ~= "string" or raw == "" then
+            return false
+        end
+        local decodeOk, decoded = pcall(function()
+            return HttpService:JSONDecode(raw)
+        end)
+        if not decodeOk or type(decoded) ~= "table" then
+            return false
+        end
+
+        local importOptions = type(decoded.LibraryOptions) == "table" and CloneTable(decoded.LibraryOptions) or {}
+        local importValues = type(decoded.Values) == "table" and CloneTable(decoded.Values) or {}
+        local preferredName = NormalizeProfileName(profileName)
+            or NormalizeProfileName((type(decoded.Meta) == "table" and decoded.Meta.Profile) or nil)
+            or ("Imported_" .. os.date("%Y%m%d_%H%M%S"))
+        local resolvedName = EnsureProfile(preferredName)
+        PersistConfig.Data.Profiles[resolvedName] = {
+            LibraryOptions = importOptions,
+            Values = importValues
+        }
+
+        if activate then
+            HydrateFromProfile(resolvedName)
+            PersistConfig.RuntimeValues = {}
+            for key, encoded in pairs(PersistConfig.Data.Values or {}) do
+                PersistConfig.RuntimeValues[key] = DecodePersistValue(encoded)
+            end
+        end
+        SavePersistConfig(true)
+        return true, resolvedName
     end
 
     function UILibrary:RegisterValue(key, defaultValue, onLoad)
@@ -348,7 +690,7 @@ local UILibrary = (function()
 
         if not hasSaved then
             PersistConfig.Data.Values[key] = EncodePersistValue(defaultValue)
-            SavePersistConfig()
+            SavePersistConfig(false)
         end
 
         if type(onLoad) == "function" then
@@ -364,7 +706,7 @@ local UILibrary = (function()
         function handle:Set(newValue)
             PersistConfig.RuntimeValues[key] = newValue
             PersistConfig.Data.Values[key] = EncodePersistValue(newValue)
-            SavePersistConfig()
+            SavePersistConfig(false)
             return newValue
         end
 
@@ -374,7 +716,7 @@ local UILibrary = (function()
 
         function handle:Save()
             PersistConfig.Data.Values[key] = EncodePersistValue(PersistConfig.RuntimeValues[key])
-            SavePersistConfig()
+            SavePersistConfig(true)
         end
 
         return handle
@@ -637,6 +979,17 @@ local UILibrary = (function()
         SaveLibraryOptions()
     end
 
+    local function ApplyRuntimeLibraryOptions()
+        UpdateTheme(Options.Theme)
+        UpdateToggleStyles(Options.ToggleStyle)
+        UpdateCornerStyle(Options.CornerStyle)
+        UpdateStrokeStyle(Options.StrokeStyle)
+        UpdateSliderStyle(Options.SliderStyle)
+        UpdateComboStyle(Options.ComboStyle)
+        UpdateFont(Options.Font)
+        UpdateMenuStyle(Options.MenuStyle)
+    end
+
     -- // TOOLTIPS // --
     local TooltipGui = Instance.new("ScreenGui",game.CoreGui)
     TooltipGui.Name = "UILibTooltips"
@@ -711,6 +1064,9 @@ local UILibrary = (function()
 
         window.connections = {}
         window.cleanupFunctions = {}
+        table.insert(window.cleanupFunctions, function()
+            SavePersistConfig(true)
+        end)
         local FPSCleanup = nil
         local Minimized = false
         local localPlayer = game:GetService("Players").LocalPlayer
@@ -733,27 +1089,37 @@ local UILibrary = (function()
         MainGlassGradient.Name = "__UILibGlassGradient"
         MainGlassGradient.Rotation = 120
         MainGlassGradient.Parent = MainGlassLayer
-        local interfaceScale = 0.9
         local mainScale = Instance.new("UIScale")
-        mainScale.Scale = interfaceScale
+        mainScale.Scale = 1
         mainScale.Parent = MainFrame
 
         local topBarHeight = 42
         local expandedWidth, expandedHeight = 560, 420
+        local function ComputeInterfaceScale(viewport)
+            local vp = viewport or Vector2.new(1920, 1080)
+            local shortestEdge = math.max(math.min(vp.X, vp.Y), 1)
+            local adaptiveScale = math.clamp((shortestEdge / 1080) * 1.03, 0.84, 1.06)
+            local userScale = math.clamp(tonumber(Options.UserScale) or 1, 0.78, 1.18)
+            return math.clamp((Options.AutoScale and adaptiveScale or 1) * userScale, 0.72, 1.22)
+        end
         local function ComputeWindowSize()
             local camera = workspace.CurrentCamera
             local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
             local width = math.clamp(math.floor(viewport.X * 0.44), 460, 740)
             local height = math.clamp(math.floor(viewport.Y * 0.56), 360, 580)
-            return width, height
+            return width, height, viewport
         end
         local function UpdateWindowSize(animate)
-            expandedWidth, expandedHeight = ComputeWindowSize()
+            local viewport
+            expandedWidth, expandedHeight, viewport = ComputeWindowSize()
             local targetSize = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight)
+            local targetScale = ComputeInterfaceScale(viewport)
             if animate then
                 PlayTween(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = targetSize}):Play()
+                PlayTween(mainScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
             else
                 MainFrame.Size = targetSize
+                mainScale.Scale = targetScale
             end
         end
         UpdateWindowSize(false)
@@ -1348,19 +1714,19 @@ local UILibrary = (function()
         -- // Settings Menu // --
         local SettingsOverlay = CreateElement("Frame", { Name = "SettingsOverlay", Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, ZIndex = 20 })
 
-        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 520, 0, 360), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
+        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 620, 0, 430), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 14), Parent = SettingsFrame})
         CreateElement("UIStroke", {Thickness = 1, Parent = SettingsFrame}, {Color = "Stroke"})
         
-        local SettingsHeader = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40) })
-        CreateElement("TextLabel", { Parent = SettingsHeader, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 0), Size = UDim2.new(1, -50, 1, 0), Font = Enum.Font.GothamBold, Text = "Settings", TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+        local SettingsHeader = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 44) })
+        CreateElement("TextLabel", { Parent = SettingsHeader, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 0), Size = UDim2.new(1, -50, 1, 0), Font = Enum.Font.GothamBold, Text = "Settings", TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
         local CloseSettingsButton = CreateElement("TextButton", {Parent = SettingsHeader, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 16}, {TextColor3 = "SubText"})
 
-        local SettingsBody = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 40), Size = UDim2.new(1, 0, 1, -40) })
+        local SettingsBody = CreateElement("Frame", { Parent = SettingsFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 44), Size = UDim2.new(1, 0, 1, -44) })
         local SettingsSidebar = CreateElement("ScrollingFrame", {
             Parent = SettingsBody,
             BackgroundTransparency = 1,
-            Size = UDim2.new(0, 140, 1, 0),
+            Size = UDim2.new(0, 168, 1, 0),
             CanvasSize = UDim2.new(0, 0, 0, 0),
             ScrollBarThickness = 2,
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
@@ -1368,9 +1734,9 @@ local UILibrary = (function()
         }, {ScrollBarImageColor3 = "Stroke"})
         CreateElement("UIListLayout", {Parent = SettingsSidebar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 5)})
         CreateElement("UIPadding", {Parent = SettingsSidebar, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10)})
-        CreateElement("Frame", { Parent = SettingsBody, BorderSizePixel = 0, Position = UDim2.new(0, 140, 0, 10), Size = UDim2.new(0, 1, 1, -20) }, {BackgroundColor3 = "Stroke"})
+        CreateElement("Frame", { Parent = SettingsBody, BorderSizePixel = 0, Position = UDim2.new(0, 168, 0, 10), Size = UDim2.new(0, 1, 1, -20) }, {BackgroundColor3 = "Stroke"})
 
-        local SettingsContent = CreateElement("Frame", { Parent = SettingsBody, BackgroundTransparency = 1, Position = UDim2.new(0, 150, 0, 0), Size = UDim2.new(1, -150, 1, 0) })
+        local SettingsContent = CreateElement("Frame", { Parent = SettingsBody, BackgroundTransparency = 1, Position = UDim2.new(0, 178, 0, 0), Size = UDim2.new(1, -178, 1, 0) })
 
         local SettingsTabs = {}
         local CurrentSettingsPage = nil
@@ -1379,7 +1745,7 @@ local UILibrary = (function()
         local function SwitchSettingsTab(name)
             for n, tab in pairs(SettingsTabs) do
                 tab.Page.Visible = (n == name)
-                if n == name then PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.9}):Play()
+                if n == name then PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.78}):Play()
                 else PlayTween(tab.Button, TweenInfo.new(0.2), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 1}):Play() end
             end
             CurrentSettingsContainer = nil
@@ -1387,14 +1753,24 @@ local UILibrary = (function()
 
         local function CreateSettingsSection(text)
             if SettingsTabs[text] then return end
-            local tabBtn = CreateElement("TextButton", { Parent = SettingsSidebar, BackgroundTransparency = 1, BackgroundColor3 = Color3.fromRGB(255, 255, 255), Size = UDim2.new(1, -10, 0, 30), Text = text, Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false }, {TextColor3 = "SubText"})
-            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = tabBtn})
-            CreateElement("UIPadding", {Parent = tabBtn, PaddingLeft = UDim.new(0, 10)})
+            local tabBtn = CreateElement("TextButton", { Parent = SettingsSidebar, BackgroundTransparency = 1, BackgroundColor3 = Color3.fromRGB(255, 255, 255), Size = UDim2.new(1, -12, 0, 32), Text = text, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false }, {TextColor3 = "SubText"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = tabBtn})
+            CreateElement("UIPadding", {Parent = tabBtn, PaddingLeft = UDim.new(0, 11)})
             local page = CreateElement("ScrollingFrame", { Parent = SettingsContent, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y })
             CreateElement("UIListLayout", {Parent = page, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)})
-            CreateElement("UIPadding", {Parent = page, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)})
+            CreateElement("UIPadding", {Parent = page, PaddingTop = UDim.new(0, 10), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)})
             SettingsTabs[text] = {Button = tabBtn, Page = page}; CurrentSettingsPage = page; CurrentSettingsContainer = nil
             tabBtn.MouseButton1Click:Connect(function() SwitchSettingsTab(text) end)
+            tabBtn.MouseEnter:Connect(function()
+                if not page.Visible then
+                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].Text, BackgroundTransparency = 0.88}):Play()
+                end
+            end)
+            tabBtn.MouseLeave:Connect(function()
+                if not page.Visible then
+                    PlayTween(tabBtn, TweenInfo.new(0.15), {TextColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 1}):Play()
+                end
+            end)
             if not next(SettingsTabs, next(SettingsTabs)) then SwitchSettingsTab(text) end
         end
 
@@ -1491,6 +1867,69 @@ local UILibrary = (function()
             button.MouseEnter:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play() end)
             button.MouseLeave:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].TerBg}):Play() end)
             button.MouseButton1Click:Connect(function() pcall(callback); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -2, 0, 38)}):Play(); task.wait(0.1); PlayTween(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 40)}):Play() end)
+        end
+
+        local function CreateSettingsCycle(text, values, defaultValue, callback)
+            local cycleFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45) }, {BackgroundColor3 = "TerBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = cycleFrame})
+            CreateElement("UIStroke", {Thickness = 1, Parent = cycleFrame}, {Color = "Stroke"})
+            CreateElement("TextLabel", { Parent = cycleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.55, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+            local cycleButton = CreateElement("TextButton", { Parent = cycleFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 156, 0, 28), Font = Enum.Font.GothamBold, Text = tostring(defaultValue or "None"), TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = cycleButton})
+            CreateElement("UIStroke", {Thickness = 1, Parent = cycleButton}, {Color = "Stroke"})
+
+            local options = values or {}
+            local index = 1
+            for i, value in ipairs(options) do
+                if value == defaultValue then
+                    index = i
+                    break
+                end
+            end
+            local function sync(skipCallback)
+                local current = options[index]
+                cycleButton.Text = tostring(current or "None")
+                if not skipCallback then
+                    pcall(callback, current)
+                end
+            end
+            cycleButton.MouseButton1Click:Connect(function()
+                if #options == 0 then
+                    return
+                end
+                index = index + 1
+                if index > #options then
+                    index = 1
+                end
+                sync(false)
+            end)
+            sync(true)
+            return {
+                SetValues = function(_, newValues)
+                    options = newValues or {}
+                    if #options == 0 then
+                        index = 1
+                        cycleButton.Text = "None"
+                        return
+                    end
+                    if index > #options then
+                        index = 1
+                    end
+                    sync(true)
+                end,
+                SetValue = function(_, value)
+                    for i, option in ipairs(options) do
+                        if option == value then
+                            index = i
+                            sync(true)
+                            break
+                        end
+                    end
+                end,
+                GetValue = function()
+                    return options[index]
+                end
+            }
         end
 
         local function CreateSettingsDropdown(text, options, default, callback)
@@ -1614,6 +2053,16 @@ local UILibrary = (function()
             collapseKey = Enum.KeyCode.Insert
         end
 
+        local function SettingsNotify(title, content, duration)
+            pcall(function()
+                UILibrary:Notify({
+                    Title = title,
+                    Content = content,
+                    Duration = duration or 2.5
+                })
+            end)
+        end
+
         -- // Initialize Global Settings Options //
         if includeCustomization then
             CreateSettingsSection("Appearance")
@@ -1631,7 +2080,136 @@ local UILibrary = (function()
             CreateSettingsDropdown("Slider Style", {"Line", "Pill", "Block"}, Options.SliderStyle, function(val) UpdateSliderStyle(val) end)
             CreateSettingsDropdown("Combo Style", {"Classic", "Compact", "Soft"}, Options.ComboStyle, function(val) UpdateComboStyle(val) end)
             CreateSettingsDropdown("Global Font", {"Gotham", "Ubuntu", "Code", "Jura", "SciFi", "Arcade", "Highway", "Garamond", "Fantasy", "Bodoni", "SourceSans"}, Options.Font, function(val) UpdateFont(val) end)
+
+            CreateSettingsGroup("Layout & Scale", false)
+            CreateSettingsDropdown("Scale Mode", {"Auto", "Manual"}, Options.AutoScale and "Auto" or "Manual", function(val)
+                Options.AutoScale = (val == "Auto")
+                SaveLibraryOptions()
+                UpdateWindowSize(false)
+            end)
+            local scalePresets = {0.78, 0.84, 0.9, 0.96, 1, 1.06, 1.12, 1.18}
+            local scaleLabels = {}
+            local scaleLabelToValue = {}
+            for _, value in ipairs(scalePresets) do
+                local label = tostring(math.floor(value * 100 + 0.5)) .. "%"
+                table.insert(scaleLabels, label)
+                scaleLabelToValue[label] = value
+            end
+            local defaultScaleLabel = "100%"
+            local bestDelta = math.huge
+            for _, label in ipairs(scaleLabels) do
+                local value = scaleLabelToValue[label]
+                local delta = math.abs(value - (Options.UserScale or 1))
+                if delta < bestDelta then
+                    bestDelta = delta
+                    defaultScaleLabel = label
+                end
+            end
+            CreateSettingsDropdown("UI Scale", scaleLabels, defaultScaleLabel, function(label)
+                local selectedScale = scaleLabelToValue[label]
+                if type(selectedScale) == "number" then
+                    Options.UserScale = selectedScale
+                    SaveLibraryOptions()
+                    UpdateWindowSize(false)
+                end
+            end)
         end
+
+        local selectedProfileName = UILibrary:GetActiveProfile()
+        local profilePicker = nil
+        local function refreshProfilePicker(preferredProfile)
+            local names = UILibrary:GetProfiles()
+            if #names == 0 then
+                names = {PersistConfig.DefaultProfile}
+            end
+            local target = preferredProfile or selectedProfileName
+            local exists = false
+            for _, profileName in ipairs(names) do
+                if profileName == target then
+                    exists = true
+                    break
+                end
+            end
+            if not exists then
+                target = names[1]
+            end
+            selectedProfileName = target
+            if profilePicker then
+                profilePicker:SetValues(names)
+                profilePicker:SetValue(selectedProfileName)
+            end
+        end
+
+        local function generateProfileName()
+            return "Profile_" .. os.date("%Y%m%d_%H%M%S")
+        end
+
+        CreateSettingsSection("Config")
+        CreateSettingsGroup("Profiles", true)
+        profilePicker = CreateSettingsCycle("Active Profile", UILibrary:GetProfiles(), selectedProfileName, function(profileName)
+            if type(profileName) == "string" and profileName ~= "" then
+                selectedProfileName = profileName
+            end
+        end)
+        refreshProfilePicker(selectedProfileName)
+        CreateSettingsButton("Save Profile", function()
+            local savedName = UILibrary:SaveProfile(selectedProfileName)
+            refreshProfilePicker(savedName)
+            SettingsNotify("Config", "Saved profile: " .. tostring(savedName))
+        end)
+        CreateSettingsButton("Save As New Profile", function()
+            local newName = UILibrary:SaveProfile(generateProfileName())
+            refreshProfilePicker(newName)
+            SettingsNotify("Config", "Created profile: " .. tostring(newName))
+        end)
+        CreateSettingsButton("Load Selected Profile", function()
+            local loaded = UILibrary:LoadProfile(selectedProfileName)
+            if not loaded then
+                SettingsNotify("Config", "Failed to load profile.", 3)
+                return
+            end
+            ApplyLoadedLibraryOptions()
+            ApplyRuntimeLibraryOptions()
+            UpdateWindowSize(false)
+            SettingsNotify("Config", "Loaded profile: " .. tostring(selectedProfileName), 3)
+        end)
+        CreateSettingsButton("Delete Selected Profile", function()
+            local deleted = UILibrary:DeleteProfile(selectedProfileName)
+            if deleted then
+                refreshProfilePicker(UILibrary:GetActiveProfile())
+                SettingsNotify("Config", "Deleted profile.", 3)
+            else
+                SettingsNotify("Config", "Cannot delete this profile.", 3)
+            end
+        end)
+        CreateSettingsGroup("Import / Export", false)
+        CreateSettingsButton("Copy Profile To Clipboard", function()
+            local payload = UILibrary:ExportConfig(selectedProfileName)
+            if type(payload) == "string" and type(setclipboard) == "function" then
+                setclipboard(payload)
+                SettingsNotify("Config", "Profile copied to clipboard.", 2.5)
+            elseif type(payload) == "string" then
+                SettingsNotify("Config", "Clipboard API unavailable.", 3)
+            else
+                SettingsNotify("Config", "Export failed.", 3)
+            end
+        end)
+        CreateSettingsButton("Import Profile From Clipboard", function()
+            local readClip = (type(getclipboard) == "function" and getclipboard)
+                or (type(readclipboard) == "function" and readclipboard)
+            if type(readClip) ~= "function" then
+                SettingsNotify("Config", "Clipboard read API unavailable.", 3)
+                return
+            end
+            local raw = readClip()
+            local ok, importedName = UILibrary:ImportConfig(raw, nil, false)
+            if ok then
+                refreshProfilePicker(importedName)
+                SettingsNotify("Config", "Imported profile: " .. tostring(importedName), 3)
+            else
+                SettingsNotify("Config", "Import failed. Invalid payload.", 3)
+            end
+        end)
 
         CreateSettingsSection("General")
         CreateSettingsGroup("Runtime", true)
