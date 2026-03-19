@@ -1492,7 +1492,7 @@ local UILibrary = (function()
 
         local EnablePlayerPanel = true
         local PlayerListCollapsed = false
-        local PlayerListExpandedWidth = 162
+        local PlayerListExpandedWidth = 236
         local PlayerListCollapsedWidth = 34
         local PlayerListGap = 8
         local PlayerAdminCallbacks = {}
@@ -1620,8 +1620,11 @@ local UILibrary = (function()
             ClipsDescendants = true
         }, {BackgroundColor3 = "SecBg"})
         PlayerListFrame.BackgroundTransparency = 0.04
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner + 2), Parent = PlayerListFrame})
-        CreateElement("UIStroke", {Thickness = 1.2, Parent = PlayerListFrame}, {Color = "Stroke"})
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner + 4), Parent = PlayerListFrame})
+        local PlayerListStroke = CreateElement("UIStroke", {Thickness = 1.2, Parent = PlayerListFrame}, {Color = "Stroke"})
+        local PlayerListScale = Instance.new("UIScale")
+        PlayerListScale.Scale = 1
+        PlayerListScale.Parent = PlayerListFrame
 
         local PlayerListHeader = CreateElement("Frame", {
             Parent = PlayerListFrame,
@@ -1629,6 +1632,8 @@ local UILibrary = (function()
             Size = UDim2.new(1, 0, 0, 34)
         }, {BackgroundColor3 = "TerBg"})
         PlayerListHeader.BackgroundTransparency = 0.08
+        PlayerListHeader.ClipsDescendants = true
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner + 4), Parent = PlayerListHeader})
         CreateElement("TextLabel", {
             Parent = PlayerListHeader,
             BackgroundTransparency = 1,
@@ -1926,6 +1931,7 @@ local UILibrary = (function()
                     AutoButtonColor = false
                 }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
                 playerButton.LayoutOrder = i
+                playerButton.TextTruncate = Enum.TextTruncate.AtEnd
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner - 1), Parent = playerButton})
                 CreateElement("UIPadding", {Parent = playerButton, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 6)})
                 CreateElement("UIStroke", {Thickness = 1, Parent = playerButton}, {Color = "Stroke"})
@@ -1980,6 +1986,64 @@ local UILibrary = (function()
                 if child:IsA("TextLabel") then
                     child.Visible = titleVisible
                 end
+            end
+        end
+
+        local function AnimatePlayerListWithUI(show)
+            if not EnablePlayerPanel then
+                PlayerListFrame.Visible = false
+                return
+            end
+            local panelX, panelY, panelWidth, panelHeight = ResolveFloatingPlayerListGeometry()
+            local targetPos = UDim2.fromOffset(panelX, panelY)
+            local hiddenPos = UDim2.fromOffset(panelX + 12, panelY + 4)
+            local targetSize = UDim2.fromOffset(panelWidth, panelHeight)
+            local titleVisible = not PlayerListCollapsed
+            local listVisible = not PlayerListCollapsed
+            PlayerListToggleButton.Text = PlayerListCollapsed and "<" or ">"
+            PlayerListScroll.Visible = listVisible
+            for _, child in ipairs(PlayerListHeader:GetChildren()) do
+                if child:IsA("TextLabel") then
+                    child.Visible = titleVisible
+                end
+            end
+
+            if show then
+                PlayerListFrame.Visible = true
+                PlayerListFrame.Size = targetSize
+                PlayerListFrame.Position = hiddenPos
+                PlayerListFrame.BackgroundTransparency = 1
+                PlayerListStroke.Transparency = 1
+                PlayerListScale.Scale = 0.96
+                PlayTween(PlayerListFrame, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Position = targetPos,
+                    BackgroundTransparency = 0.04
+                }):Play()
+                PlayTween(PlayerListStroke, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Transparency = 0
+                }):Play()
+                PlayTween(PlayerListScale, TweenInfo.new(0.26, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Scale = 1
+                }):Play()
+            else
+                if not PlayerListFrame.Visible then
+                    return
+                end
+                PlayTween(PlayerListFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Position = hiddenPos,
+                    BackgroundTransparency = 1
+                }):Play()
+                PlayTween(PlayerListStroke, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Transparency = 1
+                }):Play()
+                PlayTween(PlayerListScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Scale = 0.96
+                }):Play()
+                task.delay(0.21, function()
+                    if PlayerListFrame.Parent and (not show) then
+                        PlayerListFrame.Visible = false
+                    end
+                end)
             end
         end
 
@@ -3162,6 +3226,7 @@ local UILibrary = (function()
             if FPSCleanup then FPSCleanup() end
             for _, conn in ipairs(window.connections) do conn:Disconnect() end
             for _, func in ipairs(window.cleanupFunctions) do pcall(func) end
+            AnimatePlayerListWithUI(false)
             PlayTween(mainScale, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                 Scale = mainScale.Scale * 0.95
             }):Play()
@@ -3175,7 +3240,7 @@ local UILibrary = (function()
             -- Preserve Layout specific visibility
             if Minimized then
                 TabContainer.Visible = false; ContentFrame.Visible = false; NavDropdownFrame.Visible = false
-                PlayerListFrame.Visible = false
+                AnimatePlayerListWithUI(false)
                 PlayerAdminOverlay.Visible = false
             else
                 ContentFrame.Visible = true
@@ -3185,6 +3250,7 @@ local UILibrary = (function()
                 NavDropdownFrame.Visible = ActiveLayoutState.ShowDropdown
                 ApplyPlayerListVisual(false)
                 ApplyContentFrameLayout(false)
+                AnimatePlayerListWithUI(true)
             end
             
             UpdateWindowSize(true)
@@ -3207,8 +3273,12 @@ local UILibrary = (function()
                 PlayTween(mainScale, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                     Scale = ComputeInterfaceScale(workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080))
                 }):Play()
+                if not Minimized then
+                    AnimatePlayerListWithUI(true)
+                end
             else
                 PlayerAdminOverlay.Visible = false
+                AnimatePlayerListWithUI(false)
                 PlayTween(mainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                     Scale = mainScale.Scale * 0.95
                 }):Play()
