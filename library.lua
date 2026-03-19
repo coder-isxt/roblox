@@ -910,9 +910,7 @@ local UILibrary = (function()
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = CloseButton})
         local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -42, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "-", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = MinimizeButton})
-        local CollapseKeybindButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -74, 0.5, 0), Size = UDim2.new(0, 34, 0, 24), Font = Enum.Font.GothamBold, Text = "INS", TextSize = 10 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = CollapseKeybindButton})
-        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -114, 0.5, 0), Size = UDim2.new(0, 34, 0, 24), Font = Enum.Font.GothamBold, Text = "CFG", TextSize = 10 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -74, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "⚙", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, 7), Parent = SettingsButton})
 
         -- Sidebar Navigation Components
@@ -1138,7 +1136,6 @@ local UILibrary = (function()
 
             local tabButton = tabEntry.Button
             local activeRail = tabEntry.ActiveRail
-            local iconDot = tabEntry.IconDot
             local buttonPadding = tabButton:FindFirstChildOfClass("UIPadding")
             local idleColor = GetTabButtonColors()
 
@@ -1150,9 +1147,6 @@ local UILibrary = (function()
                     buttonPadding.PaddingLeft = UDim.new(0, 0)
                     buttonPadding.PaddingRight = UDim.new(0, 0)
                 end
-                if iconDot then
-                    iconDot.Visible = false
-                end
                 activeRail.AnchorPoint = Vector2.new(0, 0)
                 activeRail.Position = UDim2.new(0, 10, 1, -4)
                 activeRail.Size = UDim2.new(1, -20, 0, 2)
@@ -1161,12 +1155,8 @@ local UILibrary = (function()
                 tabButton.TextXAlignment = Enum.TextXAlignment.Left
                 tabButton.TextSize = 13
                 if buttonPadding then
-                    buttonPadding.PaddingLeft = UDim.new(0, 26)
+                    buttonPadding.PaddingLeft = UDim.new(0, 14)
                     buttonPadding.PaddingRight = UDim.new(0, 0)
-                end
-                if iconDot then
-                    iconDot.Visible = true
-                    iconDot.Position = UDim2.new(0, 10, 0.5, 0)
                 end
                 activeRail.AnchorPoint = Vector2.new(1, 0.5)
                 activeRail.Position = UDim2.new(1, -4, 0.5, 0)
@@ -1562,6 +1552,68 @@ local UILibrary = (function()
             applyComboStyle(true)
         end
 
+        local function CreateSettingsKeybind(text, defaultKey, callback)
+            local keybindFrame = CreateElement("Frame", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45) }, {BackgroundColor3 = "TerBg"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = keybindFrame})
+            CreateElement("UIStroke", {Thickness = 1, Parent = keybindFrame}, {Color = "Stroke"})
+            CreateElement("TextLabel", { Parent = keybindFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 15, 0, 0), Size = UDim2.new(0.55, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+
+            local keybindButton = CreateElement("TextButton", { Parent = keybindFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -15, 0.5, 0), Size = UDim2.new(0, 110, 0, 28), Font = Enum.Font.GothamBold, Text = "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+            CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = keybindButton})
+            local keybindStroke = CreateElement("UIStroke", {Thickness = 1, Parent = keybindButton}, {Color = "Stroke"})
+
+            local currentKey = (typeof(defaultKey) == "EnumItem") and defaultKey or Enum.KeyCode.Insert
+            keybindButton.Text = currentKey.Name
+            local waiting = false
+
+            local function setKeybind(newKey, skipCallback)
+                if newKey ~= nil and typeof(newKey) ~= "EnumItem" then
+                    return
+                end
+                currentKey = newKey
+                keybindButton.Text = currentKey and currentKey.Name or "None"
+                if not skipCallback then
+                    pcall(callback, currentKey)
+                end
+            end
+
+            keybindButton.MouseButton1Click:Connect(function()
+                if waiting then
+                    return
+                end
+                waiting = true
+                keybindButton.Text = "..."
+                PlayTween(keybindStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Accent}):Play()
+
+                local connection
+                connection = UserInputService.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.Keyboard then
+                        setKeybind(input.KeyCode, false)
+                        waiting = false
+                        PlayTween(keybindStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Stroke}):Play()
+                        if connection then
+                            connection:Disconnect()
+                        end
+                    end
+                end)
+            end)
+
+            return {
+                SetValue = function(_, newKey)
+                    setKeybind(newKey, true)
+                end,
+                GetValue = function()
+                    return currentKey
+                end
+            }
+        end
+
+        local collapseKeyStore = UILibrary:RegisterValue("uilib_menu_toggle_key", Enum.KeyCode.Insert)
+        local collapseKey = collapseKeyStore and collapseKeyStore:Get() or Enum.KeyCode.Insert
+        if typeof(collapseKey) ~= "EnumItem" then
+            collapseKey = Enum.KeyCode.Insert
+        end
+
         -- // Initialize Global Settings Options //
         if includeCustomization then
             CreateSettingsSection("Appearance")
@@ -1583,6 +1635,15 @@ local UILibrary = (function()
 
         CreateSettingsSection("General")
         CreateSettingsGroup("Runtime", true)
+        CreateSettingsKeybind("Menu Toggle Key", collapseKey, function(newKey)
+            if typeof(newKey) ~= "EnumItem" then
+                return
+            end
+            collapseKey = newKey
+            if collapseKeyStore then
+                collapseKeyStore:Set(collapseKey)
+            end
+        end)
         local function CreateSettingsToggle(text, callback)
             local toggleButton = CreateElement("TextButton", { Parent = ResolveSettingsParent(), BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 45), AutoButtonColor = false, Text = "" }, {BackgroundColor3 = "TerBg"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 8), Parent = toggleButton})
@@ -1767,8 +1828,6 @@ local UILibrary = (function()
         MinimizeButton.MouseLeave:Connect(function() PlayTween(MinimizeButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         SettingsButton.MouseEnter:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         SettingsButton.MouseLeave:Connect(function() PlayTween(SettingsButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
-        CollapseKeybindButton.MouseEnter:Connect(function() PlayTween(CollapseKeybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
-        CollapseKeybindButton.MouseLeave:Connect(function() PlayTween(CollapseKeybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         TabletBackButton.MouseEnter:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover, TextColor3 = Themes[Options.Theme].Text}):Play() end)
         TabletBackButton.MouseLeave:Connect(function() PlayTween(TabletBackButton, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].QuarBg, TextColor3 = Themes[Options.Theme].SubText}):Play() end)
         TabletBackButton.MouseButton1Click:Connect(function()
@@ -1810,20 +1869,6 @@ local UILibrary = (function()
                 PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = Minimized and UDim2.new(0, expandedWidth, 0, topBarHeight) or UDim2.new(0, expandedWidth, 0, expandedHeight)}):Play()
             else PlayTween(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)}):Play(); task.delay(0.3, function() if not UIVisible then MainFrame.Visible = false end end) end
         end
-
-        local collapseKey = Enum.KeyCode.Insert
-        local waitingForCollapseKey = false
-
-        CollapseKeybindButton.MouseButton1Click:Connect(function()
-            if waitingForCollapseKey then return end
-            waitingForCollapseKey = true; CollapseKeybindButton.Text = "..."
-            local connection; connection = UserInputService.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    collapseKey = input.KeyCode; local keyName = input.KeyCode.Name; if #keyName > 5 then keyName = keyName:sub(1, 4) end
-                    CollapseKeybindButton.Text = keyName; waitingForCollapseKey = false; connection:Disconnect()
-                end
-            end)
-        end)
 
         toggleConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if not gameProcessed and input.KeyCode == collapseKey then ToggleUI() end
@@ -1868,17 +1913,11 @@ local UILibrary = (function()
                 if tab.ActiveRail then
                     PlayTween(tab.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
                 end
-                if tab.IconDot then
-                    PlayTween(tab.IconDot, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].SubText, BackgroundTransparency = 0.35}):Play()
-                end
             end
             tabToSelect.Page.Visible = true
             PlayTween(tabToSelect.Button, TweenInfo.new(0.2), {BackgroundColor3 = activeColor, TextColor3 = Themes[Options.Theme].Text}):Play()
             if tabToSelect.ActiveRail then
                 PlayTween(tabToSelect.ActiveRail, TweenInfo.new(0.2), {BackgroundTransparency = 0}):Play()
-            end
-            if tabToSelect.IconDot then
-                PlayTween(tabToSelect.IconDot, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Accent, BackgroundTransparency = 0}):Play()
             end
 
             if Options.MenuStyle == "Tablet" then
@@ -1896,18 +1935,7 @@ local UILibrary = (function()
             local tab = { Name = name, Elements = {} }
             local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.12, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -16, 0, 40), Font = Enum.Font.GothamBold, Text = name, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 9), Parent = tabButton})
-            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 26)})
-            local iconDot = CreateElement("Frame", {
-                Parent = tabButton,
-                AnchorPoint = Vector2.new(0, 0.5),
-                Position = UDim2.new(0, 10, 0.5, 0),
-                Size = UDim2.new(0, 7, 0, 7),
-                BorderSizePixel = 0,
-                BackgroundTransparency = 0.35
-            }, {
-                BackgroundColor3 = "SubText"
-            })
-            CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = iconDot})
+            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 14)})
             local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0, 3, 0, 22), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
             
@@ -1934,7 +1962,7 @@ local UILibrary = (function()
             CreateElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = tabletTile})
             CreateElement("UIStroke", {Parent = tabletTile, Thickness = 1}, {Color = "Stroke"})
             
-            tab.Button = tabButton; tab.Page = page; tab.ActiveRail = activeRail; tab.IconDot = iconDot; tab.TabletTile = tabletTile; table.insert(tabs, tab)
+            tab.Button = tabButton; tab.Page = page; tab.ActiveRail = activeRail; tab.TabletTile = tabletTile; table.insert(tabs, tab)
             ApplyTabButtonMode(tab)
             tabButton.MouseEnter:Connect(function()
                 if not page.Visible then
