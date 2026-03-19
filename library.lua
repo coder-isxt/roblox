@@ -1426,11 +1426,13 @@ local UILibrary = (function()
         })
         if localPlayer then
             task.spawn(function()
+                local ImageSize = Enum.ThumbnailSize.Size420x420
+                local ImageType = Enum.ThumbnailType.HeadShot
                 local ok, content = pcall(function()
                     return game:GetService("Players"):GetUserThumbnailAsync(
                         localPlayer.UserId,
-                        Enum.ThumbnailType.HeadShot,
-                        Enum.ThumbnailSize.Size100x100
+                        ImageType,
+                        ImageSize
                     )
                 end)
                 if ok and type(content) == "string" and FooterAvatarImage.Parent then
