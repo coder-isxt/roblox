@@ -46,31 +46,31 @@ local UILibrary = (function()
     
     -- // CONFIGURATION & THEMES // --
     local Options = {
-    Theme = "Clean",
-    ToggleStyle = "Switch",
-    CornerStyle = "Slight",        -- much cleaner, matches image
-    StrokeStyle = "SoftFade",      -- subtle professional edge
-    SliderStyle = "Line",
-    ComboStyle = "Soft",
-    Font = "Gotham",
-    MenuStyle = "Sidebar",
-    AutoScale = true,
-    UserScale = 1
-}
-
-local Themes = {
-    Clean = {
-        MainBg = Color3.fromRGB(10, 12, 18),
-        SecBg = Color3.fromRGB(15, 18, 26),
-        TerBg = Color3.fromRGB(20, 24, 34),
-        QuarBg = Color3.fromRGB(25, 30, 42),
-        Hover = Color3.fromRGB(35, 45, 65),
-        Accent = Color3.fromRGB(0, 175, 255),   -- vibrant blue from image
-        Text = Color3.fromRGB(245, 248, 255),
-        SubText = Color3.fromRGB(165, 180, 210),
-        Stroke = Color3.fromRGB(42, 52, 70)
+        Theme = "Clean",
+        ToggleStyle = "Switch",
+        CornerStyle = "Slight",
+        StrokeStyle = "SoftFade",
+        SliderStyle = "Line",
+        ComboStyle = "Compact",
+        Font = "Gotham",
+        MenuStyle = "Sidebar",
+        AutoScale = true,
+        UserScale = 0.96
     }
-}
+
+    local Themes = {
+        Clean = {
+            MainBg = Color3.fromRGB(14, 16, 21),
+            SecBg = Color3.fromRGB(19, 22, 28),
+            TerBg = Color3.fromRGB(24, 28, 35),
+            QuarBg = Color3.fromRGB(31, 36, 45),
+            Hover = Color3.fromRGB(40, 47, 58),
+            Accent = Color3.fromRGB(92, 163, 255),
+            Text = Color3.fromRGB(236, 241, 249),
+            SubText = Color3.fromRGB(151, 164, 188),
+            Stroke = Color3.fromRGB(52, 60, 74)
+        }
+    }
 
     local MenuStyleSet = {
         Sidebar = true,
@@ -197,17 +197,17 @@ local Themes = {
     local SliderStyleSet = { Line = true, Pill = true, Block = true }
     local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
     local VisualTokens = {
-    WindowCorner = 12,
-    SurfaceCorner = 10,
-    ControlCorner = 8,
-    TopBarHeight = 52,
-    SidebarWidth = 172,
-    SearchWidth = 210,
-    SearchHeight = 34,
-    ControlHeight = 42,
-    SectionGap = 10,
-    CardStroke = 1
-}
+        WindowCorner = 10,
+        SurfaceCorner = 8,
+        ControlCorner = 6,
+        TopBarHeight = 46,
+        SidebarWidth = 160,
+        SearchWidth = 186,
+        SearchHeight = 30,
+        ControlHeight = 38,
+        SectionGap = 8,
+        CardStroke = 1
+    }
 
     local PersistConfig = {
         SchemaVersion = 3,
@@ -524,17 +524,26 @@ local Themes = {
         local savedOptions = PersistConfig.Data.LibraryOptions
         if type(savedOptions) ~= "table" then return end
 
+        local function ResolveOption(savedValue, allowedSet, fallback)
+            if type(savedValue) == "string" and allowedSet[savedValue] then
+                return savedValue
+            end
+            return fallback
+        end
+
         local resolvedTheme = ResolveThemeName(savedOptions.Theme)
         if resolvedTheme then
             Options.Theme = resolvedTheme
         end
-        Options.ToggleStyle = "Switch"
-        Options.CornerStyle = "Rounded"
-        Options.StrokeStyle = "Outline"
-        Options.SliderStyle = "Line"
-        Options.ComboStyle = "Classic"
-        Options.Font = "Gotham"
-        Options.MenuStyle = "Sidebar"
+
+        Options.ToggleStyle = ResolveOption(savedOptions.ToggleStyle, ToggleStyleSet, "Switch")
+        Options.CornerStyle = ResolveOption(savedOptions.CornerStyle, CornerStyleSet, "Slight")
+        Options.StrokeStyle = ResolveOption(savedOptions.StrokeStyle, StrokeStyleSet, "SoftFade")
+        Options.SliderStyle = ResolveOption(savedOptions.SliderStyle, SliderStyleSet, "Line")
+        Options.ComboStyle = ResolveOption(savedOptions.ComboStyle, ComboStyleSet, "Compact")
+        Options.Font = ResolveOption(savedOptions.Font, FontMap, "Gotham")
+        local savedMenuStyle = (savedOptions.MenuStyle == "Topbar") and "TopBar" or savedOptions.MenuStyle
+        Options.MenuStyle = ResolveOption(savedMenuStyle, MenuStyleSet, "Sidebar")
         if type(savedOptions.AutoScale) == "boolean" then
             Options.AutoScale = savedOptions.AutoScale
         end
@@ -984,11 +993,12 @@ local Themes = {
                         NumberSequenceKeypoint.new(1, 0)
                     })
                 elseif styleName == "SoftFade" then
-                    targetTransparency = 0.15
+                    targetThickness = 0.95
+                    targetTransparency = 0.28
                     gradientTransparency = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, 0.2),
-                        NumberSequenceKeypoint.new(0.5, 0.65),
-                        NumberSequenceKeypoint.new(1, 0.2)
+                        NumberSequenceKeypoint.new(0, 0.35),
+                        NumberSequenceKeypoint.new(0.5, 0.78),
+                        NumberSequenceKeypoint.new(1, 0.35)
                     })
                 end
 
@@ -1130,17 +1140,17 @@ local Themes = {
     TooltipLabel.Visible = false
     TooltipLabel.BackgroundColor3 = Themes[Options.Theme].TerBg
     TooltipLabel.TextColor3 = Themes[Options.Theme].Text
-    TooltipLabel.Size = UDim2.new(0,210,0,28)
+    TooltipLabel.Size = UDim2.new(0,192,0,24)
     TooltipLabel.ZIndex = 10001
     TooltipLabel.BorderSizePixel = 0
     TooltipLabel.TextXAlignment = Enum.TextXAlignment.Left
     TooltipLabel.Font = Enum.Font.Gotham
-    TooltipLabel.TextSize = 11
+    TooltipLabel.TextSize = 10
     local TooltipPadding = Instance.new("UIPadding", TooltipLabel)
-    TooltipPadding.PaddingLeft = UDim.new(0, 8)
-    TooltipPadding.PaddingRight = UDim.new(0, 8)
+    TooltipPadding.PaddingLeft = UDim.new(0, 7)
+    TooltipPadding.PaddingRight = UDim.new(0, 7)
     local TooltipCorner = Instance.new("UICorner", TooltipLabel)
-    TooltipCorner.CornerRadius = UDim.new(0, 8)
+    TooltipCorner.CornerRadius = UDim.new(0, 6)
     local TooltipStroke = Instance.new("UIStroke", TooltipLabel)
     TooltipStroke.Thickness = 1
     TooltipStroke.Color = Themes[Options.Theme].Stroke
@@ -1203,7 +1213,7 @@ local Themes = {
         
         local ScreenGui = CreateElement("ScreenGui", { Name = "UILibWindow", Parent = game:GetService("CoreGui"), ZIndexBehavior = Enum.ZIndexBehavior.Sibling, ResetOnSpawn = false, IgnoreGuiInset = true })
 
-        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 590, 0, 440), ClipsDescendants = true, Visible = false }, {BackgroundColor3 = "MainBg"})
+        local MainFrame = CreateElement("Frame", { Name = "MainFrame", Parent = ScreenGui, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 560, 0, 410), ClipsDescendants = true, Visible = false }, {BackgroundColor3 = "MainBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner), Parent = MainFrame})
         CreateElement("UIStroke", {Thickness = 1.35, Transparency = 0.06, Parent = MainFrame}, {Color = "Stroke"})
         local MainGlassLayer = CreateElement("Frame", {
@@ -1224,7 +1234,7 @@ local Themes = {
         mainScale.Parent = MainFrame
 
         local topBarHeight = VisualTokens.TopBarHeight
-        local expandedWidth, expandedHeight = 590, 440
+        local expandedWidth, expandedHeight = 560, 410
         local function ComputeInterfaceScale(viewport)
             local vp = viewport or Vector2.new(1920, 1080)
             local shortestEdge = math.max(math.min(vp.X, vp.Y), 1)
@@ -1235,8 +1245,8 @@ local Themes = {
         local function ComputeWindowSize()
             local camera = workspace.CurrentCamera
             local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
-            local width = math.clamp(math.floor(viewport.X * 0.45), 500, 780)
-            local height = math.clamp(math.floor(viewport.Y * 0.58), 380, 610)
+            local width = math.clamp(math.floor(viewport.X * 0.42), 480, 740)
+            local height = math.clamp(math.floor(viewport.Y * 0.56), 360, 580)
             return width, height, viewport
         end
         local function GetWindowTargetState()
@@ -1371,15 +1381,15 @@ local Themes = {
             Parent = TopBar,
             AnchorPoint = Vector2.new(0, 0.5),
             Position = UDim2.new(0, 16, 0.5, 0),
-            Size = UDim2.new(0, 8, 0, 8),
+            Size = UDim2.new(0, 6, 0, 6),
             BorderSizePixel = 0
         }, {
             BackgroundColor3 = "Accent"
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = TitleDot})
 
-        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 32, 0, 0), Size = UDim2.new(0.28, 0, 1, 0), Font = Enum.Font.GothamBlack, Text = windowTitle, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
-        local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0.5, -12), Size = UDim2.new(0, 32, 0, 24), Font = Enum.Font.GothamBold, Text = "<", TextSize = 15, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 30, 0, 0), Size = UDim2.new(0.28, 0, 1, 0), Font = Enum.Font.GothamBold, Text = windowTitle, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0.5, -11), Size = UDim2.new(0, 28, 0, 22), Font = Enum.Font.GothamBold, Text = "<", TextSize = 14, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = TabletBackButton})
         
         -- // SEARCH BAR (TOPBAR) // --
@@ -1414,14 +1424,14 @@ local Themes = {
 
         local SearchBox = CreateElement("TextBox", {
             Parent = TopBar,
-            PlaceholderText = "Search controls...",
+            PlaceholderText = "Search...",
             Text = "",
             ClearTextOnFocus = false,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
             Size = UDim2.new(0, VisualTokens.SearchWidth, 0, VisualTokens.SearchHeight),
             Font = Enum.Font.Gotham,
-            TextSize = 11
+            TextSize = 10
         }, {
             BackgroundColor3 = "TerBg",
             TextColor3 = "Text",
@@ -1429,7 +1439,7 @@ local Themes = {
         })
 
         CreateElement("UICorner", {
-            CornerRadius = UDim.new(0, 10),
+            CornerRadius = UDim.new(0, VisualTokens.ControlCorner),
             Parent = SearchBox
         })
 
@@ -1439,7 +1449,7 @@ local Themes = {
         }, {
             Color = "Stroke"
         })
-        CreateElement("UIPadding", {Parent = SearchBox, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+        CreateElement("UIPadding", {Parent = SearchBox, PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)})
 
         SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
             ApplySearch(SearchBox.Text)
@@ -1447,11 +1457,11 @@ local Themes = {
 
 
 
-        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0), Size = UDim2.new(0, 28, 0, 28), Font = Enum.Font.GothamBold, Text = "X", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 11 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = CloseButton})
-        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -48, 0.5, 0), Size = UDim2.new(0, 28, 0, 28), Font = Enum.Font.GothamBold, Text = "-", TextSize = 15 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -40, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "-", TextSize = 14 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = MinimizeButton})
-        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0.5, 0), Size = UDim2.new(0, 28, 0, 28), Font = Enum.Font.GothamBold, Text = "S", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -68, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "S", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = SettingsButton})
 
         -- Sidebar Navigation Components
@@ -2431,8 +2441,8 @@ local Themes = {
         local ActiveNavFramePos = UDim2.new(0, 12, 0, 60)
         local ActiveNavAnchor = Vector2.new(0, 0)
         local CurrentTabButtonMode = "Sidebar"
-        local TopTabWidth = 124
-        local TopTabHeight = 26
+        local TopTabWidth = 112
+        local TopTabHeight = 24
         local ActiveLayoutState = {
             ShowSidebar = true,
             ShowSeparator = true,
@@ -2444,10 +2454,10 @@ local Themes = {
             TabletBackButton.Visible = visible
             TitleDot.Visible = not visible
             if visible then
-                TitleLabel.Position = UDim2.new(0, 52, 0, 0)
+                TitleLabel.Position = UDim2.new(0, 46, 0, 0)
                 TitleLabel.Size = UDim2.new(0.24, 0, 1, 0)
             else
-                TitleLabel.Position = UDim2.new(0, 32, 0, 0)
+                TitleLabel.Position = UDim2.new(0, 30, 0, 0)
                 TitleLabel.Size = UDim2.new(0.28, 0, 1, 0)
             end
         end
@@ -2535,7 +2545,7 @@ local Themes = {
             if CurrentTabButtonMode == "Top" then
                 tabButton.Size = UDim2.new(0, TopTabWidth, 0, TopTabHeight)
                 tabButton.TextXAlignment = Enum.TextXAlignment.Center
-                tabButton.TextSize = 13
+                tabButton.TextSize = 12
                 if buttonPadding then
                     buttonPadding.PaddingLeft = UDim.new(0, 0)
                     buttonPadding.PaddingRight = UDim.new(0, 0)
@@ -2544,16 +2554,16 @@ local Themes = {
                 activeRail.Position = UDim2.new(0, 10, 1, -4)
                 activeRail.Size = UDim2.new(1, -20, 0, 2)
             else
-                tabButton.Size = UDim2.new(1, -16, 0, 40)
+                tabButton.Size = UDim2.new(1, -16, 0, 36)
                 tabButton.TextXAlignment = Enum.TextXAlignment.Left
-                tabButton.TextSize = 13
+                tabButton.TextSize = 12
                 if buttonPadding then
                     buttonPadding.PaddingLeft = UDim.new(0, 14)
                     buttonPadding.PaddingRight = UDim.new(0, 0)
                 end
                 activeRail.AnchorPoint = Vector2.new(1, 0.5)
                 activeRail.Position = UDim2.new(1, -4, 0.5, 0)
-                activeRail.Size = UDim2.new(0, 3, 0, 22)
+                activeRail.Size = UDim2.new(0, 2, 0, 18)
             end
 
             if CurrentTab ~= tabEntry then
@@ -2626,8 +2636,8 @@ local Themes = {
                     ShowSeparator = false,
                     ShowDropdown = false,
                     TabMode = "Top",
-                    TopTabWidth = 120,
-                    TopTabHeight = 26,
+                    TopTabWidth = 112,
+                    TopTabHeight = 24,
                     SidebarSize = UDim2.new(1, -20, 0, 40),
                     SidebarPos = UDim2.new(0, 10, 0, topBarHeight + 6),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
@@ -2692,8 +2702,8 @@ local Themes = {
             ActiveNavFrameSize = preset.NavSize
             ActiveNavAnchor = preset.NavAnchor
             ActiveNavRowHeight = preset.NavRow
-            TopTabWidth = preset.TopTabWidth or 124
-            TopTabHeight = preset.TopTabHeight or 26
+            TopTabWidth = preset.TopTabWidth or 112
+            TopTabHeight = preset.TopTabHeight or 24
             ActiveLayoutState.ShowSidebar = preset.ShowSidebar
             ActiveLayoutState.ShowSeparator = preset.ShowSeparator
             ActiveLayoutState.ShowDropdown = preset.ShowDropdown
@@ -2744,7 +2754,7 @@ local Themes = {
         -- // Settings Menu // --
         local SettingsOverlay = CreateElement("Frame", { Name = "SettingsOverlay", Parent = MainFrame, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), Visible = false, ZIndex = 20 })
 
-        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 680, 0, 462), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
+        local SettingsFrame = CreateElement("Frame", { Name = "SettingsFrame", Parent = SettingsOverlay, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 640, 0, 430), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.WindowCorner - 1), Parent = SettingsFrame})
         CreateElement("UIStroke", {Thickness = 1.15, Parent = SettingsFrame}, {Color = "Stroke"})
         
@@ -3687,10 +3697,10 @@ local Themes = {
 
 
             local tab = { Name = name, Elements = {} }
-            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.1, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -16, 0, 42), Font = Enum.Font.GothamBold, Text = name, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
+            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.1, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -16, 0, 38), Font = Enum.Font.GothamBold, Text = name, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = tabButton})
-            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 15)})
-            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0, 4, 0, 24), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
+            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 13)})
+            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0, 2, 0, 20), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
             
             local page = CreateElement("ScrollingFrame", {
