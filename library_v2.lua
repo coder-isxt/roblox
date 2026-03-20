@@ -2504,8 +2504,9 @@ function Window:CreateUniversalCategory(options)
         simpleSpy.HookError = nil
 
         local function process(remote, method, ...)
+            local packed = packArgs(...)
             local ok, err = pcall(function()
-                captureRemote(remote, method, packArgs(...))
+                captureRemote(remote, method, packed)
             end)
             if not ok then
                 warn("[library_v2] remotes capture error:", err)
