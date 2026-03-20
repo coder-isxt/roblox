@@ -208,33 +208,92 @@ function Window:PlayInitializeAnimation()
         BackgroundColor3 = C.Main,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
         ZIndex = 50,
     })
     corner(overlay, 5)
+    mk("UIGradient", {
+        Parent = overlay,
+        Rotation = 90,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(7, 11, 18)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 18, 29)),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.1),
+            NumberSequenceKeypoint.new(1, 0.35),
+        }),
+    })
+
+    local panel = mk("Frame", {
+        Parent = overlay,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 12),
+        Size = UDim2.fromOffset(380, 114),
+        BackgroundColor3 = C.Top,
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        ZIndex = 52,
+    })
+    local panelScale = mk("UIScale", {
+        Parent = panel,
+        Scale = 0.96,
+    })
+    corner(panel, 6)
+    stroke(panel, C.Stroke, 0.35)
+    mk("UIPadding", {
+        Parent = panel,
+        PaddingTop = UDim.new(0, 12),
+        PaddingBottom = UDim.new(0, 12),
+        PaddingLeft = UDim.new(0, 12),
+        PaddingRight = UDim.new(0, 12),
+    })
+
+    local line = mk("Frame", {
+        Parent = panel,
+        BackgroundColor3 = C.Accent,
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 0, 0, 2),
+        Position = UDim2.new(0, 0, 0, 0),
+        ZIndex = 53,
+    })
+    corner(line, 99)
 
     local initTitle = mk("TextLabel", {
-        Parent = overlay,
+        Parent = panel,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 16, 0, 12),
-        Size = UDim2.new(1, -32, 0, 18),
+        Position = UDim2.new(0, 0, 0, 6),
+        Size = UDim2.new(1, 0, 0, 18),
+        Font = FONT,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = C.Text,
+        Text = "Xeno Interface",
+        TextTransparency = 1,
+        ZIndex = 53,
+    })
+    local initSub = mk("TextLabel", {
+        Parent = panel,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 27),
+        Size = UDim2.new(1, 0, 0, 16),
         Font = FONT,
         TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.SubText,
-        Text = "Initializing interface...",
+        Text = "Preparing modules...",
         TextTransparency = 1,
-        ZIndex = 51,
+        ZIndex = 53,
     })
 
     local barBack = mk("Frame", {
-        Parent = overlay,
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, 38),
-        Size = UDim2.new(1, -32, 0, 3),
+        Parent = panel,
+        Position = UDim2.new(0, 0, 0, 58),
+        Size = UDim2.new(1, 0, 0, 6),
         BackgroundColor3 = C.Control,
         BorderSizePixel = 0,
-        BackgroundTransparency = 0.35,
-        ZIndex = 51,
+        BackgroundTransparency = 0.55,
+        ZIndex = 53,
     })
     corner(barBack, 99)
 
@@ -243,26 +302,48 @@ function Window:PlayInitializeAnimation()
         BackgroundColor3 = C.Accent,
         BorderSizePixel = 0,
         Size = UDim2.new(0, 0, 1, 0),
-        ZIndex = 52,
+        ZIndex = 54,
     })
     corner(barFill, 99)
 
-    tw(initTitle, 0.15, { TextTransparency = 0 }):Play()
-    tw(barFill, 0.35, { Size = UDim2.new(1, 0, 1, 0) }):Play()
+    local steps = {
+        { Label = "Preparing modules...", Fill = 0.34, Time = 0.24 },
+        { Label = "Building sections...", Fill = 0.72, Time = 0.26 },
+        { Label = "Finalizing...", Fill = 1, Time = 0.2 },
+    }
 
-    task.delay(0.38, function()
+    tw(overlay, 0.12, { BackgroundTransparency = 0.08 }):Play()
+    tw(panel, 0.14, { BackgroundTransparency = 0 }):Play()
+    tw(panelScale, 0.14, { Scale = 1 }):Play()
+    tw(initTitle, 0.14, { TextTransparency = 0 }):Play()
+    tw(initSub, 0.14, { TextTransparency = 0 }):Play()
+    tw(line, 0.22, { Size = UDim2.new(1, 0, 0, 2) }):Play()
+    task.wait(0.09)
+
+    for _, step in ipairs(steps) do
         if not overlay.Parent then
             return
         end
-        tw(initTitle, 0.2, { TextTransparency = 1 }):Play()
-        tw(barBack, 0.2, { BackgroundTransparency = 1 }):Play()
-        tw(barFill, 0.2, { BackgroundTransparency = 1 }):Play()
-        tw(overlay, 0.2, { BackgroundTransparency = 1 }):Play()
-        task.delay(0.22, function()
-            if overlay and overlay.Parent then
-                overlay:Destroy()
-            end
-        end)
+        initSub.Text = step.Label
+        tw(barFill, step.Time, { Size = UDim2.new(step.Fill, 0, 1, 0) }):Play()
+        task.wait(step.Time + 0.02)
+    end
+
+    if not overlay.Parent then
+        return
+    end
+    tw(initSub, 0.18, { TextTransparency = 1 }):Play()
+    tw(initTitle, 0.2, { TextTransparency = 1 }):Play()
+    tw(line, 0.18, { BackgroundTransparency = 1 }):Play()
+    tw(barBack, 0.2, { BackgroundTransparency = 1 }):Play()
+    tw(barFill, 0.2, { BackgroundTransparency = 1 }):Play()
+    tw(panelScale, 0.2, { Scale = 0.97 }):Play()
+    tw(panel, 0.2, { BackgroundTransparency = 1 }):Play()
+    tw(overlay, 0.2, { BackgroundTransparency = 1 }):Play()
+    task.delay(0.22, function()
+        if overlay and overlay.Parent then
+            overlay:Destroy()
+        end
     end)
 end
 
@@ -1213,6 +1294,9 @@ function Window:CreateLocalCategory(options)
     local flyBG = nil
 
     local flingProtectEnabled = false
+    local flingProtectSafeCFrame = nil
+    local flingProtectStunUntil = 0
+    local flingProtectViolation = 0
 
     local flyInputConnectionBegan = nil
     local flyInputConnectionEnded = nil
@@ -1379,8 +1463,24 @@ function Window:CreateLocalCategory(options)
         end
     end
 
+    local function resetFlingProtectState()
+        flingProtectSafeCFrame = nil
+        flingProtectStunUntil = 0
+        flingProtectViolation = 0
+    end
+
     local function setFlingProtectEnabled(state)
         flingProtectEnabled = state == true
+        if flingProtectEnabled then
+            local root = getLocalRoot()
+            if root then
+                flingProtectSafeCFrame = root.CFrame
+            end
+            flingProtectStunUntil = 0
+            flingProtectViolation = 0
+        else
+            resetFlingProtectState()
+        end
         notify("Fling Protect", flingProtectEnabled and "Enabled." or "Disabled.", 1.8)
     end
 
@@ -1424,23 +1524,69 @@ function Window:CreateLocalCategory(options)
         if not flingProtectEnabled then
             return
         end
-        local root = getLocalRoot()
-        if not root then
+        if flyEnabled then
             return
         end
+
+        local root = getLocalRoot()
+        local humanoid = getLocalHumanoid()
+        if not root or not humanoid then
+            return
+        end
+        if humanoid.Sit or humanoid.SeatPart then
+            return
+        end
+
+        local now = os.clock()
 
         local lv = root.AssemblyLinearVelocity
         local av = root.AssemblyAngularVelocity
         local horiz = Vector3.new(lv.X, 0, lv.Z).Magnitude
+        local vert = math.abs(lv.Y)
+        local spin = av.Magnitude
 
-        if horiz > 120 then
-            root.AssemblyLinearVelocity = Vector3.new(0, math.clamp(lv.Y, -45, 45), 0)
-        elseif horiz > 70 then
-            root.AssemblyLinearVelocity = Vector3.new(lv.X * 0.2, math.clamp(lv.Y, -65, 65), lv.Z * 0.2)
+        local suspicious = horiz > 90 or spin > 45 or vert > 105
+        local extreme = horiz > 180 or spin > 105 or vert > 175
+
+        if not suspicious then
+            if horiz < 36 and spin < 20 and vert < 40 then
+                flingProtectSafeCFrame = root.CFrame
+            end
+            flingProtectViolation = math.max(0, flingProtectViolation - 0.35)
+        else
+            flingProtectViolation = math.min(4, flingProtectViolation + (extreme and 1.9 or 0.7))
         end
 
-        if av.Magnitude > 55 then
+        if extreme or flingProtectViolation > 2 then
+            local oldPos = root.Position
             root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            root.AssemblyLinearVelocity = Vector3.new(0, math.clamp(lv.Y, -20, 20), 0)
+
+            if flingProtectSafeCFrame then
+                local safePos = flingProtectSafeCFrame.Position
+                if (oldPos - safePos).Magnitude > 16 then
+                    root.CFrame = flingProtectSafeCFrame + Vector3.new(0, 2.5, 0)
+                end
+            end
+
+            if humanoid.Sit then
+                humanoid.Sit = false
+            end
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            flingProtectViolation = 0
+            flingProtectStunUntil = now + 0.32
+            return
+        end
+
+        if now < flingProtectStunUntil then
+            root.AssemblyLinearVelocity = Vector3.new(lv.X * 0.14, math.clamp(lv.Y, -28, 28), lv.Z * 0.14)
+            root.AssemblyAngularVelocity = av * 0.08
+            return
+        end
+
+        if suspicious then
+            root.AssemblyLinearVelocity = Vector3.new(lv.X * 0.3, math.clamp(lv.Y, -42, 42), lv.Z * 0.3)
+            root.AssemblyAngularVelocity = av * 0.2
         end
     end))
 
@@ -1467,6 +1613,7 @@ function Window:CreateLocalCategory(options)
     self:OnClose(function()
         setFlyEnabled(false, true)
         flingProtectEnabled = false
+        resetFlingProtectState()
         flyControls.Forward = false
         flyControls.Back = false
         flyControls.Left = false
@@ -1503,6 +1650,40 @@ function Window:CreateLocalCategory(options)
     }
 
     return self.LocalCategory
+end
+
+function Window:CreateUniversalCategory(options)
+    if self.UniversalCategory then
+        return self.UniversalCategory
+    end
+
+    options = options or {}
+
+    local universalTab = nil
+    for _, existingTab in ipairs(self.Tabs) do
+        if existingTab.Name == "Universal" then
+            universalTab = existingTab
+            break
+        end
+    end
+    if not universalTab then
+        universalTab = self:CreateTab("Universal")
+    end
+
+    local universalSection = universalTab:CreateSection({ Name = "Universal", Side = "Left" })
+    local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Right" })
+
+    universalSection:CreateParagraph("Universal", "Persistent tab for cross-game features.")
+    otherSection:CreateLabel("Ready")
+
+    self.UniversalCategory = {
+        Tab = universalTab,
+        UniversalSection = universalSection,
+        OtherSection = otherSection,
+        Options = options,
+    }
+
+    return self.UniversalCategory
 end
 
 local function controlShell(section, h)
@@ -2393,6 +2574,8 @@ function Window:CreateTab(a, iconMaybe)
         tabLayoutOrder = 10
     elseif tabNameLower == "players" then
         tabLayoutOrder = 20
+    elseif tabNameLower == "universal" then
+        tabLayoutOrder = 30
     else
         tabLayoutOrder = self.NextCustomTabOrder or 200
         self.NextCustomTabOrder = tabLayoutOrder + 1
@@ -2811,6 +2994,16 @@ function UILibrary:CreateWindow(arg)
             if w and not w.Destroyed then
                 pcall(function()
                     w:CreateLocalCategory(o.LocalOptions)
+                end)
+            end
+        end)
+    end
+
+    if o.IncludeUniversal ~= false then
+        task.defer(function()
+            if w and not w.Destroyed then
+                pcall(function()
+                    w:CreateUniversalCategory(o.UniversalOptions)
                 end)
             end
         end)
