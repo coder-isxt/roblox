@@ -745,7 +745,7 @@ function Window:CreatePlayersCategory(options)
 
     local selectedName = optionsSection:CreateLabel("Selected: None")
     local selectedUser = optionsSection:CreateLabel("@none")
-    local targetModeButton = optionsSection:CreateButton("Target Mode: Selected")
+    --local targetModeButton = optionsSection:CreateButton("Target Mode: Selected")
     local spectateButton = optionsSection:CreateButton("Spectate")
 
     local headsitButton = nil
@@ -1129,7 +1129,7 @@ function Window:CreatePlayersCategory(options)
             selectedName:Set("Selected: None")
             selectedUser:Set("@none")
         end
-        targetModeButton:SetText("Target Mode: " .. targetMode)
+        --targetModeButton:SetText("Target Mode: " .. targetMode)
         refreshSpectateButtonText()
         refreshTrollButtonTexts()
     end
@@ -1233,22 +1233,22 @@ function Window:CreatePlayersCategory(options)
         end
     end
 
-    track(self.Connections, targetModeButton.Button.MouseButton1Click:Connect(function()
-        local idx = 1
-        for i, mode in ipairs(targetModes) do
-            if mode == targetMode then
-                idx = i
-                break
-            end
-        end
-        idx = idx + 1
-        if idx > #targetModes then
-            idx = 1
-        end
-        targetMode = targetModes[idx]
-        refreshTargetSelectionLabels()
-        notify("Target Mode", "Now using: " .. targetMode, 2.1)
-    end))
+    -- track(self.Connections, targetModeButton.Button.MouseButton1Click:Connect(function()
+    --     local idx = 1
+    --     for i, mode in ipairs(targetModes) do
+    --         if mode == targetMode then
+    --             idx = i
+    --             break
+    --         end
+    --     end
+    --     idx = idx + 1
+    --     if idx > #targetModes then
+    --         idx = 1
+    --     end
+    --     targetMode = targetModes[idx]
+    --     refreshTargetSelectionLabels()
+    --     notify("Target Mode", "Now using: " .. targetMode, 2.1)
+    -- end))
 
     track(self.Connections, spectateButton.Button.MouseButton1Click:Connect(function()
         if spectateTarget then
@@ -1352,9 +1352,9 @@ function Window:CreatePlayersCategory(options)
         notify("Annoy", enabled and ("Now annoying " .. tostring(target.Name) .. " (" .. targetMode .. ").") or "Annoy loop stopped.", 2.2)
     end)
 
-    optionsSection:CreateButton("Refresh Player List", function()
-        refreshPlayerList()
-    end)
+    -- optionsSection:CreateButton("Refresh Player List", function()
+    --     refreshPlayerList()
+    -- end)
 
     track(self.Connections, searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         playerSearchQuery = searchBox.Text or ""
