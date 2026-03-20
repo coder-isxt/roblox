@@ -197,6 +197,119 @@ function Window:SetVisible(v)
     end
 end
 
+function Window:PlayInitializeAnimation()
+    if self.InitAnimationPlayed or not self.Main or not self.Main.Parent then
+        return
+    end
+    self.InitAnimationPlayed = true
+
+    local overlay = mk("Frame", {
+        Parent = self.Main,
+        BackgroundColor3 = C.Main,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 50,
+    })
+    corner(overlay, 5)
+
+    local initTitle = mk("TextLabel", {
+        Parent = overlay,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 16, 0, 12),
+        Size = UDim2.new(1, -32, 0, 18),
+        Font = FONT,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = C.SubText,
+        Text = "Initializing interface...",
+        TextTransparency = 1,
+        ZIndex = 51,
+    })
+
+    local barBack = mk("Frame", {
+        Parent = overlay,
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, 38),
+        Size = UDim2.new(1, -32, 0, 3),
+        BackgroundColor3 = C.Control,
+        BorderSizePixel = 0,
+        BackgroundTransparency = 0.35,
+        ZIndex = 51,
+    })
+    corner(barBack, 99)
+
+    local barFill = mk("Frame", {
+        Parent = barBack,
+        BackgroundColor3 = C.Accent,
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 0, 1, 0),
+        ZIndex = 52,
+    })
+    corner(barFill, 99)
+
+    tw(initTitle, 0.15, { TextTransparency = 0 }):Play()
+    tw(barFill, 0.35, { Size = UDim2.new(1, 0, 1, 0) }):Play()
+
+    task.delay(0.38, function()
+        if not overlay.Parent then
+            return
+        end
+        tw(initTitle, 0.2, { TextTransparency = 1 }):Play()
+        tw(barBack, 0.2, { BackgroundTransparency = 1 }):Play()
+        tw(barFill, 0.2, { BackgroundTransparency = 1 }):Play()
+        tw(overlay, 0.2, { BackgroundTransparency = 1 }):Play()
+        task.delay(0.22, function()
+            if overlay and overlay.Parent then
+                overlay:Destroy()
+            end
+        end)
+    end)
+end
+
+function Window:PlayCloseAnimation()
+    if not self.Main or not self.Main.Parent then
+        return
+    end
+    if not self.Main.Visible then
+        return
+    end
+
+    if self.AnimScaleTween then
+        self.AnimScaleTween:Cancel()
+    end
+    if self.AnimFadeTween then
+        self.AnimFadeTween:Cancel()
+    end
+    if self.AnimStrokeTween then
+        self.AnimStrokeTween:Cancel()
+    end
+
+    local startPos = self.Main.Position
+    local overlay = mk("Frame", {
+        Parent = self.Main,
+        BackgroundColor3 = C.Main,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        ZIndex = 60,
+    })
+    corner(overlay, 5)
+
+    if self.MainScale then
+        tw(self.MainScale, 0.2, { Scale = 0.93 }):Play()
+    end
+    tw(self.Main, 0.2, {
+        BackgroundTransparency = 1,
+        Position = UDim2.new(startPos.X.Scale, startPos.X.Offset, startPos.Y.Scale, startPos.Y.Offset + 12),
+    }):Play()
+    if self.MainStroke then
+        tw(self.MainStroke, 0.2, { Transparency = 1 }):Play()
+    end
+    tw(overlay, 0.2, { BackgroundTransparency = 0.15 }):Play()
+
+    task.wait(0.21)
+end
+
 function Window:Toggle()
     self:SetVisible(not self:IsVisible())
 end
@@ -232,6 +345,7 @@ function Window:Destroy()
     closeDropdowns(nil)
 
     self:Cleanup()
+    self:PlayCloseAnimation()
 
     for _, c in ipairs(self.Connections) do
         if c and c.Disconnect then
@@ -2645,6 +2759,7 @@ function UILibrary:CreateWindow(arg)
         ToggleKey = toggleKey,
         VisibleState = false,
         Animating = false,
+        InitAnimationPlayed = false,
         CleanupRan = false,
         Destroyed = false,
     }, Window)
@@ -2712,6 +2827,11 @@ function UILibrary:CreateWindow(arg)
     end
 
     w:SetVisible(true)
+    task.defer(function()
+        if w and not w.Destroyed then
+            w:PlayInitializeAnimation()
+        end
+    end)
     return w
 end
 
