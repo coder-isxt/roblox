@@ -186,6 +186,14 @@ local function resolveIconSpec(iconSpec, depth)
     return nil, nil
 end
 
+local function normalizeSectionSide(side)
+    local s = string.lower(tostring(side or "left"))
+    if s == "right" or s == "r" then
+        return "Right"
+    end
+    return "Left"
+end
+
 local function closeDropdowns(except)
     for d in pairs(OPEN_DROPDOWNS) do
         if d ~= except and d.SetOpen then
@@ -781,19 +789,42 @@ function Window:CreatePlayersCategory(options)
         return list
     end
 
+    local function collectModeCandidates()
+        local candidates = {}
+        if targetMode == "Selected" then
+            if selectedPlayer and selectedPlayer ~= localPlayer then
+                table.insert(candidates, selectedPlayer)
+            end
+            return candidates
+        end
+
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= localPlayer then
+                if targetMode == "Others" and selectedPlayer and p == selectedPlayer then
+                    -- In Others mode, target everyone except your selected player.
+                else
+                    table.insert(candidates, p)
+                end
+            end
+        end
+        table.sort(candidates, function(a, b)
+            return string.lower(tostring(a.Name or "")) < string.lower(tostring(b.Name or ""))
+        end)
+        return candidates
+    end
+
     local function getTrollTarget()
-        if not selectedPlayer or selectedPlayer == localPlayer then
-            return nil
+        local candidates = collectModeCandidates()
+        for _, p in ipairs(candidates) do
+            if p and p.Parent == Players and getTargetRoot(p) then
+                return p
+            end
         end
-        if selectedPlayer.Parent ~= Players then
-            return nil
-        end
-        return selectedPlayer
+        return nil
     end
 
     local function refreshSpectateButtonText()
-        local watchingSelected = spectateTarget and selectedPlayer and (spectateTarget == selectedPlayer)
-        spectateButton:SetText(watchingSelected and "Stop Spectating" or "Spectate")
+        spectateButton:SetText(spectateTarget and "Stop Spectating" or "Spectate")
     end
 
     local function refreshTrollButtonTexts()
@@ -942,24 +973,7 @@ function Window:CreatePlayersCategory(options)
     end
 
     local function getPlayableTargets()
-        local candidates = {}
-        if targetMode == "All" then
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= localPlayer then
-                    table.insert(candidates, p)
-                end
-            end
-        elseif targetMode == "Others" then
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= localPlayer then
-                    table.insert(candidates, p)
-                end
-            end
-        else
-            if selectedPlayer and selectedPlayer ~= localPlayer then
-                table.insert(candidates, selectedPlayer)
-            end
-        end
+        local candidates = collectModeCandidates()
 
         local valid = {}
         for _, p in ipairs(candidates) do
@@ -1237,18 +1251,19 @@ function Window:CreatePlayersCategory(options)
     end))
 
     track(self.Connections, spectateButton.Button.MouseButton1Click:Connect(function()
-        if not selectedPlayer then
-            notify("Spectate", "Select a valid player first.", 2.4)
-            return
-        end
-        if spectateTarget == selectedPlayer then
+        if spectateTarget then
             stopSpectate()
             notify("Spectate", "Stopped spectating.")
             return
         end
-        local ok = startSpectate(selectedPlayer)
+        local target = getTrollTarget()
+        if not target then
+            notify("Spectate", "No valid target for mode: " .. targetMode, 2.4)
+            return
+        end
+        local ok = startSpectate(target)
         if ok then
-            notify("Spectate", "Now watching " .. tostring(selectedPlayer.Name) .. ".")
+            notify("Spectate", "Now watching " .. tostring(target.Name) .. " (" .. targetMode .. ").")
         else
             notify("Spectate", "Target is not available.", 2.8)
         end
@@ -1257,12 +1272,12 @@ function Window:CreatePlayersCategory(options)
     optionsSection:CreateButton("Teleport To", function()
         local target = getTrollTarget()
         if not target then
-            notify("Teleport", "Select a valid player first.", 2.4)
+            notify("Teleport", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
         local ok = teleportToPlayer(target)
         if ok then
-            notify("Teleport", "Teleported to " .. tostring(target.Name) .. ".")
+            notify("Teleport", "Teleported to " .. tostring(target.Name) .. " (" .. targetMode .. ").")
         else
             notify("Teleport", "Unable to teleport right now.", 2.8)
         end
@@ -1286,12 +1301,12 @@ function Window:CreatePlayersCategory(options)
     optionsSection:CreateButton("Fling", function()
         local target = getTrollTarget()
         if not target then
-            notify("Fling", "Select a valid player first.", 2.4)
+            notify("Fling", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
         local ok = flingForFiveSeconds(target)
         if ok then
-            notify("Fling", "Flinging " .. tostring(target.Name) .. " for 5 seconds.", 2.3)
+            notify("Fling", "Flinging " .. tostring(target.Name) .. " (" .. targetMode .. ") for 5 seconds.", 2.3)
         else
             notify("Fling", "Could not fling target right now.", 2.8)
         end
@@ -1300,41 +1315,41 @@ function Window:CreatePlayersCategory(options)
     headsitButton = optionsSection:CreateButton("Headsit: OFF", function()
         local target = getTrollTarget()
         if not target then
-            notify("Headsit", "Select a valid player first.", 2.4)
+            notify("Headsit", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
         local enabled = setTrollLoopMode("Headsit")
-        notify("Headsit", enabled and ("Now headsitting " .. tostring(target.Name) .. ".") or "Headsit stopped.", 2.2)
+        notify("Headsit", enabled and ("Now headsitting " .. tostring(target.Name) .. " (" .. targetMode .. ").") or "Headsit stopped.", 2.2)
     end)
 
     bangButton = optionsSection:CreateButton("Bang: OFF", function()
         local target = getTrollTarget()
         if not target then
-            notify("Bang", "Select a valid player first.", 2.4)
+            notify("Bang", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
         local enabled = setTrollLoopMode("Bang")
-        notify("Bang", enabled and ("Now banging " .. tostring(target.Name) .. ".") or "Bang stopped.", 2.2)
+        notify("Bang", enabled and ("Now banging " .. tostring(target.Name) .. " (" .. targetMode .. ").") or "Bang stopped.", 2.2)
     end)
 
     spinButton = optionsSection:CreateButton("Spin on Target: OFF", function()
         local target = getTrollTarget()
         if not target then
-            notify("Spin", "Select a valid player first.", 2.4)
+            notify("Spin", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
         local enabled = setTrollLoopMode("Spin")
-        notify("Spin", enabled and ("Now spinning on " .. tostring(target.Name) .. ".") or "Spin stopped.", 2.2)
+        notify("Spin", enabled and ("Now spinning on " .. tostring(target.Name) .. " (" .. targetMode .. ").") or "Spin stopped.", 2.2)
     end)
 
     annoyButton = optionsSection:CreateButton("Annoy Loop: OFF", function()
         local target = getTrollTarget()
         if not target then
-            notify("Annoy", "Select a valid player first.", 2.4)
+            notify("Annoy", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
         local enabled = setTrollLoopMode("Annoy")
-        notify("Annoy", enabled and ("Now annoying " .. tostring(target.Name) .. ".") or "Annoy loop stopped.", 2.2)
+        notify("Annoy", enabled and ("Now annoying " .. tostring(target.Name) .. " (" .. targetMode .. ").") or "Annoy loop stopped.", 2.2)
     end)
 
     optionsSection:CreateButton("Refresh Player List", function()
@@ -1356,7 +1371,9 @@ function Window:CreatePlayersCategory(options)
     track(self.Connections, Players.PlayerRemoving:Connect(function(leavingPlayer)
         if selectedPlayer and leavingPlayer == selectedPlayer then
             selectedPlayer = nil
-            stopTrollLoop()
+            if targetMode == "Selected" then
+                stopTrollLoop()
+            end
         end
         if spectateTarget and leavingPlayer == spectateTarget then
             stopSpectate()
@@ -1508,14 +1525,14 @@ function Window:CreateLocalCategory(options)
         end
 
         flyBG = Instance.new("BodyGyro")
-        flyBG.Name = "XenoFlyBG"
+        flyBG.Name = "LimboFlyBG"
         flyBG.P = 9e4
         flyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
         flyBG.CFrame = rootPart.CFrame
         flyBG.Parent = rootPart
 
         flyBV = Instance.new("BodyVelocity")
-        flyBV.Name = "XenoFlyBV"
+        flyBV.Name = "LimboFlyBV"
         flyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
         flyBV.Velocity = Vector3.new(0, 0, 0)
         flyBV.Parent = rootPart
@@ -1864,7 +1881,7 @@ function Window:CreateUniversalCategory(options)
     end
 
     developerSection:CreateButton("Load Remotespy", function()
-        runRemoteDevTool("Remotespy", "https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578", false)
+        runRemoteDevTool("Remotespy", "https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Limbo-and-Solara-32578", false)
     end)
     developerSection:CreateButton("Load SimpleSpy", function()
         runRemoteDevTool("SimpleSpy", "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua", true)
@@ -2659,9 +2676,23 @@ function Section:CreateParagraph(a, b)
     }
 end
 
+function Section:SetSide(side)
+    local requested = normalizeSectionSide(side)
+    local column, resolved = self.Tab:_column(requested)
+    self.Frame.Parent = column
+    self.RequestedSide = requested
+    self.Side = requested
+    self.ResolvedSide = resolved
+    return self
+end
+
+function Section:GetSide()
+    return self.RequestedSide or self.Side or "Left", self.ResolvedSide
+end
+
 function Tab:_column(side)
-    local s = string.lower(tostring(side or "left"))
-    return (s == "right" or s == "r") and self.Right or self.Left
+    local requested = normalizeSectionSide(side)
+    return (requested == "Right") and self.Right or self.Left, requested
 end
 
 function Tab:CreateSection(a, b)
@@ -2673,10 +2704,12 @@ function Tab:CreateSection(a, b)
         name = tostring(a or "Section")
         side = tostring(b or "Left")
     end
+    local requestedSide = normalizeSectionSide(side)
+    local column, resolvedSide = self:_column(requestedSide)
 
     local frame = mk("Frame", {
         Name = name .. "_Section",
-        Parent = self:_column(side),
+        Parent = column,
         BackgroundColor3 = C.PanelInset,
         BorderSizePixel = 0,
         Size = UDim2.new(1, -2, 0, 0),
@@ -2720,6 +2753,9 @@ function Tab:CreateSection(a, b)
         Tab = self,
         Frame = frame,
         Content = content,
+        RequestedSide = requestedSide,
+        Side = requestedSide,
+        ResolvedSide = resolvedSide,
     }, Section)
     table.insert(self.Sections, sec)
     return sec
