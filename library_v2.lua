@@ -2248,6 +2248,7 @@ function Window:CreateUniversalCategory(options)
             HookError = nil,
             LastCaptureKey = nil,
             LastCaptureTime = 0,
+            CaptureErrorCount = 0,
         }
         UILibrary._simpleSpyState = simpleSpy
     end
@@ -2677,12 +2678,19 @@ function Window:CreateUniversalCategory(options)
         simpleSpy.HookType = nil
 
         local function process(remote, method, recorderType, ...)
+            if simpleSpyOfficial and simpleSpyOfficial.Running then
+                return
+            end
             local packed = packArgs(...)
             local ok, err = pcall(function()
                 captureRemote(remote, method, packed, recorderType)
             end)
             if not ok then
-                warn("[library_v2] remotes capture error:", err)
+                simpleSpy.CaptureErrorCount = (simpleSpy.CaptureErrorCount or 0) + 1
+                local n = simpleSpy.CaptureErrorCount
+                if n <= 3 or (n % 50) == 0 then
+                    warn("[library_v2] remotes capture error:", tostring(err or "unknown"))
+                end
             end
         end
 
@@ -3230,29 +3238,21 @@ function Window:CreateUniversalCategory(options)
             notify("Remotes", "Excluded: " .. remotePath, 2.4)
         end)
 
-        local hookOk = installSimpleSpyHook()
-        if hookOk then
-            local officialOk = startSimpleSpyOfficial(false)
-            refreshOfficialStatus()
-            if officialOk then
-                hookStatusLabel:Set(
-                    "Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ") + official SimpleSpyBeta"
-                )
-            else
-                hookStatusLabel:Set("Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ")")
-            end
+        local officialOk, officialErr = startSimpleSpyOfficial(false)
+        refreshOfficialStatus()
+        if officialOk then
+            hookStatusLabel:Set("Hook: Official SimpleSpyBeta")
         else
-            local reason = tostring(simpleSpy.HookError or "unknown")
-            local fallbackOk, fallbackErr = startSimpleSpyOfficial(false)
-            refreshOfficialStatus()
-            if fallbackOk then
-                hookStatusLabel:Set("Hook: Internal failed; official SimpleSpyBeta started")
-                notify("Remotes", "Internal hook failed; launched official SimpleSpyBeta.", 3.4)
+            local hookOk = installSimpleSpyHook()
+            if hookOk then
+                hookStatusLabel:Set("Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ")")
             else
+                local reason = tostring(simpleSpy.HookError or "unknown")
                 hookStatusLabel:Set("Hook: Failed - " .. reason)
                 notify(
                     "Remotes",
-                    "Internal hook failed: " .. reason .. " | official fallback failed: " .. tostring(fallbackErr),
+                    "Official SimpleSpyBeta failed: " .. tostring(officialErr)
+                        .. " | Internal hook failed: " .. reason,
                     4.8
                 )
             end
