@@ -681,8 +681,12 @@ function Window:CreatePlayersCategory(options)
         local startCFrame = localRoot.CFrame
         local oldLinear = localRoot.AssemblyLinearVelocity
         local oldAngular = localRoot.AssemblyAngularVelocity
+        local startAt = os.clock()
         local endAt = os.clock() + 5
         local done = false
+        local burstTick = 0
+        local orbitDirection = 1
+        local radialDirection = 1
 
         local function restore()
             if done then
@@ -714,19 +718,42 @@ function Window:CreatePlayersCategory(options)
             end
 
             local now = os.clock()
-            local theta = now * 65
-            local orbitOffset = Vector3.new(
-                math.cos(theta) * 0.16,
-                0.08 + math.sin(theta * 0.55) * 0.06,
-                math.sin(theta) * 0.16
+            local elapsed = now - startAt
+
+            if now - burstTick > 0.11 then
+                burstTick = now
+                orbitDirection = (math.random() > 0.5) and 1 or -1
+                radialDirection = (math.random() > 0.5) and 1 or -1
+            end
+
+            local spinSpeed = 145 + (elapsed * 18)
+            local theta = now * spinSpeed * orbitDirection
+
+            local radius = 0.09 + math.abs(math.sin(elapsed * 13.5)) * 0.38
+            local bob = 0.09 + (math.sin(elapsed * 20) * 0.16) + (math.cos(elapsed * 11) * 0.05)
+            local radialPulse = radialDirection * (0.05 + math.abs(math.sin(elapsed * 17)) * 0.22)
+
+            local offset = Vector3.new(
+                (math.cos(theta) * radius) + (math.cos(theta * 2.2) * radialPulse),
+                bob,
+                (math.sin(theta) * radius) + (math.sin(theta * 2.2) * radialPulse)
             )
-            currentRoot.CFrame = currentTargetRoot.CFrame * CFrame.new(orbitOffset) * CFrame.Angles(0, theta * 1.4, 0)
-            currentRoot.AssemblyAngularVelocity = Vector3.new(0, 900, 0)
+
+            currentRoot.CFrame = currentTargetRoot.CFrame * CFrame.new(offset) * CFrame.Angles(theta * 2.0, theta * 1.4, theta * 1.1)
+
             local tangential = Vector3.new(-math.sin(theta), 0, math.cos(theta))
-            currentRoot.AssemblyLinearVelocity = (tangential * 340) + Vector3.new(0, 60, 0)
+            local radial = Vector3.new(math.cos(theta), 0, math.sin(theta)) * radialDirection
+            local impulse = (tangential * 560) + (radial * 230) + Vector3.new(0, 110 + math.abs(math.sin(elapsed * 9)) * 75, 0)
+
+            currentRoot.AssemblyLinearVelocity = impulse
+            currentRoot.AssemblyAngularVelocity = Vector3.new(
+                3200 * orbitDirection,
+                4500 * orbitDirection,
+                3100 * radialDirection
+            )
         end)
 
-        task.delay(4, restore)
+        task.delay(5.2, restore)
         return true
     end
 
