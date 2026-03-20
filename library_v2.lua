@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
 
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "LimboLibrary"
@@ -742,6 +743,16 @@ function Window:CreatePlayersCategory(options)
 
     local flingConnection = nil
     local flingRestore = nil
+    local clickFlingEnabled = false
+    local clickFlingConnection = nil
+    local clickFlingCooldownUntil = 0
+    local spamSoundEnabled = false
+    local spamSoundConnection = nil
+    local spamSoundTick = 0
+    local spamSoundId = tostring(options.SpamSoundId or "rbxassetid://138186576")
+    local spamSoundVolume = math.clamp(tonumber(options.SpamSoundVolume) or 9, 0, 25)
+    local slaveEnabled = false
+    local slaveConnection = nil
 
     local selectedName = optionsSection:CreateLabel("Selected: None")
     local selectedUser = optionsSection:CreateLabel("@none")
@@ -1032,18 +1043,142 @@ function Window:CreatePlayersCategory(options)
         return true
     end
 
+    local function runBringPlayer(targetPlayer)
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(targetPlayer)
+        if not localRoot or not targetRoot then
+            return false
+        end
+
+        local bringSpot = localRoot.CFrame * CFrame.new(0, 2, -6)
+        local endAt = os.clock() + 2.8
+        while os.clock() < endAt do
+            localRoot = getLocalRoot()
+            targetRoot = getTargetRoot(targetPlayer)
+            if not localRoot or not targetRoot or not localRoot.Parent then
+                break
+            end
+
+            local toSpot = bringSpot.Position - targetRoot.Position
+            if toSpot.Magnitude < 4 then
+                break
+            end
+            local dir = (toSpot.Magnitude > 0.001) and toSpot.Unit or Vector3.new(0, 0, 0)
+            local pushPos = targetRoot.Position - (dir * 2) + Vector3.new(0, 1.2, 0)
+
+            localRoot.CFrame = CFrame.lookAt(pushPos, targetRoot.Position)
+            localRoot.AssemblyLinearVelocity = (dir * 180) + Vector3.new(0, 45, 0)
+            RunService.Heartbeat:Wait()
+        end
+        return true
+    end
+
+    local function runBringParts()
+        local localRoot = getLocalRoot()
+        if not localRoot then
+            return false, 0
+        end
+
+        local moved = 0
+        local localCharacter = localPlayer.Character
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") and obj.Parent and not obj.Anchored then
+                if not (localCharacter and obj:IsDescendantOf(localCharacter)) then
+                    if not obj.Parent:FindFirstChildOfClass("Humanoid") then
+                        obj.CFrame = localRoot.CFrame
+                            * CFrame.new(math.random(-7, 7), math.random(3, 8), math.random(-7, 7))
+                        obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                        moved = moved + 1
+                        if moved >= 180 then
+                            break
+                        end
+                    end
+                end
+            end
+        end
+
+        return moved > 0, moved
+    end
+
+    local function runLaunchPlayerHigh(targetPlayer)
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(targetPlayer)
+        if not localRoot or not targetRoot then
+            return false
+        end
+
+        local endAt = os.clock() + 1.9
+        while os.clock() < endAt do
+            localRoot = getLocalRoot()
+            targetRoot = getTargetRoot(targetPlayer)
+            if not localRoot or not targetRoot or not localRoot.Parent then
+                break
+            end
+
+            localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, -1.8)
+            localRoot.AssemblyLinearVelocity = Vector3.new(0, 260, 0)
+            localRoot.AssemblyAngularVelocity = Vector3.new(0, 1200, 0)
+            RunService.Heartbeat:Wait()
+        end
+        return true
+    end
+
+    local function runKidnapPlayer(targetPlayer)
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(targetPlayer)
+        if not localRoot or not targetRoot then
+            return false
+        end
+
+        local kidnapSpot = localRoot.CFrame * CFrame.new(0, 2, -10)
+        local endAt = os.clock() + 3.8
+        while os.clock() < endAt do
+            localRoot = getLocalRoot()
+            targetRoot = getTargetRoot(targetPlayer)
+            if not localRoot or not targetRoot or not localRoot.Parent then
+                break
+            end
+
+            local toSpot = kidnapSpot.Position - targetRoot.Position
+            local dir = (toSpot.Magnitude > 0.001) and toSpot.Unit or Vector3.new(0, 0, 0)
+            local pushPos = targetRoot.Position - (dir * 1.4) + Vector3.new(0, 1.4, 0)
+            localRoot.CFrame = CFrame.lookAt(pushPos, targetRoot.Position)
+            localRoot.AssemblyLinearVelocity = (dir * 220) + Vector3.new(0, 65, 0)
+            RunService.Heartbeat:Wait()
+        end
+        return true
+    end
+
     local function stopFlingAndRestore()
         if flingRestore then
             flingRestore()
         end
     end
 
-    local function flingForFiveSeconds(targetPlayer)
+    local function flingForFiveSeconds(targetPlayer, flingOptions)
+        flingOptions = flingOptions or {}
         local localRoot = getLocalRoot()
         local targetRoot = getTargetRoot(targetPlayer)
         if not localRoot or not targetRoot then
             return false
         end
+
+        local duration = math.max(0.8, tonumber(flingOptions.Duration) or 5)
+        local thrustForce = (typeof(flingOptions.Force) == "Vector3")
+            and flingOptions.Force
+            or Vector3.new(9999, 9999, 9999)
+        local spinBase = tonumber(flingOptions.SpinBase) or 130
+        local spinAccel = tonumber(flingOptions.SpinAccel) or 32
+        local radiusBase = tonumber(flingOptions.RadiusBase) or 0.2
+        local radiusPulse = tonumber(flingOptions.RadiusPulse) or 0.65
+        local riseBase = tonumber(flingOptions.RiseBase) or 0.15
+        local risePulse = tonumber(flingOptions.RisePulse) or 0.25
+        local tangentPower = tonumber(flingOptions.TangentPower) or 650
+        local forwardPower = tonumber(flingOptions.ForwardPower) or 220
+        local upPower = tonumber(flingOptions.UpPower) or 145
+        local angularVelocity = (typeof(flingOptions.AngularVelocity) == "Vector3")
+            and flingOptions.AngularVelocity
+            or Vector3.new(4200, 6000, 4200)
 
         stopFlingAndRestore()
 
@@ -1051,11 +1186,11 @@ function Window:CreatePlayersCategory(options)
         local oldLinear = localRoot.AssemblyLinearVelocity
         local oldAngular = localRoot.AssemblyAngularVelocity
         local startAt = os.clock()
-        local endAt = os.clock() + 5
+        local endAt = os.clock() + duration
         local done = false
         local thrust = Instance.new("BodyThrust")
         thrust.Name = "YeetForce"
-        thrust.Force = Vector3.new(9999, 9999, 9999)
+        thrust.Force = thrustForce
         thrust.Parent = localRoot
 
         local function restore()
@@ -1095,9 +1230,9 @@ function Window:CreatePlayersCategory(options)
 
             local now = os.clock()
             local elapsed = now - startAt
-            local theta = now * (130 + elapsed * 32)
-            local closeRadius = 0.2 + math.abs(math.sin(elapsed * 16)) * 0.65
-            local rise = 0.15 + math.sin(elapsed * 22) * 0.25
+            local theta = now * (spinBase + elapsed * spinAccel)
+            local closeRadius = radiusBase + math.abs(math.sin(elapsed * 16)) * radiusPulse
+            local rise = riseBase + math.sin(elapsed * 22) * risePulse
             local offset = Vector3.new(
                 math.cos(theta) * closeRadius,
                 rise,
@@ -1112,13 +1247,245 @@ function Window:CreatePlayersCategory(options)
             thrust.Location = currentTargetRoot.Position
 
             local tangent = Vector3.new(-math.sin(theta), 0, math.cos(theta))
-            local shove = (tangent * 650) + (currentTargetRoot.CFrame.LookVector * 220) + Vector3.new(0, 145, 0)
+            local shove = (tangent * tangentPower)
+                + (currentTargetRoot.CFrame.LookVector * forwardPower)
+                + Vector3.new(0, upPower, 0)
             currentRoot.AssemblyLinearVelocity = shove
-            currentRoot.AssemblyAngularVelocity = Vector3.new(4200, 6000, 4200)
+            currentRoot.AssemblyAngularVelocity = angularVelocity
         end)
 
-        task.delay(5.2, restore)
+        task.delay(duration + 0.2, restore)
         return true
+    end
+
+    local function runSuperFling(targetPlayer)
+        return flingForFiveSeconds(targetPlayer, {
+            Duration = 6,
+            Force = Vector3.new(18000, 18000, 18000),
+            SpinBase = 185,
+            SpinAccel = 44,
+            RadiusBase = 0.35,
+            RadiusPulse = 0.85,
+            RiseBase = 0.25,
+            RisePulse = 0.35,
+            TangentPower = 980,
+            ForwardPower = 360,
+            UpPower = 240,
+            AngularVelocity = Vector3.new(7600, 9800, 7600),
+        })
+    end
+
+    local function runZombieAnimationFling(targetPlayer)
+        local track = nil
+        local humanoid = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            local animator = humanoid:FindFirstChildOfClass("Animator")
+            if not animator then
+                animator = Instance.new("Animator")
+                animator.Parent = humanoid
+            end
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://616158929"
+            local ok, loaded = pcall(function()
+                return animator:LoadAnimation(anim)
+            end)
+            anim:Destroy()
+            if ok and loaded then
+                track = loaded
+                pcall(function()
+                    track.Looped = true
+                    track:Play(0.1, 1, 1.15)
+                end)
+            end
+        end
+
+        local okFling = flingForFiveSeconds(targetPlayer, {
+            Duration = 5.4,
+            TangentPower = 760,
+            ForwardPower = 280,
+            UpPower = 170,
+            AngularVelocity = Vector3.new(5000, 6900, 5000),
+        })
+
+        task.delay(5.6, function()
+            if track then
+                pcall(function()
+                    track:Stop(0.1)
+                    track:Destroy()
+                end)
+            end
+        end)
+
+        return okFling
+    end
+
+    local function getPlayerFromPart(part)
+        if not part then
+            return nil
+        end
+        local model = part:FindFirstAncestorOfClass("Model")
+        if not model then
+            return nil
+        end
+        return Players:GetPlayerFromCharacter(model)
+    end
+
+    local function setClickFlingEnabled(state, silent)
+        state = state == true
+        if clickFlingEnabled == state then
+            return
+        end
+
+        clickFlingEnabled = state
+        if clickFlingConnection then
+            clickFlingConnection:Disconnect()
+            clickFlingConnection = nil
+        end
+
+        if clickFlingEnabled then
+            local mouse = localPlayer:GetMouse()
+            clickFlingConnection = mouse.Button1Down:Connect(function()
+                if not clickFlingEnabled then
+                    return
+                end
+                if os.clock() < clickFlingCooldownUntil then
+                    return
+                end
+
+                local clickedPlayer = getPlayerFromPart(mouse.Target)
+                if not clickedPlayer or clickedPlayer == localPlayer then
+                    return
+                end
+
+                selectedPlayer = clickedPlayer
+                UILibrary:SetSelectedPlayer(clickedPlayer)
+                selectedName:Set("Selected: " .. tostring(clickedPlayer.DisplayName or clickedPlayer.Name))
+                selectedUser:Set("@" .. tostring(clickedPlayer.Name))
+                clickFlingCooldownUntil = os.clock() + 5.3
+
+                local ok = flingForFiveSeconds(clickedPlayer)
+                if ok then
+                    notify("Fling Click", "Flinging " .. tostring(clickedPlayer.Name) .. ".", 2.1)
+                end
+            end)
+        end
+
+        if not silent then
+            notify("Fling Click", clickFlingEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function resolveSoundId(soundIdText)
+        local raw = tostring(soundIdText or "")
+        if raw == "" then
+            return "rbxassetid://138186576"
+        end
+        if string.find(raw, "rbxassetid://", 1, true) then
+            return raw
+        end
+        local numeric = tonumber(raw)
+        if numeric then
+            return "rbxassetid://" .. tostring(numeric)
+        end
+        return raw
+    end
+
+    local function setSpamSoundEnabled(state, silent)
+        state = state == true
+        if spamSoundEnabled == state then
+            return
+        end
+
+        spamSoundEnabled = state
+        if spamSoundConnection then
+            spamSoundConnection:Disconnect()
+            spamSoundConnection = nil
+        end
+
+        if spamSoundEnabled then
+            spamSoundTick = 0
+            local resolvedId = resolveSoundId(spamSoundId)
+            spamSoundConnection = RunService.Heartbeat:Connect(function()
+                local now = os.clock()
+                if now - spamSoundTick < 0.22 then
+                    return
+                end
+                local root = getLocalRoot()
+                if not root then
+                    return
+                end
+                spamSoundTick = now
+
+                local s = Instance.new("Sound")
+                s.SoundId = resolvedId
+                s.Volume = spamSoundVolume
+                s.RollOffMaxDistance = 120
+                s.PlaybackSpeed = 0.94 + (math.random() * 0.16)
+                s.Parent = root
+                s:Play()
+                Debris:AddItem(s, 2.2)
+            end)
+        end
+
+        if not silent then
+            notify("FE Spam Sound", spamSoundEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function setSlaveEnabled(state, silent)
+        state = state == true
+        if slaveEnabled == state then
+            return
+        end
+
+        slaveEnabled = state
+        if slaveConnection then
+            slaveConnection:Disconnect()
+            slaveConnection = nil
+        end
+
+        if slaveEnabled then
+            stopTrollLoop()
+            stopFlingAndRestore()
+
+            local target = selectedPlayer
+            if not target or target == localPlayer or target.Parent ~= Players or not getTargetRoot(target) then
+                slaveEnabled = false
+                if not silent then
+                    notify("Slave", "Select a valid player first.", 2.3)
+                end
+                return
+            end
+
+            slaveConnection = RunService.Heartbeat:Connect(function()
+                if not slaveEnabled then
+                    return
+                end
+                local targetPlayer = selectedPlayer
+                local localRoot = getLocalRoot()
+                local targetRoot = getTargetRoot(targetPlayer)
+                if not targetPlayer or targetPlayer == localPlayer or targetPlayer.Parent ~= Players then
+                    return
+                end
+                if not localRoot or not targetRoot then
+                    return
+                end
+
+                local desired = localRoot.Position - (localRoot.CFrame.LookVector * 3.2)
+                local toDesired = desired - targetRoot.Position
+                if toDesired.Magnitude < 1 then
+                    return
+                end
+                local dir = toDesired.Unit
+                local pushPos = targetRoot.Position - (dir * 1.8) + Vector3.new(0, 1.35, 0)
+                localRoot.CFrame = CFrame.lookAt(pushPos, targetRoot.Position)
+                localRoot.AssemblyLinearVelocity = (dir * 175) + Vector3.new(0, 44, 0)
+            end)
+        end
+
+        if not silent then
+            notify("Slave", slaveEnabled and "Enabled on selected player." or "Disabled.", 2)
+        end
     end
 
     local function refreshTargetSelectionLabels()
@@ -1312,6 +1679,81 @@ function Window:CreatePlayersCategory(options)
         end
     end)
 
+    optionsSection:CreateButton("FE Bring Player", function()
+        applyToTargets("FE Bring Player", function(targetPlayer)
+            return runBringPlayer(targetPlayer)
+        end)
+    end)
+
+    optionsSection:CreateButton("FE bring parts", function()
+        local ok, moved = runBringParts()
+        if ok then
+            notify("FE bring parts", "Moved " .. tostring(moved) .. " part(s).", 2.2)
+        else
+            notify("FE bring parts", "No movable parts found.", 2.5)
+        end
+    end)
+
+    optionsSection:CreateButton("FE launch player High", function()
+        applyToTargets("FE launch player High", function(targetPlayer)
+            return runLaunchPlayerHigh(targetPlayer)
+        end)
+    end)
+
+    optionsSection:CreateButton("FE kidnap", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("FE kidnap", "No valid target for mode: " .. targetMode, 2.4)
+            return
+        end
+        local ok = runKidnapPlayer(target)
+        if ok then
+            notify("FE kidnap", "Attempting to kidnap " .. tostring(target.Name) .. ".", 2.2)
+        else
+            notify("FE kidnap", "Could not kidnap target right now.", 2.8)
+        end
+    end)
+
+    optionsSection:CreateToggle("Fling Click on person you want (toggle)", function(v)
+        setClickFlingEnabled(v, false)
+    end, false)
+
+    optionsSection:CreateButton("Super fling", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Super fling", "No valid target for mode: " .. targetMode, 2.4)
+            return
+        end
+        local ok = runSuperFling(target)
+        if ok then
+            notify("Super fling", "Super flinging " .. tostring(target.Name) .. ".", 2.2)
+        else
+            notify("Super fling", "Could not fling target right now.", 2.8)
+        end
+    end)
+
+    optionsSection:CreateButton("FE Zombie Animation/fling", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("FE Zombie Animation/fling", "No valid target for mode: " .. targetMode, 2.4)
+            return
+        end
+        local ok = runZombieAnimationFling(target)
+        if ok then
+            notify("FE Zombie Animation/fling", "Zombie-flinging " .. tostring(target.Name) .. ".", 2.2)
+        else
+            notify("FE Zombie Animation/fling", "Could not run right now.", 2.8)
+        end
+    end)
+
+    optionsSection:CreateToggle("FE Spam Sound", function(v)
+        setSpamSoundEnabled(v, false)
+    end, false)
+
+    optionsSection:CreateToggle("slave (selected player)", function(v)
+        setSlaveEnabled(v, false)
+    end, false)
+
     headsitButton = optionsSection:CreateButton("Headsit: OFF", function()
         local target = getTrollTarget()
         if not target then
@@ -1374,6 +1816,9 @@ function Window:CreatePlayersCategory(options)
             if targetMode == "Selected" then
                 stopTrollLoop()
             end
+            if slaveEnabled then
+                setSlaveEnabled(false, true)
+            end
         end
         if spectateTarget and leavingPlayer == spectateTarget then
             stopSpectate()
@@ -1383,6 +1828,9 @@ function Window:CreatePlayersCategory(options)
     end))
 
     self:OnClose(function()
+        setClickFlingEnabled(false, true)
+        setSpamSoundEnabled(false, true)
+        setSlaveEnabled(false, true)
         stopSpectate()
         stopTrollLoop()
         stopFlingAndRestore()
@@ -1764,7 +2212,7 @@ function Window:CreateLocalCategory(options)
         end
     end, flyKey)
 
-    flySection:CreateSlider("Fly Speed", 20, 250, flySpeed, function(v)
+    flySection:CreateSlider("Fly Speed", 20, 400, flySpeed, function(v)
         flySpeed = tonumber(v) or flySpeed
     end)
     flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
@@ -1799,7 +2247,7 @@ function Window:CreateLocalCategory(options)
             return flyEnabled
         end,
         SetFlySpeed = function(_, speed)
-            flySpeed = math.clamp(tonumber(speed) or flySpeed, 20, 250)
+            flySpeed = math.clamp(tonumber(speed) or flySpeed, 20, 400)
         end,
         GetFlySpeed = function()
             return flySpeed
@@ -1837,7 +2285,7 @@ function Window:CreateUniversalCategory(options)
     end
 
     local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
-    local developerSection = universalTab:CreateSection({ Name = "Developer", Side = "Left" })
+    local developerSection = universalTab:CreateSection({ Name = "Developer", Side = "Right" })
 
     local function notify(title, content, duration)
         UILibrary:Notify({
