@@ -3,6 +3,7 @@ local UILibrary = {}
 local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "XenoUILibraryV2"
@@ -127,6 +128,14 @@ local Tab = {}
 Tab.__index = Tab
 local Section = {}
 Section.__index = Section
+
+function UILibrary:GetSelectedPlayer()
+    return self._selectedPlayer
+end
+
+function UILibrary:SetSelectedPlayer(player)
+    self._selectedPlayer = player
+end
 
 function Window:IsVisible()
     return self.VisibleState == true
@@ -262,6 +271,676 @@ end
 
 function Window:GetTabs()
     return self.Tabs
+end
+
+function Window:CreatePlayersCategory(options)
+    if self.PlayerCategory then
+        return self.PlayerCategory
+    end
+
+    options = options or {}
+    local localPlayer = Players.LocalPlayer
+    if not localPlayer then
+        return nil
+    end
+
+    local playersTab = nil
+    for _, existingTab in ipairs(self.Tabs) do
+        if existingTab.Name == "Players" then
+            playersTab = existingTab
+            break
+        end
+    end
+    if not playersTab then
+        playersTab = self:CreateTab("Players")
+    end
+
+    local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
+    local optionsSection = playersTab:CreateSection({ Name = "Player Options", Side = "Right" })
+
+    local listShell = mk("Frame", {
+        Parent = listSection.Content,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 300),
+    })
+    local listBack = mk("Frame", {
+        Parent = listShell,
+        BackgroundColor3 = C.Control,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 1, 0),
+    })
+    corner(listBack, 4)
+    stroke(listBack, C.Stroke, 0.55)
+
+    local listScroll = mk("ScrollingFrame", {
+        Parent = listBack,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 6, 0, 6),
+        Size = UDim2.new(1, -12, 1, -12),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = C.Stroke,
+    })
+    mk("UIListLayout", {
+        Parent = listScroll,
+        FillDirection = Enum.FillDirection.Vertical,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 4),
+    })
+
+    local selectedPlayer = nil
+    local targetMode = "Selected"
+    local targetModes = { "Selected", "Others", "All" }
+
+    local spectateTarget = nil
+    local spectatePrevSubject = nil
+    local spectateConnection = nil
+
+    local trollMode = nil
+    local trollConnection = nil
+    local trollJumpTick = 0
+
+    local flingConnection = nil
+    local flingRestore = nil
+
+    local selectedName = optionsSection:CreateLabel("Selected: None")
+    local selectedUser = optionsSection:CreateLabel("@none")
+    local targetModeButton = optionsSection:CreateButton("Target Mode: Selected")
+    local spectateButton = optionsSection:CreateButton("Spectate")
+
+    local headsitButton = nil
+    local bangButton = nil
+    local spinButton = nil
+    local annoyButton = nil
+
+    local function notify(title, content, duration)
+        UILibrary:Notify({
+            Title = title,
+            Content = content,
+            Duration = duration or 2.4,
+        })
+    end
+
+    local function getLocalRoot()
+        local character = localPlayer.Character
+        return character and character:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function getTargetRoot(player)
+        local character = player and player.Character
+        return character and character:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function getTargetHum(player)
+        local character = player and player.Character
+        return character and character:FindFirstChildOfClass("Humanoid")
+    end
+
+    local function getOtherPlayersSorted()
+        local list = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= localPlayer then
+                table.insert(list, p)
+            end
+        end
+        table.sort(list, function(a, b)
+            return string.lower(a.Name) < string.lower(b.Name)
+        end)
+        return list
+    end
+
+    local function getTrollTarget()
+        if not selectedPlayer or selectedPlayer == localPlayer then
+            return nil
+        end
+        if selectedPlayer.Parent ~= Players then
+            return nil
+        end
+        return selectedPlayer
+    end
+
+    local function refreshSpectateButtonText()
+        local watchingSelected = spectateTarget and selectedPlayer and (spectateTarget == selectedPlayer)
+        spectateButton:SetText(watchingSelected and "Stop Spectating" or "Spectate")
+    end
+
+    local function refreshTrollButtonTexts()
+        if headsitButton then
+            headsitButton:SetText((trollMode == "Headsit") and "Headsit: ON" or "Headsit: OFF")
+        end
+        if bangButton then
+            bangButton:SetText((trollMode == "Bang") and "Bang: ON" or "Bang: OFF")
+        end
+        if spinButton then
+            spinButton:SetText((trollMode == "Spin") and "Spin on Target: ON" or "Spin on Target: OFF")
+        end
+        if annoyButton then
+            annoyButton:SetText((trollMode == "Annoy") and "Annoy Loop: ON" or "Annoy Loop: OFF")
+        end
+    end
+
+    local function stopSpectate()
+        if spectateConnection then
+            spectateConnection:Disconnect()
+            spectateConnection = nil
+        end
+        spectateTarget = nil
+        local cam = workspace.CurrentCamera
+        if cam then
+            if spectatePrevSubject then
+                cam.CameraSubject = spectatePrevSubject
+            elseif localPlayer.Character then
+                local hum = localPlayer.Character:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    cam.CameraSubject = hum
+                end
+            end
+        end
+        spectatePrevSubject = nil
+        refreshSpectateButtonText()
+    end
+
+    local function startSpectate(targetPlayer)
+        if not targetPlayer then
+            return false
+        end
+        local targetHum = getTargetHum(targetPlayer)
+        local cam = workspace.CurrentCamera
+        if not targetHum or not cam then
+            return false
+        end
+
+        stopSpectate()
+        spectateTarget = targetPlayer
+        spectatePrevSubject = cam.CameraSubject
+        cam.CameraSubject = targetHum
+
+        spectateConnection = RunService.Heartbeat:Connect(function()
+            if not spectateTarget then
+                return
+            end
+            local hum = getTargetHum(spectateTarget)
+            local currentCam = workspace.CurrentCamera
+            if not hum or not currentCam then
+                stopSpectate()
+                return
+            end
+            if currentCam.CameraSubject ~= hum then
+                currentCam.CameraSubject = hum
+            end
+        end)
+
+        refreshSpectateButtonText()
+        return true
+    end
+
+    local function stopTrollLoop()
+        trollMode = nil
+        if trollConnection then
+            trollConnection:Disconnect()
+            trollConnection = nil
+        end
+        local localRoot = getLocalRoot()
+        if localRoot then
+            localRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        end
+        refreshTrollButtonTexts()
+    end
+
+    local function setTrollLoopMode(modeName)
+        if trollMode == modeName then
+            stopTrollLoop()
+            return false
+        end
+
+        trollMode = modeName
+        if trollConnection then
+            trollConnection:Disconnect()
+            trollConnection = nil
+        end
+
+        trollConnection = RunService.Heartbeat:Connect(function()
+            local targetPlayer = getTrollTarget()
+            local localRoot = getLocalRoot()
+            local localCharacter = localPlayer.Character
+            local localHum = localCharacter and localCharacter:FindFirstChildOfClass("Humanoid")
+            local targetRoot = getTargetRoot(targetPlayer)
+            if not trollMode or not targetPlayer or not localRoot or not targetRoot or not localHum then
+                return
+            end
+
+            local now = os.clock()
+            if trollMode == "Headsit" then
+                localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 2.8, 0)
+            elseif trollMode == "Bang" then
+                local sway = math.sin(now * 10) * 0.32
+                localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0.15, 1.05 + sway) * CFrame.Angles(0, math.rad(180), 0)
+            elseif trollMode == "Spin" then
+                local radius = 3.4
+                local spinSpeed = 4.6
+                local theta = now * spinSpeed
+                local offset = Vector3.new(math.cos(theta) * radius, 1.9, math.sin(theta) * radius)
+                local spinPos = targetRoot.Position + offset
+                localRoot.CFrame = CFrame.lookAt(spinPos, targetRoot.Position)
+                localRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            elseif trollMode == "Annoy" then
+                local jitter = Vector3.new(
+                    math.sin(now * 17) * 2.1,
+                    2 + math.abs(math.cos(now * 11)) * 1.7,
+                    math.cos(now * 19) * 2.1
+                )
+                local annoyPos = targetRoot.Position + jitter
+                localRoot.CFrame = CFrame.lookAt(annoyPos, targetRoot.Position)
+                localRoot.AssemblyLinearVelocity = Vector3.new(
+                    math.sin(now * 21) * 35,
+                    localRoot.AssemblyLinearVelocity.Y,
+                    math.cos(now * 23) * 35
+                )
+                if now - trollJumpTick > 0.55 then
+                    trollJumpTick = now
+                    pcall(function()
+                        localHum:ChangeState(Enum.HumanoidStateType.Jumping)
+                    end)
+                end
+            end
+        end)
+
+        refreshTrollButtonTexts()
+        return true
+    end
+
+    local function getPlayableTargets()
+        local candidates = {}
+        if targetMode == "All" then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= localPlayer then
+                    table.insert(candidates, p)
+                end
+            end
+        elseif targetMode == "Others" then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= localPlayer then
+                    table.insert(candidates, p)
+                end
+            end
+        else
+            if selectedPlayer and selectedPlayer ~= localPlayer then
+                table.insert(candidates, selectedPlayer)
+            end
+        end
+
+        local valid = {}
+        for _, p in ipairs(candidates) do
+            if p and p.Parent == Players and getTargetRoot(p) then
+                table.insert(valid, p)
+            end
+        end
+        return valid
+    end
+
+    local function applyToTargets(actionName, callback)
+        local targets = getPlayableTargets()
+        if #targets == 0 then
+            notify(actionName, "No valid targets for mode: " .. targetMode, 2.8)
+            return false
+        end
+        local successCount = 0
+        for _, p in ipairs(targets) do
+            local ok, result = pcall(callback, p)
+            if ok and result ~= false then
+                successCount = successCount + 1
+            end
+        end
+        notify(actionName, "Applied to " .. tostring(successCount) .. "/" .. tostring(#targets) .. " target(s).", 2.5)
+        return successCount > 0
+    end
+
+    local function teleportToPlayer(targetPlayer)
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(targetPlayer)
+        if not localRoot or not targetRoot then
+            return false
+        end
+        localRoot.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+        return true
+    end
+
+    local function runPushLock(targetPlayer)
+        local localRoot = getLocalRoot()
+        local localHum = localPlayer.Character and localPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local targetRoot = getTargetRoot(targetPlayer)
+        if not localRoot or not localHum or not targetRoot then
+            return false
+        end
+
+        local endAt = os.clock() + 2.6
+        while os.clock() < endAt do
+            targetRoot = getTargetRoot(targetPlayer)
+            if not targetRoot or not localRoot.Parent then
+                break
+            end
+            localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2)
+            localRoot.AssemblyLinearVelocity = targetRoot.CFrame.LookVector * 95
+            RunService.Heartbeat:Wait()
+        end
+        return true
+    end
+
+    local function stopFlingAndRestore()
+        if flingRestore then
+            flingRestore()
+        end
+    end
+
+    local function flingForFiveSeconds(targetPlayer)
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(targetPlayer)
+        if not localRoot or not targetRoot then
+            return false
+        end
+
+        stopFlingAndRestore()
+
+        local startCFrame = localRoot.CFrame
+        local oldLinear = localRoot.AssemblyLinearVelocity
+        local oldAngular = localRoot.AssemblyAngularVelocity
+        local endAt = os.clock() + 5
+        local done = false
+
+        local function restore()
+            if done then
+                return
+            end
+            done = true
+
+            if flingConnection then
+                flingConnection:Disconnect()
+                flingConnection = nil
+            end
+
+            local currentRoot = getLocalRoot()
+            if currentRoot and currentRoot.Parent then
+                currentRoot.AssemblyAngularVelocity = oldAngular
+                currentRoot.AssemblyLinearVelocity = oldLinear
+                currentRoot.CFrame = startCFrame
+            end
+            flingRestore = nil
+        end
+
+        flingRestore = restore
+        flingConnection = RunService.Heartbeat:Connect(function()
+            local currentRoot = getLocalRoot()
+            local currentTargetRoot = getTargetRoot(targetPlayer)
+            if os.clock() >= endAt or not currentRoot or not currentTargetRoot then
+                restore()
+                return
+            end
+
+            local now = os.clock()
+            local theta = now * 65
+            local orbitOffset = Vector3.new(
+                math.cos(theta) * 0.16,
+                0.08 + math.sin(theta * 0.55) * 0.06,
+                math.sin(theta) * 0.16
+            )
+            currentRoot.CFrame = currentTargetRoot.CFrame * CFrame.new(orbitOffset) * CFrame.Angles(0, theta * 1.4, 0)
+            currentRoot.AssemblyAngularVelocity = Vector3.new(0, 900, 0)
+            local tangential = Vector3.new(-math.sin(theta), 0, math.cos(theta))
+            currentRoot.AssemblyLinearVelocity = (tangential * 340) + Vector3.new(0, 60, 0)
+        end)
+
+        task.delay(5.2, restore)
+        return true
+    end
+
+    local function refreshTargetSelectionLabels()
+        if selectedPlayer and selectedPlayer.Parent == Players then
+            selectedName:Set("Selected: " .. tostring(selectedPlayer.DisplayName or selectedPlayer.Name))
+            selectedUser:Set("@" .. tostring(selectedPlayer.Name))
+        else
+            selectedName:Set("Selected: None")
+            selectedUser:Set("@none")
+        end
+        targetModeButton:SetText("Target Mode: " .. targetMode)
+        refreshSpectateButtonText()
+        refreshTrollButtonTexts()
+    end
+
+    local function setSelectedPlayer(player)
+        if player == localPlayer then
+            player = nil
+        end
+        if player and player.Parent ~= Players then
+            player = nil
+        end
+        selectedPlayer = player
+        UILibrary:SetSelectedPlayer(player)
+        refreshTargetSelectionLabels()
+    end
+
+    local function refreshPlayerList()
+        for _, child in ipairs(listScroll:GetChildren()) do
+            if child:IsA("TextButton") or child:IsA("TextLabel") then
+                child:Destroy()
+            end
+        end
+
+        local allPlayers = getOtherPlayersSorted()
+        if #allPlayers == 0 then
+            mk("TextLabel", {
+                Parent = listScroll,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 26),
+                Font = FONT,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextColor3 = C.SubText,
+                Text = "No players",
+            })
+            return
+        end
+
+        for _, p in ipairs(allPlayers) do
+            local displayText = tostring(p.DisplayName or p.Name) .. "  @" .. tostring(p.Name)
+            local row = mk("TextButton", {
+                Parent = listScroll,
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 30),
+                Font = FONT,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextColor3 = C.Text,
+                AutoButtonColor = false,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                Text = displayText,
+                BackgroundColor3 = (selectedPlayer == p) and C.ControlPress or C.Control,
+            })
+            corner(row, 3)
+            stroke(row, C.Stroke, 0.6)
+            mk("UIPadding", {
+                Parent = row,
+                PaddingLeft = UDim.new(0, 8),
+                PaddingRight = UDim.new(0, 6),
+            })
+            track(self.Connections, row.MouseEnter:Connect(function()
+                if selectedPlayer ~= p then
+                    tw(row, 0.1, { BackgroundColor3 = C.ControlHover }):Play()
+                end
+            end))
+            track(self.Connections, row.MouseLeave:Connect(function()
+                tw(row, 0.1, { BackgroundColor3 = (selectedPlayer == p) and C.ControlPress or C.Control }):Play()
+            end))
+            track(self.Connections, row.MouseButton1Click:Connect(function()
+                setSelectedPlayer(p)
+                refreshPlayerList()
+            end))
+        end
+    end
+
+    track(self.Connections, targetModeButton.Button.MouseButton1Click:Connect(function()
+        local idx = 1
+        for i, mode in ipairs(targetModes) do
+            if mode == targetMode then
+                idx = i
+                break
+            end
+        end
+        idx = idx + 1
+        if idx > #targetModes then
+            idx = 1
+        end
+        targetMode = targetModes[idx]
+        refreshTargetSelectionLabels()
+        notify("Target Mode", "Now using: " .. targetMode, 2.1)
+    end))
+
+    track(self.Connections, spectateButton.Button.MouseButton1Click:Connect(function()
+        if not selectedPlayer then
+            notify("Spectate", "Select a valid player first.", 2.4)
+            return
+        end
+        if spectateTarget == selectedPlayer then
+            stopSpectate()
+            notify("Spectate", "Stopped spectating.")
+            return
+        end
+        local ok = startSpectate(selectedPlayer)
+        if ok then
+            notify("Spectate", "Now watching " .. tostring(selectedPlayer.Name) .. ".")
+        else
+            notify("Spectate", "Target is not available.", 2.8)
+        end
+    end))
+
+    optionsSection:CreateButton("Teleport To", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Teleport", "Select a valid player first.", 2.4)
+            return
+        end
+        local ok = teleportToPlayer(target)
+        if ok then
+            notify("Teleport", "Teleported to " .. tostring(target.Name) .. ".")
+        else
+            notify("Teleport", "Unable to teleport right now.", 2.8)
+        end
+    end)
+
+    optionsSection:CreateButton("Bring", function()
+        local targets = getPlayableTargets()
+        if #targets == 0 then
+            notify("Bring", "No valid targets for mode: " .. targetMode, 2.8)
+        else
+            notify("Bring", "Unavailable in client-only mode.", 2.8)
+        end
+    end)
+
+    optionsSection:CreateButton("Push Lock", function()
+        applyToTargets("Push Lock", function(targetPlayer)
+            return runPushLock(targetPlayer)
+        end)
+    end)
+
+    optionsSection:CreateButton("Fling", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Fling", "Select a valid player first.", 2.4)
+            return
+        end
+        local ok = flingForFiveSeconds(target)
+        if ok then
+            notify("Fling", "Flinging " .. tostring(target.Name) .. " for 5 seconds.", 2.3)
+        else
+            notify("Fling", "Could not fling target right now.", 2.8)
+        end
+    end)
+
+    headsitButton = optionsSection:CreateButton("Headsit: OFF", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Headsit", "Select a valid player first.", 2.4)
+            return
+        end
+        local enabled = setTrollLoopMode("Headsit")
+        notify("Headsit", enabled and ("Now headsitting " .. tostring(target.Name) .. ".") or "Headsit stopped.", 2.2)
+    end)
+
+    bangButton = optionsSection:CreateButton("Bang: OFF", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Bang", "Select a valid player first.", 2.4)
+            return
+        end
+        local enabled = setTrollLoopMode("Bang")
+        notify("Bang", enabled and ("Now banging " .. tostring(target.Name) .. ".") or "Bang stopped.", 2.2)
+    end)
+
+    spinButton = optionsSection:CreateButton("Spin on Target: OFF", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Spin", "Select a valid player first.", 2.4)
+            return
+        end
+        local enabled = setTrollLoopMode("Spin")
+        notify("Spin", enabled and ("Now spinning on " .. tostring(target.Name) .. ".") or "Spin stopped.", 2.2)
+    end)
+
+    annoyButton = optionsSection:CreateButton("Annoy Loop: OFF", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Annoy", "Select a valid player first.", 2.4)
+            return
+        end
+        local enabled = setTrollLoopMode("Annoy")
+        notify("Annoy", enabled and ("Now annoying " .. tostring(target.Name) .. ".") or "Annoy loop stopped.", 2.2)
+    end)
+
+    optionsSection:CreateButton("Refresh Player List", function()
+        refreshPlayerList()
+    end)
+
+    track(self.Connections, Players.PlayerAdded:Connect(function()
+        refreshPlayerList()
+    end))
+    track(self.Connections, Players.PlayerRemoving:Connect(function(leavingPlayer)
+        if selectedPlayer and leavingPlayer == selectedPlayer then
+            selectedPlayer = nil
+            stopTrollLoop()
+        end
+        if spectateTarget and leavingPlayer == spectateTarget then
+            stopSpectate()
+        end
+        refreshTargetSelectionLabels()
+        refreshPlayerList()
+    end))
+
+    self:OnClose(function()
+        stopSpectate()
+        stopTrollLoop()
+        stopFlingAndRestore()
+    end)
+
+    setSelectedPlayer(UILibrary:GetSelectedPlayer())
+    refreshPlayerList()
+    refreshTargetSelectionLabels()
+
+    self.PlayerCategory = {
+        Tab = playersTab,
+        PlayerListSection = listSection,
+        OptionsSection = optionsSection,
+        RefreshPlayerList = refreshPlayerList,
+        GetSelectedPlayer = function()
+            return selectedPlayer
+        end,
+        SetSelectedPlayer = function(_, player)
+            setSelectedPlayer(player)
+            refreshPlayerList()
+        end,
+    }
+
+    return self.PlayerCategory
 end
 
 local function controlShell(section, h)
@@ -1525,6 +2204,16 @@ function UILibrary:CreateWindow(arg)
             w:Toggle()
         end
     end))
+
+    if o.IncludePlayers ~= false then
+        task.defer(function()
+            if w and not w.Destroyed then
+                pcall(function()
+                    w:CreatePlayersCategory(o.PlayersOptions)
+                end)
+            end
+        end)
+    end
 
     w:SetVisible(true)
     return w
