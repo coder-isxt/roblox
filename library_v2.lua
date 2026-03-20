@@ -9,19 +9,19 @@ local GUI_NAME = "XenoUILibraryV2"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-    Main = Color3.fromRGB(9, 13, 20),
-    Top = Color3.fromRGB(12, 17, 27),
-    Sidebar = Color3.fromRGB(10, 14, 22),
-    SidebarActive = Color3.fromRGB(18, 27, 41),
-    Panel = Color3.fromRGB(13, 19, 29),
-    PanelInset = Color3.fromRGB(16, 24, 37),
-    Control = Color3.fromRGB(20, 31, 48),
-    ControlHover = Color3.fromRGB(28, 42, 64),
-    ControlPress = Color3.fromRGB(35, 53, 78),
-    Stroke = Color3.fromRGB(37, 52, 76),
-    Accent = Color3.fromRGB(91, 180, 255),
+    Main = Color3.fromRGB(10, 14, 21),
+    Top = Color3.fromRGB(11, 16, 24),
+    Sidebar = Color3.fromRGB(10, 14, 21),
+    SidebarActive = Color3.fromRGB(22, 31, 45),
+    Panel = Color3.fromRGB(11, 16, 24),
+    PanelInset = Color3.fromRGB(13, 19, 28),
+    Control = Color3.fromRGB(20, 29, 41),
+    ControlHover = Color3.fromRGB(25, 36, 50),
+    ControlPress = Color3.fromRGB(30, 43, 60),
+    Stroke = Color3.fromRGB(31, 42, 58),
+    Accent = Color3.fromRGB(90, 182, 255),
     Text = Color3.fromRGB(224, 233, 248),
-    SubText = Color3.fromRGB(145, 163, 192),
+    SubText = Color3.fromRGB(140, 159, 187),
 }
 
 local function mk(className, props)
@@ -34,7 +34,7 @@ end
 
 local function corner(x, r)
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, r or 6)
+    c.CornerRadius = UDim.new(0, r or 4)
     c.Parent = x
     return c
 end
@@ -43,7 +43,7 @@ local function stroke(x, color, trans)
     local s = Instance.new("UIStroke")
     s.Color = color or C.Stroke
     s.Thickness = 1
-    s.Transparency = trans or 0.35
+    s.Transparency = trans or 0.5
     s.Parent = x
     return s
 end
@@ -154,7 +154,7 @@ function Window:SetVisible(v)
     if shouldShow then
         self.Main.Visible = true
         if self.MainScale then
-            self.MainScale.Scale = 0.94
+            self.MainScale.Scale = 0.97
         end
         self.Main.BackgroundTransparency = 1
         if self.MainStroke then
@@ -173,7 +173,7 @@ function Window:SetVisible(v)
             end
         end)
     else
-        self.AnimScaleTween = tw(self.MainScale, 0.14, { Scale = 0.94 })
+        self.AnimScaleTween = tw(self.MainScale, 0.14, { Scale = 0.97 })
         self.AnimFadeTween = tw(self.Main, 0.14, { BackgroundTransparency = 1 })
         self.AnimStrokeTween = tw(self.MainStroke, 0.14, { Transparency = 1 })
         self.AnimScaleTween:Play()
@@ -250,7 +250,7 @@ function Window:SelectTab(tabOrName)
         local active = t == picked
         t.Page.Visible = active
         t.Indicator.BackgroundTransparency = active and 0 or 1
-        t.ButtonBack.BackgroundTransparency = active and 0 or 1
+        t.ButtonBack.BackgroundTransparency = active and 0.2 or 1
         t.Label.TextColor3 = active and C.Text or C.SubText
     end
     return picked
@@ -279,8 +279,8 @@ local function controlBack(parent, h)
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, h),
     })
-    corner(b, 6)
-    stroke(b, C.Stroke, 0.35)
+    corner(b, 4)
+    stroke(b, C.Stroke, 0.55)
     return b
 end
 
@@ -314,8 +314,8 @@ function Section:CreateButton(a, b)
         TextColor3 = C.Text,
         Text = text,
     })
-    corner(btn, 6)
-    stroke(btn, C.Stroke, 0.35)
+    corner(btn, 4)
+    stroke(btn, C.Stroke, 0.55)
 
     track(self.Window.Connections, btn.MouseEnter:Connect(function()
         tw(btn, 0.1, { BackgroundColor3 = C.ControlHover }):Play()
@@ -365,8 +365,8 @@ function Section:CreateToggle(a, b, c)
         BackgroundColor3 = Color3.fromRGB(9, 14, 22),
         BorderSizePixel = 0,
     })
-    corner(box, 4)
-    stroke(box, C.Stroke, 0.2)
+    corner(box, 3)
+    stroke(box, C.Stroke, 0.45)
 
     mk("TextLabel", {
         Parent = back,
@@ -603,8 +603,8 @@ function Section:CreateDropdown(a, b, c, d)
         Size = UDim2.new(1, 0, 0, 0),
         Visible = false,
     })
-    corner(menu, 6)
-    stroke(menu, C.Stroke, 0.35)
+    corner(menu, 4)
+    stroke(menu, C.Stroke, 0.55)
     mk("UIPadding", {
         Parent = menu,
         PaddingTop = UDim.new(0, 4),
@@ -662,8 +662,8 @@ function Section:CreateDropdown(a, b, c, d)
                 Text = o,
                 LayoutOrder = i,
             })
-            corner(btt, 5)
-            stroke(btt, C.Stroke, 0.45)
+            corner(btt, 4)
+            stroke(btt, C.Stroke, 0.6)
             local function paint()
                 local on = multi and map[o] or (chosen == o)
                 btt.BackgroundColor3 = on and C.ControlPress or C.Control
@@ -830,8 +830,8 @@ function Section:CreateInput(a, b, c)
         Position = UDim2.new(0.48, 0, 0.5, -11),
         Size = UDim2.new(0.52, -10, 0, 22),
     })
-    corner(inBack, 5)
-    stroke(inBack, C.Stroke, 0.45)
+    corner(inBack, 3)
+    stroke(inBack, C.Stroke, 0.6)
     local box = mk("TextBox", {
         Parent = inBack,
         BackgroundTransparency = 1,
@@ -910,8 +910,8 @@ function Section:CreateKeybind(a, b, c)
         TextColor3 = C.SubText,
         Text = "",
     })
-    corner(btn, 5)
-    stroke(btn, C.Stroke, 0.45)
+    corner(btn, 3)
+    stroke(btn, C.Stroke, 0.6)
 
     local function keyText(k)
         return (k == Enum.KeyCode.Unknown) and "None" or k.Name
@@ -994,12 +994,12 @@ function Section:CreateParagraph(a, b)
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
     })
-    corner(shell, 6)
-    stroke(shell, C.Stroke, 0.35)
+    corner(shell, 4)
+    stroke(shell, C.Stroke, 0.55)
     mk("UIPadding", {
         Parent = shell,
-        PaddingTop = UDim.new(0, 7),
-        PaddingBottom = UDim.new(0, 8),
+        PaddingTop = UDim.new(0, 6),
+        PaddingBottom = UDim.new(0, 6),
         PaddingLeft = UDim.new(0, 10),
         PaddingRight = UDim.new(0, 10),
     })
@@ -1059,12 +1059,12 @@ function Tab:CreateSection(a, b)
         Size = UDim2.new(1, -2, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
     })
-    corner(frame, 7)
-    stroke(frame, C.Stroke, 0.25)
+    corner(frame, 4)
+    stroke(frame, C.Stroke, 0.5)
     mk("UIPadding", {
         Parent = frame,
-        PaddingTop = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 8),
+        PaddingTop = UDim.new(0, 6),
+        PaddingBottom = UDim.new(0, 6),
         PaddingLeft = UDim.new(0, 8),
         PaddingRight = UDim.new(0, 8),
     })
@@ -1089,7 +1089,7 @@ function Tab:CreateSection(a, b)
         Parent = content,
         FillDirection = Enum.FillDirection.Vertical,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 6),
+        Padding = UDim.new(0, 5),
     })
     local sec = setmetatable({
         Name = name,
@@ -1161,7 +1161,7 @@ function Window:CreateTab(a, iconMaybe)
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, 0),
     })
-    corner(back, 5)
+    corner(back, 3)
     local ind = mk("Frame", {
         Parent = btn,
         BackgroundColor3 = C.Accent,
@@ -1240,7 +1240,7 @@ function Window:CreateTab(a, iconMaybe)
         Parent = left,
         FillDirection = Enum.FillDirection.Vertical,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
     })
     local right = mk("ScrollingFrame", {
         Parent = page,
@@ -1257,7 +1257,7 @@ function Window:CreateTab(a, iconMaybe)
         Parent = right,
         FillDirection = Enum.FillDirection.Vertical,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
     })
 
     local tab = setmetatable({
@@ -1280,7 +1280,7 @@ function Window:CreateTab(a, iconMaybe)
     end))
     track(self.Connections, btn.MouseEnter:Connect(function()
         if self.ActiveTab ~= tab then
-            tw(back, 0.1, { BackgroundTransparency = 0.62 }):Play()
+            tw(back, 0.1, { BackgroundTransparency = 0.72 }):Play()
         end
     end))
     track(self.Connections, btn.MouseLeave:Connect(function()
@@ -1303,7 +1303,7 @@ function UILibrary:CreateWindow(arg)
     local o = typeof(arg) == "table" and arg or { Title = arg }
     local title = tostring(o.Title or o.Name or "UI Library")
     local subtitle = tostring(o.Subtitle or o.SubTitle or "")
-    local size = (typeof(o.Size) == "UDim2") and o.Size or UDim2.fromOffset(780, 440)
+    local size = (typeof(o.Size) == "UDim2") and o.Size or UDim2.fromOffset(900, 520)
     local toggleKey = Enum.KeyCode.Insert
     local parent = (typeof(o.Parent) == "Instance") and o.Parent or guiParent()
     if not parent then
@@ -1336,24 +1336,24 @@ function UILibrary:CreateWindow(arg)
         Active = true,
         Visible = false,
     })
-    corner(main, 8)
-    local mainStroke = stroke(main, C.Stroke, 0.2)
+    corner(main, 5)
+    local mainStroke = stroke(main, C.Stroke, 0.45)
     local mainScale = mk("UIScale", {
         Parent = main,
         Scale = 1,
     })
     mk("UISizeConstraint", {
         Parent = main,
-        MinSize = Vector2.new(610, 360),
+        MinSize = Vector2.new(720, 430),
     })
 
     local top = mk("Frame", {
         Parent = main,
         BackgroundColor3 = C.Top,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 34),
+        Size = UDim2.new(1, 0, 0, 32),
     })
-    corner(top, 8)
+    corner(top, 5)
     mk("Frame", {
         Parent = top,
         BackgroundColor3 = C.Top,
@@ -1386,7 +1386,7 @@ function UILibrary:CreateWindow(arg)
         Text = "-",
         AutoButtonColor = false,
     })
-    corner(hide, 5)
+    corner(hide, 3)
     local close = mk("TextButton", {
         Parent = top,
         AnchorPoint = Vector2.new(1, 0.5),
@@ -1400,24 +1400,24 @@ function UILibrary:CreateWindow(arg)
         Text = "x",
         AutoButtonColor = false,
     })
-    corner(close, 5)
+    corner(close, 3)
 
     local body = mk("Frame", {
         Parent = main,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 34),
-        Size = UDim2.new(1, 0, 1, -34),
+        Position = UDim2.new(0, 0, 0, 32),
+        Size = UDim2.new(1, 0, 1, -32),
     })
     local side = mk("Frame", {
         Parent = body,
         BackgroundColor3 = C.Sidebar,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 150, 1, 0),
+        Size = UDim2.new(0, 164, 1, 0),
     })
     mk("UIPadding", {
         Parent = side,
-        PaddingTop = UDim.new(0, 10),
-        PaddingBottom = UDim.new(0, 10),
+        PaddingTop = UDim.new(0, 8),
+        PaddingBottom = UDim.new(0, 8),
         PaddingLeft = UDim.new(0, 8),
         PaddingRight = UDim.new(0, 8),
     })
@@ -1430,20 +1430,20 @@ function UILibrary:CreateWindow(arg)
         Parent = tabList,
         FillDirection = Enum.FillDirection.Vertical,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 5),
+        Padding = UDim.new(0, 4),
     })
 
     local content = mk("Frame", {
         Parent = body,
         BackgroundColor3 = C.Panel,
         BorderSizePixel = 0,
-        Position = UDim2.new(0, 150, 0, 0),
-        Size = UDim2.new(1, -150, 1, 0),
+        Position = UDim2.new(0, 164, 0, 0),
+        Size = UDim2.new(1, -164, 1, 0),
     })
     mk("UIPadding", {
         Parent = content,
-        PaddingTop = UDim.new(0, 10),
-        PaddingBottom = UDim.new(0, 10),
+        PaddingTop = UDim.new(0, 8),
+        PaddingBottom = UDim.new(0, 8),
         PaddingLeft = UDim.new(0, 10),
         PaddingRight = UDim.new(0, 10),
     })
@@ -1466,7 +1466,7 @@ function UILibrary:CreateWindow(arg)
         HorizontalAlignment = Enum.HorizontalAlignment.Right,
         VerticalAlignment = Enum.VerticalAlignment.Top,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 6),
     })
 
     local w = setmetatable({
@@ -1578,13 +1578,13 @@ function UILibrary:Notify(args)
     local toastStroke = stroke(toast, C.Stroke, 0.25)
     local pop = mk("UIScale", {
         Parent = toast,
-        Scale = 0.92,
+        Scale = 0.96,
     })
-    corner(toast, 6)
+    corner(toast, 4)
     mk("UIPadding", {
         Parent = toast,
-        PaddingTop = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 8),
+        PaddingTop = UDim.new(0, 7),
+        PaddingBottom = UDim.new(0, 7),
         PaddingLeft = UDim.new(0, 10),
         PaddingRight = UDim.new(0, 10),
     })
@@ -1592,7 +1592,7 @@ function UILibrary:Notify(args)
         Parent = toast,
         FillDirection = Enum.FillDirection.Vertical,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 6),
+        Padding = UDim.new(0, 5),
     })
 
     local t = mk("TextLabel", {
@@ -1659,7 +1659,7 @@ function UILibrary:Notify(args)
         if not toast.Parent then
             return
         end
-        tw(pop, 0.14, { Scale = 0.9 }):Play()
+        tw(pop, 0.14, { Scale = 0.95 }):Play()
         tw(toast, 0.14, { BackgroundTransparency = 1 }):Play()
         tw(toastStroke, 0.14, { Transparency = 1 }):Play()
         tw(t, 0.14, { TextTransparency = 1 }):Play()
