@@ -2201,6 +2201,7 @@ function Window:CreateUniversalCategory(options)
     spyState.HookDetails = {}
     spyState.LastCaptureHash = nil
     spyState.LastCaptureAt = 0
+    spyState.DebugCaptured = 0
     if spyState.LogExecutorCalls == nil then
         spyState.LogExecutorCalls = true
     else
@@ -2228,6 +2229,7 @@ function Window:CreateUniversalCategory(options)
 
     local function canonicalMethod(method)
         local m = string.lower(tostring(method or ""))
+        m = string.gsub(m, "[^a-z]", "")
         if m == "fireserver" or m == "unreliablefireserver" then
             return "FireServer"
         elseif m == "invokeserver" then
@@ -2423,7 +2425,7 @@ function Window:CreateUniversalCategory(options)
 
     local function newRemoteObject(instance)
         local remote = {
-            Instance = cloneRef(instance),
+            Instance = instance,
             Key = instancePath(instance),
             Logs = {},
             Calls = 0,
@@ -2491,7 +2493,7 @@ function Window:CreateUniversalCategory(options)
                     if bucket.types[tostring(typeof(value))] then
                         return true
                     end
-                    if bucket.values[value] ~= nil then
+                    if value ~= nil and bucket.values[value] ~= nil then
                         return true
                     end
                 end
@@ -2535,6 +2537,7 @@ function Window:CreateUniversalCategory(options)
         if not spyState.RemotesViewing[className] then
             return false
         end
+        spyState.DebugCaptured = (tonumber(spyState.DebugCaptured) or 0) + 1
 
         local remote = getOrCreateRemote(instance)
         local argsIgnored = remote:AreArgsIgnored(argsPack)
@@ -2979,7 +2982,7 @@ function Window:CreateUniversalCategory(options)
             local out = {}
             local query = string.lower(searchQuery or "")
             for instance, remote in pairs(spyState.CurrentRemotes) do
-                if not spyState.Removed[remote.Key] and remote.Instance and remote.Instance.Parent then
+                if not spyState.Removed[remote.Key] and remote.Instance then
                     local className = remote.Instance.ClassName
                     if spyState.RemotesViewing[className] then
                         if query == "" then
@@ -3007,16 +3010,20 @@ function Window:CreateUniversalCategory(options)
             local remotes = 0
             local calls = 0
             for instance, remote in pairs(spyState.CurrentRemotes) do
-                if not spyState.Removed[remote.Key] and remote.Instance and remote.Instance.Parent then
+                if not spyState.Removed[remote.Key] and remote.Instance then
                     remotes = remotes + 1
                     calls = calls + (tonumber(remote.Calls) or 0)
                 end
             end
-            statsLabel:Set("Remotes: " .. tostring(remotes) .. " | Calls: " .. tostring(calls))
+            statsLabel:Set(
+                "Remotes: " .. tostring(remotes)
+                    .. " | Calls: " .. tostring(calls)
+                    .. " | Hits: " .. tostring(tonumber(spyState.DebugCaptured) or 0)
+            )
         end
 
         local function refreshInspector()
-            if not selectedRemote or not selectedRemote.Instance or not selectedRemote.Instance.Parent then
+            if not selectedRemote or not selectedRemote.Instance then
                 selectedRemote = nil
                 selectedCall = nil
                 remoteLabel:Set("Remote: None")
