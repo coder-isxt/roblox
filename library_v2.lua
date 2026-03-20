@@ -2244,7 +2244,10 @@ function Window:CreateUniversalCategory(options)
             MaxLogs = 450,
             Hooked = false,
             HookType = nil,
+            HookDetails = {},
             HookError = nil,
+            LastCaptureKey = nil,
+            LastCaptureTime = 0,
         }
         UILibrary._simpleSpyState = simpleSpy
     end
@@ -2474,6 +2477,14 @@ function Window:CreateUniversalCategory(options)
             packedArgs[i] = argsPack[i]
         end
 
+        local dedupeKey = remotePath .. "|" .. tostring(method) .. "|" .. tostring(packedArgs.n or 0)
+        local nowClock = os.clock()
+        if simpleSpy.LastCaptureKey == dedupeKey and (nowClock - (simpleSpy.LastCaptureTime or 0)) < 0.001 then
+            return
+        end
+        simpleSpy.LastCaptureKey = dedupeKey
+        simpleSpy.LastCaptureTime = nowClock
+
         local entryId = simpleSpy.NextId
         simpleSpy.NextId = entryId + 1
 
@@ -2502,6 +2513,8 @@ function Window:CreateUniversalCategory(options)
             return true
         end
         simpleSpy.HookError = nil
+        simpleSpy.HookDetails = {}
+        simpleSpy.HookType = nil
 
         local function process(remote, method, ...)
             local packed = packArgs(...)
@@ -2513,54 +2526,128 @@ function Window:CreateUniversalCategory(options)
             end
         end
 
-        if typeof(hookmetamethod) == "function" and typeof(newcclosure) == "function" then
+        local newClosure = (typeof(newcclosure) == "function") and newcclosure or function(f)
+            return f
+        end
+        local installedCount = 0
+        local errors = {}
+
+        local hookMeta = hookmetamethod
+        local hookFunc = hookfunction
+        if not hookMeta and syn and typeof(syn.hookmetamethod) == "function" then
+            hookMeta = syn.hookmetamethod
+        end
+        if not hookFunc and syn and typeof(syn.hookfunction) == "function" then
+            hookFunc = syn.hookfunction
+        end
+        if not hookFunc and syn and syn.oth and typeof(syn.oth.hook) == "function" then
+            hookFunc = syn.oth.hook
+        end
+
+        if typeof(hookMeta) == "function" then
             local okHook, hookErr = pcall(function()
                 local oldNamecall
-                oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(selfRef, ...)
+                oldNamecall = hookMeta(game, "__namecall", newClosure(function(selfRef, ...)
                     local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
                     if (method == "FireServer" or method == "InvokeServer") and typeof(selfRef) == "Instance" then
                         process(selfRef, method, ...)
                     end
                     return oldNamecall(selfRef, ...)
                 end))
-                simpleSpy.Hooked = true
-                simpleSpy.HookType = "hookmetamethod"
             end)
             if okHook then
-                return true
+                installedCount = installedCount + 1
+                table.insert(simpleSpy.HookDetails, "hookmetamethod(__namecall)")
+            else
+                table.insert(errors, tostring(hookErr))
             end
-            simpleSpy.HookError = tostring(hookErr)
         end
 
-        if typeof(getrawmetatable) == "function" and typeof(setreadonly) == "function" and typeof(newcclosure) == "function" then
+        local getRawMt = getrawmetatable or (debug and debug.getmetatable)
+        local setReadOnly = setreadonly
+        if not setReadOnly and typeof(make_writeable) == "function" and typeof(make_readonly) == "function" then
+            setReadOnly = function(mt, state)
+                if state then
+                    make_readonly(mt)
+                else
+                    make_writeable(mt)
+                end
+            end
+        end
+        if installedCount == 0 and typeof(getRawMt) == "function" and typeof(setReadOnly) == "function" then
             local okMeta, metaErr = pcall(function()
-                local mt = getrawmetatable(game)
+                local mt = getRawMt(game)
                 if mt and mt.__namecall then
                     local oldNamecall = mt.__namecall
-                    setreadonly(mt, false)
-                    mt.__namecall = newcclosure(function(selfRef, ...)
+                    setReadOnly(mt, false)
+                    mt.__namecall = newClosure(function(selfRef, ...)
                         local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
                         if (method == "FireServer" or method == "InvokeServer") and typeof(selfRef) == "Instance" then
                             process(selfRef, method, ...)
                         end
                         return oldNamecall(selfRef, ...)
                     end)
-                    setreadonly(mt, true)
-
-                    simpleSpy.Hooked = true
-                    simpleSpy.HookType = "metamethod"
+                    setReadOnly(mt, true)
+                else
+                    error("missing __namecall metatable")
                 end
             end)
-            if okMeta and simpleSpy.Hooked then
-                return true
-            end
-            if not okMeta then
-                simpleSpy.HookError = tostring(metaErr)
+            if okMeta then
+                installedCount = installedCount + 1
+                table.insert(simpleSpy.HookDetails, "raw metatable __namecall")
+            else
+                table.insert(errors, tostring(metaErr))
             end
         end
 
-        if not simpleSpy.HookError or simpleSpy.HookError == "" then
-            simpleSpy.HookError = "Executor does not support namecall hooks."
+        if typeof(hookFunc) == "function" then
+            local okFire, errFire = pcall(function()
+                local probe = Instance.new("RemoteEvent")
+                local oldFire
+                oldFire = hookFunc(probe.FireServer, newClosure(function(selfRef, ...)
+                    if typeof(selfRef) == "Instance" then
+                        process(selfRef, "FireServer", ...)
+                    end
+                    return oldFire(selfRef, ...)
+                end))
+                probe:Destroy()
+            end)
+            if okFire then
+                installedCount = installedCount + 1
+                table.insert(simpleSpy.HookDetails, "hookfunction(RemoteEvent.FireServer)")
+            else
+                table.insert(errors, tostring(errFire))
+            end
+
+            local okInvoke, errInvoke = pcall(function()
+                local probe = Instance.new("RemoteFunction")
+                local oldInvoke
+                oldInvoke = hookFunc(probe.InvokeServer, newClosure(function(selfRef, ...)
+                    if typeof(selfRef) == "Instance" then
+                        process(selfRef, "InvokeServer", ...)
+                    end
+                    return oldInvoke(selfRef, ...)
+                end))
+                probe:Destroy()
+            end)
+            if okInvoke then
+                installedCount = installedCount + 1
+                table.insert(simpleSpy.HookDetails, "hookfunction(RemoteFunction.InvokeServer)")
+            else
+                table.insert(errors, tostring(errInvoke))
+            end
+        end
+
+        if installedCount > 0 then
+            simpleSpy.Hooked = true
+            simpleSpy.HookType = table.concat(simpleSpy.HookDetails, " + ")
+            return true
+        end
+
+        if #errors > 0 then
+            simpleSpy.HookError = table.concat(errors, " | ")
+        else
+            simpleSpy.HookError = "Executor does not support remote hook methods."
         end
         return false
     end
