@@ -2277,6 +2277,19 @@ function Window:CreateUniversalCategory(options)
     remoteSpy.HookDetails = remoteSpy.HookDetails or {}
     remoteSpy.Scheduled = remoteSpy.Scheduled or {}
     remoteSpy.CaptureErrorCount = tonumber(remoteSpy.CaptureErrorCount) or 0
+    remoteSpy.InterceptCount = tonumber(remoteSpy.InterceptCount) or 0
+
+    local REMOTE_SPY_OWNER_TAG = "library_v2_remotes_v3"
+    if remoteSpy._OwnerTag ~= REMOTE_SPY_OWNER_TAG then
+        if typeof(remoteSpy.UninstallHooks) == "function" then
+            pcall(remoteSpy.UninstallHooks)
+        end
+        remoteSpy.Hooked = false
+        remoteSpy.HookType = nil
+        remoteSpy.HookError = nil
+        remoteSpy.HookDetails = {}
+        remoteSpy._OwnerTag = REMOTE_SPY_OWNER_TAG
+    end
 
     UILibrary._remoteSpyState = remoteSpy
 
@@ -2703,20 +2716,21 @@ function Window:CreateUniversalCategory(options)
 
         local installedCount = 0
         local errors = {}
-
         local function markInstalled(detail)
             installedCount = installedCount + 1
             table.insert(remoteSpy.HookDetails, detail)
         end
-
         local function markFailed(detail, errValue)
             table.insert(errors, detail .. ": " .. tostring(errValue))
         end
 
         local originalNamecall = nil
+        local originalIndex = nil
+        local namecallHookMode = nil
         local originalEvent = nil
         local originalFunction = nil
         local originalUnreliable = nil
+        local functionHooksUsed = false
 
         local function interceptRemote(method, originalFunctionRef, recorderType, ...)
             if typeof(originalFunctionRef) ~= "function" then
@@ -2736,6 +2750,7 @@ function Window:CreateUniversalCategory(options)
                 return originalFunctionRef(...)
             end
 
+            remoteSpy.InterceptCount = (remoteSpy.InterceptCount or 0) + 1
             remote = cloneRef(remote)
             local remoteId = getRemoteDebugId(remote)
             local blockcheck = tablecheck(remoteSpy.Blocklist, remote, remoteId) == true
@@ -2772,6 +2787,7 @@ function Window:CreateUniversalCategory(options)
                 if typeof(originalNamecall) ~= "function" then
                     error("invalid __namecall hook return")
                 end
+                namecallHookMode = "hookmetamethod"
             end)
             if okHook then
                 markInstalled("hookmetamethod(__namecall)")
@@ -2795,6 +2811,7 @@ function Window:CreateUniversalCategory(options)
                 if typeof(originalNamecall) ~= "function" then
                     error("invalid raw __namecall hook return")
                 end
+                namecallHookMode = "hookfunction_raw"
             end)
             if okRaw then
                 markInstalled("hookfunction(raw __namecall)")
@@ -2803,82 +2820,153 @@ function Window:CreateUniversalCategory(options)
             end
         end
 
-        if typeof(hookFn) == "function" then
-            local tempEvent = Instance.new("RemoteEvent")
-            local tempFunction = Instance.new("RemoteFunction")
-            local tempUnreliable = nil
-            local hasUnreliable = false
-
-            originalEvent = tempEvent.FireServer
-            originalFunction = tempFunction.InvokeServer
-
-            local okUnreliable, unreliableOrErr = pcall(function()
-                return Instance.new("UnreliableRemoteEvent")
+        if typeof(hookMeta) == "function" then
+            local newMetaIndex = newClosure(function(self, key)
+                local value = originalIndex(self, key)
+                local method = canonicalRemoteMethod(key)
+                if method and type(value) == "function" and isRemoteInstance(self) then
+                    return newClosure(function(...)
+                        return interceptRemote(method, value, "__metaindex", ...)
+                    end)
+                end
+                return value
             end)
-            if okUnreliable and unreliableOrErr then
-                tempUnreliable = unreliableOrErr
-                hasUnreliable = true
-                originalUnreliable = tempUnreliable.FireServer
-            end
 
+            local okIndex, indexErr = pcall(function()
+                originalIndex = hookMeta(game, "__index", cloneFn(newMetaIndex))
+                if typeof(originalIndex) ~= "function" then
+                    error("invalid __index hook return")
+                end
+            end)
+            if okIndex then
+                markInstalled("hookmetamethod(__index)")
+            else
+                markFailed("hookmetamethod(__index)", indexErr)
+            end
+        end
+
+        if typeof(hookFn) == "function" then
             local newFireServer = newClosure(function(...)
                 return interceptRemote("FireServer", originalEvent, "__index", ...)
             end)
             local newInvokeServer = newClosure(function(...)
                 return interceptRemote("InvokeServer", originalFunction, "__index", ...)
             end)
+            local newUnreliable = newClosure(function(...)
+                return interceptRemote("FireServer", originalUnreliable, "__index", ...)
+            end)
 
             local okFire, errFire = pcall(function()
-                originalEvent = hookFn(tempEvent.FireServer, cloneFn(newFireServer))
+                local obj = Instance.new("RemoteEvent")
+                originalEvent = hookFn(obj.FireServer, cloneFn(newFireServer))
+                obj:Destroy()
                 if typeof(originalEvent) ~= "function" then
                     error("invalid RemoteEvent.FireServer hook return")
                 end
             end)
             if okFire then
+                functionHooksUsed = true
                 markInstalled("hookfunction(RemoteEvent.FireServer)")
             else
                 markFailed("hookfunction(RemoteEvent.FireServer)", errFire)
             end
 
             local okInvoke, errInvoke = pcall(function()
-                originalFunction = hookFn(tempFunction.InvokeServer, cloneFn(newInvokeServer))
+                local obj = Instance.new("RemoteFunction")
+                originalFunction = hookFn(obj.InvokeServer, cloneFn(newInvokeServer))
+                obj:Destroy()
                 if typeof(originalFunction) ~= "function" then
                     error("invalid RemoteFunction.InvokeServer hook return")
                 end
             end)
             if okInvoke then
+                functionHooksUsed = true
                 markInstalled("hookfunction(RemoteFunction.InvokeServer)")
             else
                 markFailed("hookfunction(RemoteFunction.InvokeServer)", errInvoke)
             end
 
-            if hasUnreliable and tempUnreliable and originalUnreliable then
-                local newUnreliable = newClosure(function(...)
-                    return interceptRemote("FireServer", originalUnreliable, "__index", ...)
-                end)
-                local okUre, errUre = pcall(function()
-                    originalUnreliable = hookFn(tempUnreliable.FireServer, cloneFn(newUnreliable))
-                    if typeof(originalUnreliable) ~= "function" then
-                        error("invalid UnreliableRemoteEvent.FireServer hook return")
-                    end
-                end)
-                if okUre then
-                    markInstalled("hookfunction(UnreliableRemoteEvent.FireServer)")
-                else
-                    markFailed("hookfunction(UnreliableRemoteEvent.FireServer)", errUre)
+            local okUnreliable, errUnreliable = pcall(function()
+                local obj = Instance.new("UnreliableRemoteEvent")
+                originalUnreliable = hookFn(obj.FireServer, cloneFn(newUnreliable))
+                obj:Destroy()
+                if typeof(originalUnreliable) ~= "function" then
+                    error("invalid UnreliableRemoteEvent.FireServer hook return")
                 end
-            end
-
-            tempEvent:Destroy()
-            tempFunction:Destroy()
-            if tempUnreliable then
-                tempUnreliable:Destroy()
+            end)
+            if okUnreliable then
+                functionHooksUsed = true
+                markInstalled("hookfunction(UnreliableRemoteEvent.FireServer)")
+            else
+                markFailed("hookfunction(UnreliableRemoteEvent.FireServer)", errUnreliable)
             end
         end
 
         if installedCount > 0 then
             remoteSpy.Hooked = true
             remoteSpy.HookType = table.concat(remoteSpy.HookDetails, " + ")
+
+            local savedHookMeta = hookMeta
+            local savedHookFn = hookFn
+            local savedNamecallHookMode = namecallHookMode
+            local savedOriginalNamecall = originalNamecall
+            local savedOriginalIndex = originalIndex
+            local savedOriginalEvent = originalEvent
+            local savedOriginalFunction = originalFunction
+            local savedOriginalUnreliable = originalUnreliable
+            local savedFunctionHooksUsed = functionHooksUsed
+
+            remoteSpy.UninstallHooks = function()
+                if typeof(savedHookMeta) == "function" then
+                    if typeof(savedOriginalNamecall) == "function" then
+                        pcall(savedHookMeta, game, "__namecall", savedOriginalNamecall)
+                    end
+                    if typeof(savedOriginalIndex) == "function" then
+                        pcall(savedHookMeta, game, "__index", savedOriginalIndex)
+                    end
+                elseif savedNamecallHookMode == "hookfunction_raw" and typeof(savedHookFn) == "function"
+                    and typeof(savedOriginalNamecall) == "function" then
+                    pcall(function()
+                        local mt = nil
+                        if typeof(getrawmetatable) == "function" then
+                            mt = getrawmetatable(game)
+                        elseif debug and typeof(debug.getmetatable) == "function" then
+                            mt = debug.getmetatable(game)
+                        end
+                        if mt and typeof(mt.__namecall) == "function" then
+                            savedHookFn(mt.__namecall, savedOriginalNamecall)
+                        end
+                    end)
+                end
+
+                if savedFunctionHooksUsed and typeof(savedHookFn) == "function" then
+                    if typeof(savedOriginalEvent) == "function" then
+                        pcall(function()
+                            local obj = Instance.new("RemoteEvent")
+                            savedHookFn(obj.FireServer, savedOriginalEvent)
+                            obj:Destroy()
+                        end)
+                    end
+                    if typeof(savedOriginalFunction) == "function" then
+                        pcall(function()
+                            local obj = Instance.new("RemoteFunction")
+                            savedHookFn(obj.InvokeServer, savedOriginalFunction)
+                            obj:Destroy()
+                        end)
+                    end
+                    if typeof(savedOriginalUnreliable) == "function" then
+                        pcall(function()
+                            local obj = Instance.new("UnreliableRemoteEvent")
+                            savedHookFn(obj.FireServer, savedOriginalUnreliable)
+                            obj:Destroy()
+                        end)
+                    end
+                end
+
+                remoteSpy.Hooked = false
+                remoteSpy.HookType = nil
+            end
+
             return true
         end
 
@@ -3001,6 +3089,7 @@ function Window:CreateUniversalCategory(options)
                 "Captured: " .. tostring(#remoteSpy.Logs)
                     .. " | Excluded: " .. tostring(countMapEntries(remoteSpy.Blacklist))
                     .. " | Blocked: " .. tostring(countMapEntries(remoteSpy.Blocklist))
+                    .. " | Hits: " .. tostring(remoteSpy.InterceptCount or 0)
             )
         end
 
@@ -3120,6 +3209,29 @@ function Window:CreateUniversalCategory(options)
             emitRemoteSpyUpdate(nil)
             queueRefresh()
             notify("Remotes", "Captured list cleared.", 1.9)
+        end)
+
+        callsSection:CreateButton("Self Test Capture", function()
+            local tempRemote = Instance.new("RemoteEvent")
+            local firedNamecall = false
+            local firedIndex = false
+
+            pcall(function()
+                tempRemote:FireServer("__LIMBO_REMOTE_SPY_TEST__", os.clock())
+                firedNamecall = true
+            end)
+            pcall(function()
+                tempRemote.FireServer(tempRemote, "__LIMBO_REMOTE_SPY_TEST_INDEX__", os.clock())
+                firedIndex = true
+            end)
+            tempRemote:Destroy()
+            queueRefresh()
+
+            notify(
+                "Remotes",
+                "Test call sent. namecall=" .. tostring(firedNamecall) .. ", index=" .. tostring(firedIndex),
+                2.4
+            )
         end)
 
         callsSection:CreateButton("Clear Exclude List", function()
