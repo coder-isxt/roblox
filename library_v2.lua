@@ -2251,6 +2251,112 @@ function Window:CreateUniversalCategory(options)
         }
         UILibrary._simpleSpyState = simpleSpy
     end
+    local simpleSpyOfficial = UILibrary._simpleSpyOfficialState
+    if not simpleSpyOfficial then
+        simpleSpyOfficial = {
+            Url = "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua",
+            LastError = nil,
+            LastStartAt = 0,
+            Running = false,
+        }
+        UILibrary._simpleSpyOfficialState = simpleSpyOfficial
+    end
+
+    local function getExecutorEnv()
+        if typeof(getgenv) == "function" then
+            local ok, env = pcall(getgenv)
+            if ok and type(env) == "table" then
+                return env
+            end
+        end
+        return _G
+    end
+
+    local function fetchSimpleSpyOfficialSource()
+        local primaryUrl = tostring(simpleSpyOfficial.Url or "")
+        if primaryUrl ~= "" then
+            local okHttp, body = pcall(function()
+                return game:HttpGet(primaryUrl .. "?t=" .. tostring(os.time()))
+            end)
+            if okHttp and type(body) == "string" and body ~= "" and not string.find(body, "404: Not Found", 1, true) then
+                return body, nil
+            end
+        end
+
+        if typeof(readfile) == "function" then
+            local localPaths = {
+                "copy/SimpleSpyBeta.lua",
+                "SimpleSpyBeta.lua",
+            }
+            for _, path in ipairs(localPaths) do
+                local okRead, body = pcall(readfile, path)
+                if okRead and type(body) == "string" and body ~= "" then
+                    return body, nil
+                end
+            end
+        end
+
+        return nil, "failed to fetch SimpleSpyBeta source (HttpGet/readfile unavailable or failed)"
+    end
+
+    local function startSimpleSpyOfficial(forceRestart)
+        local env = getExecutorEnv()
+        forceRestart = forceRestart == true
+
+        if env.SimpleSpyExecuted == true and not forceRestart then
+            simpleSpyOfficial.Running = true
+            simpleSpyOfficial.LastError = nil
+            return true, "already running"
+        end
+
+        if forceRestart and type(env.SimpleSpyShutdown) == "function" then
+            pcall(env.SimpleSpyShutdown)
+        end
+
+        local source, fetchErr = fetchSimpleSpyOfficialSource()
+        if not source then
+            simpleSpyOfficial.Running = false
+            simpleSpyOfficial.LastError = fetchErr
+            return false, fetchErr
+        end
+
+        if typeof(loadstring) ~= "function" then
+            simpleSpyOfficial.Running = false
+            simpleSpyOfficial.LastError = "loadstring unavailable"
+            return false, "loadstring unavailable"
+        end
+
+        local chunk, loadErr = loadstring(source)
+        if not chunk then
+            simpleSpyOfficial.Running = false
+            simpleSpyOfficial.LastError = "compile failed: " .. tostring(loadErr)
+            return false, simpleSpyOfficial.LastError
+        end
+
+        local okRun, runErr = pcall(chunk)
+        if not okRun then
+            simpleSpyOfficial.Running = false
+            simpleSpyOfficial.LastError = "runtime failed: " .. tostring(runErr)
+            return false, simpleSpyOfficial.LastError
+        end
+
+        simpleSpyOfficial.Running = env.SimpleSpyExecuted == true or okRun
+        simpleSpyOfficial.LastStartAt = os.time()
+        simpleSpyOfficial.LastError = nil
+        return true, "started"
+    end
+
+    local function stopSimpleSpyOfficial()
+        local env = getExecutorEnv()
+        if type(env.SimpleSpyShutdown) == "function" then
+            local ok, err = pcall(env.SimpleSpyShutdown)
+            simpleSpyOfficial.Running = false
+            simpleSpyOfficial.LastError = ok and nil or tostring(err)
+            return ok, err
+        end
+        simpleSpyOfficial.Running = false
+        return false, "SimpleSpyShutdown unavailable"
+    end
 
     local luaKeywords = {
         ["and"] = true, ["break"] = true, ["do"] = true, ["else"] = true, ["elseif"] = true, ["end"] = true,
@@ -2787,7 +2893,49 @@ function Window:CreateUniversalCategory(options)
         local refreshQueued = false
 
         local hookStatusLabel = callsSection:CreateLabel("Hook: Checking...")
+        local officialStatusLabel = callsSection:CreateLabel("Official: Idle")
         local statsLabel = callsSection:CreateLabel("Captured: 0 | Excluded: 0")
+
+        local function refreshOfficialStatus()
+            if simpleSpyOfficial.Running then
+                local startedAt = tonumber(simpleSpyOfficial.LastStartAt or 0)
+                if startedAt > 0 then
+                    officialStatusLabel:Set("Official: Running (" .. os.date("%H:%M:%S", startedAt) .. ")")
+                else
+                    officialStatusLabel:Set("Official: Running")
+                end
+            else
+                officialStatusLabel:Set("Official: Idle")
+            end
+        end
+
+        callsSection:CreateButton("Launch Official SimpleSpyBeta", function()
+            local okStart, msg = startSimpleSpyOfficial(false)
+            refreshOfficialStatus()
+            if okStart then
+                notify("Remotes", "Official SimpleSpyBeta launched.", 2.4)
+            else
+                notify("Remotes", "Official launch failed: " .. tostring(msg), 3.6)
+            end
+        end)
+        callsSection:CreateButton("Restart Official SimpleSpyBeta", function()
+            local okStart, msg = startSimpleSpyOfficial(true)
+            refreshOfficialStatus()
+            if okStart then
+                notify("Remotes", "Official SimpleSpyBeta restarted.", 2.4)
+            else
+                notify("Remotes", "Official restart failed: " .. tostring(msg), 3.6)
+            end
+        end)
+        callsSection:CreateButton("Shutdown Official SimpleSpyBeta", function()
+            local okStop, stopErr = stopSimpleSpyOfficial()
+            refreshOfficialStatus()
+            if okStop then
+                notify("Remotes", "Official SimpleSpyBeta stopped.", 2.2)
+            else
+                notify("Remotes", "Official stop failed: " .. tostring(stopErr), 3.2)
+            end
+        end)
 
         local listShell = mk("Frame", {
             Parent = callsSection.Content,
@@ -3084,11 +3232,32 @@ function Window:CreateUniversalCategory(options)
 
         local hookOk = installSimpleSpyHook()
         if hookOk then
-            hookStatusLabel:Set("Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ")")
+            local officialOk = startSimpleSpyOfficial(false)
+            refreshOfficialStatus()
+            if officialOk then
+                hookStatusLabel:Set(
+                    "Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ") + official SimpleSpyBeta"
+                )
+            else
+                hookStatusLabel:Set("Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ")")
+            end
         else
-            hookStatusLabel:Set("Hook: Failed - " .. tostring(simpleSpy.HookError or "unknown"))
-            notify("Remotes", "Simple spy hook failed: " .. tostring(simpleSpy.HookError or "unknown"), 3.8)
+            local reason = tostring(simpleSpy.HookError or "unknown")
+            local fallbackOk, fallbackErr = startSimpleSpyOfficial(false)
+            refreshOfficialStatus()
+            if fallbackOk then
+                hookStatusLabel:Set("Hook: Internal failed; official SimpleSpyBeta started")
+                notify("Remotes", "Internal hook failed; launched official SimpleSpyBeta.", 3.4)
+            else
+                hookStatusLabel:Set("Hook: Failed - " .. reason)
+                notify(
+                    "Remotes",
+                    "Internal hook failed: " .. reason .. " | official fallback failed: " .. tostring(fallbackErr),
+                    4.8
+                )
+            end
         end
+        refreshOfficialStatus()
 
         local listenerToken = {}
         simpleSpy.Listeners[listenerToken] = function()
