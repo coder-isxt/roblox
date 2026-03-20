@@ -2261,6 +2261,59 @@ function Window:CreateUniversalCategory(options)
     local packArgs = table.pack or function(...)
         return { n = select("#", ...), ... }
     end
+    local cloneRef = (typeof(cloneref) == "function") and cloneref or function(v)
+        return v
+    end
+
+    local function isRemoteInstance(remote)
+        if typeof(remote) ~= "Instance" then
+            return false
+        end
+        local ok, result = pcall(function()
+            return remote:IsA("RemoteEvent")
+                or remote:IsA("RemoteFunction")
+                or remote:IsA("UnreliableRemoteEvent")
+        end)
+        return ok and result == true
+    end
+
+    local function canonicalRemoteMethod(method)
+        local methodLower = string.lower(tostring(method or ""))
+        if methodLower == "fireserver" or methodLower == "unreliablefireserver" then
+            return "FireServer"
+        end
+        if methodLower == "invokeserver" then
+            return "InvokeServer"
+        end
+        return nil
+    end
+
+    local function deepCloneArg(value, depth, seen)
+        local valueType = typeof(value)
+        if valueType == "table" then
+            depth = depth or 0
+            if depth > 6 then
+                return nil
+            end
+            seen = seen or {}
+            if seen[value] then
+                return seen[value]
+            end
+            local out = {}
+            seen[value] = out
+            for k, v in pairs(value) do
+                local ck = deepCloneArg(k, depth + 1, seen)
+                if ck ~= nil then
+                    out[ck] = deepCloneArg(v, depth + 1, seen)
+                end
+            end
+            return out
+        end
+        if valueType == "Instance" then
+            return cloneRef(value)
+        end
+        return value
+    end
 
     local function isIdentifier(name)
         return type(name) == "string" and name:match("^[A-Za-z_][A-Za-z0-9_]*$") ~= nil and not luaKeywords[name]
@@ -2415,6 +2468,7 @@ function Window:CreateUniversalCategory(options)
     end
 
     local function buildRemoteCode(remote, method, argsPack, entryId)
+        local canonicalMethod = canonicalRemoteMethod(method) or "FireServer"
         local remoteExpr = instanceToCode(remote)
         local lines = {
             "-- [[ Remotes Capture #" .. tostring(entryId) .. " ]]",
@@ -2431,7 +2485,7 @@ function Window:CreateUniversalCategory(options)
         lines[#lines + 1] = "local callArgs = {}"
         lines[#lines + 1] = "for i = 1, args.n do callArgs[i] = args[i] end"
         lines[#lines + 1] = "if remote then"
-        if method == "InvokeServer" then
+        if canonicalMethod == "InvokeServer" then
             lines[#lines + 1] = "    local result = remote:InvokeServer(unpackFn(callArgs, 1, args.n))"
             lines[#lines + 1] = "    print(\"[Remotes] Invoke result:\", result)"
         else
@@ -2452,32 +2506,31 @@ function Window:CreateUniversalCategory(options)
         end
     end
 
-    local function captureRemote(remote, method, argsPack)
-        if typeof(remote) ~= "Instance" then
+    local function captureRemote(remote, method, argsPack, recorderType)
+        local canonicalMethod = canonicalRemoteMethod(method)
+        if not canonicalMethod then
             return
         end
-        if method ~= "FireServer" and method ~= "InvokeServer" then
-            return
-        end
-
-        local okRemote, isRemote = pcall(function()
-            return remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction")
-        end)
-        if not okRemote or not isRemote then
+        if not isRemoteInstance(remote) then
             return
         end
 
-        local remotePath = instanceToCode(remote)
+        local remoteRef = cloneRef(remote)
+        local remotePath = instanceToCode(remoteRef)
         if simpleSpy.Excluded[remotePath] then
             return
         end
 
         local packedArgs = { n = argsPack.n or 0 }
         for i = 1, packedArgs.n do
-            packedArgs[i] = argsPack[i]
+            packedArgs[i] = deepCloneArg(argsPack[i], 0, {})
         end
 
-        local dedupeKey = remotePath .. "|" .. tostring(method) .. "|" .. tostring(packedArgs.n or 0)
+        local dedupeKey = table.concat({
+            remotePath,
+            canonicalMethod,
+            tostring(packedArgs.n or 0),
+        }, "|")
         local nowClock = os.clock()
         if simpleSpy.LastCaptureKey == dedupeKey and (nowClock - (simpleSpy.LastCaptureTime or 0)) < 0.001 then
             return
@@ -2490,14 +2543,15 @@ function Window:CreateUniversalCategory(options)
 
         local entry = {
             Id = entryId,
-            Method = method,
-            Remote = remote,
+            Method = canonicalMethod,
+            Recorder = tostring(recorderType or "?"),
+            Remote = remoteRef,
             RemotePath = remotePath,
-            RemoteName = remote.Name,
+            RemoteName = remoteRef.Name,
             TimeUnix = os.time(),
             Args = packedArgs,
             ArgCount = packedArgs.n,
-            Code = buildRemoteCode(remote, method, packedArgs, entryId),
+            Code = buildRemoteCode(remoteRef, canonicalMethod, packedArgs, entryId),
         }
 
         table.insert(simpleSpy.Logs, 1, entry)
@@ -2516,10 +2570,10 @@ function Window:CreateUniversalCategory(options)
         simpleSpy.HookDetails = {}
         simpleSpy.HookType = nil
 
-        local function process(remote, method, ...)
+        local function process(remote, method, recorderType, ...)
             local packed = packArgs(...)
             local ok, err = pcall(function()
-                captureRemote(remote, method, packed)
+                captureRemote(remote, method, packed, recorderType)
             end)
             if not ok then
                 warn("[library_v2] remotes capture error:", err)
@@ -2529,8 +2583,20 @@ function Window:CreateUniversalCategory(options)
         local newClosure = (typeof(newcclosure) == "function") and newcclosure or function(f)
             return f
         end
+        local cloneFn = (typeof(clonefunction) == "function") and clonefunction or function(f)
+            return f
+        end
+
         local installedCount = 0
+        local namecallInstalled = false
         local errors = {}
+        local function markInstalled(detail)
+            installedCount = installedCount + 1
+            table.insert(simpleSpy.HookDetails, detail)
+        end
+        local function markFailed(detail, errValue)
+            table.insert(errors, detail .. ": " .. tostring(errValue))
+        end
 
         local hookMeta = hookmetamethod
         local hookFunc = hookfunction
@@ -2547,20 +2613,28 @@ function Window:CreateUniversalCategory(options)
         if typeof(hookMeta) == "function" then
             local okHook, hookErr = pcall(function()
                 local oldNamecall
-                oldNamecall = hookMeta(game, "__namecall", newClosure(function(selfRef, ...)
+                local newNamecall = newClosure(function(...)
                     local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
-                    if (method == "FireServer" or method == "InvokeServer") and typeof(selfRef) == "Instance" then
-                        process(selfRef, method, ...)
+                    local remote = ...
+                    local canonicalMethod = canonicalRemoteMethod(method)
+                    if canonicalMethod and isRemoteInstance(remote) then
+                        process(remote, canonicalMethod, "__namecall", select(2, ...))
                     end
-                    return oldNamecall(selfRef, ...)
-                end))
+                    return oldNamecall(...)
+                end)
+                oldNamecall = hookMeta(game, "__namecall", cloneFn(newNamecall))
+                if typeof(oldNamecall) ~= "function" then
+                    error("hookmetamethod returned invalid __namecall function")
+                end
             end)
             if okHook then
-                installedCount = installedCount + 1
-                table.insert(simpleSpy.HookDetails, "hookmetamethod(__namecall)")
+                namecallInstalled = true
+                markInstalled("hookmetamethod(__namecall)")
             else
-                table.insert(errors, tostring(hookErr))
+                markFailed("hookmetamethod(__namecall)", hookErr)
             end
+        else
+            markFailed("hookmetamethod(__namecall)", "not available")
         end
 
         local getRawMt = getrawmetatable or (debug and debug.getmetatable)
@@ -2574,68 +2648,114 @@ function Window:CreateUniversalCategory(options)
                 end
             end
         end
-        if installedCount == 0 and typeof(getRawMt) == "function" and typeof(setReadOnly) == "function" then
+        if not namecallInstalled and typeof(getRawMt) == "function" and typeof(setReadOnly) == "function" then
             local okMeta, metaErr = pcall(function()
                 local mt = getRawMt(game)
-                if mt and mt.__namecall then
-                    local oldNamecall = mt.__namecall
-                    setReadOnly(mt, false)
-                    mt.__namecall = newClosure(function(selfRef, ...)
-                        local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
-                        if (method == "FireServer" or method == "InvokeServer") and typeof(selfRef) == "Instance" then
-                            process(selfRef, method, ...)
-                        end
-                        return oldNamecall(selfRef, ...)
-                    end)
-                    setReadOnly(mt, true)
-                else
+                if not mt or typeof(mt.__namecall) ~= "function" then
                     error("missing __namecall metatable")
                 end
+                local oldNamecall = mt.__namecall
+                local newNamecall = newClosure(function(...)
+                    local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
+                    local remote = ...
+                    local canonicalMethod = canonicalRemoteMethod(method)
+                    if canonicalMethod and isRemoteInstance(remote) then
+                        process(remote, canonicalMethod, "__namecall(raw)", select(2, ...))
+                    end
+                    return oldNamecall(...)
+                end)
+                setReadOnly(mt, false)
+                mt.__namecall = cloneFn(newNamecall)
+                setReadOnly(mt, true)
             end)
             if okMeta then
-                installedCount = installedCount + 1
-                table.insert(simpleSpy.HookDetails, "raw metatable __namecall")
+                namecallInstalled = true
+                markInstalled("raw metatable __namecall")
             else
-                table.insert(errors, tostring(metaErr))
+                markFailed("raw metatable __namecall", metaErr)
             end
         end
 
         if typeof(hookFunc) == "function" then
+            local originalEvent = Instance.new("RemoteEvent").FireServer
+            local originalFunction = Instance.new("RemoteFunction").InvokeServer
+
+            local originalUnreliableEvent = nil
+            do
+                local okUnreliable, unreliableInstance = pcall(function()
+                    return Instance.new("UnreliableRemoteEvent")
+                end)
+                if okUnreliable and unreliableInstance then
+                    originalUnreliableEvent = unreliableInstance.FireServer
+                    unreliableInstance:Destroy()
+                end
+            end
+
+            local newFireServer = newClosure(function(...)
+                local remote = ...
+                if isRemoteInstance(remote) then
+                    process(remote, "FireServer", "hookfunction(RemoteEvent.FireServer)", select(2, ...))
+                end
+                return originalEvent(...)
+            end)
+
+            local newInvokeServer = newClosure(function(...)
+                local remote = ...
+                if isRemoteInstance(remote) then
+                    process(remote, "InvokeServer", "hookfunction(RemoteFunction.InvokeServer)", select(2, ...))
+                end
+                return originalFunction(...)
+            end)
+
             local okFire, errFire = pcall(function()
-                local probe = Instance.new("RemoteEvent")
-                local oldFire
-                oldFire = hookFunc(probe.FireServer, newClosure(function(selfRef, ...)
-                    if typeof(selfRef) == "Instance" then
-                        process(selfRef, "FireServer", ...)
-                    end
-                    return oldFire(selfRef, ...)
-                end))
-                probe:Destroy()
+                originalEvent = hookFunc(Instance.new("RemoteEvent").FireServer, cloneFn(newFireServer))
+                if typeof(originalEvent) ~= "function" then
+                    error("hookfunction returned invalid RemoteEvent function")
+                end
             end)
             if okFire then
-                installedCount = installedCount + 1
-                table.insert(simpleSpy.HookDetails, "hookfunction(RemoteEvent.FireServer)")
+                markInstalled("hookfunction(RemoteEvent.FireServer)")
             else
-                table.insert(errors, tostring(errFire))
+                markFailed("hookfunction(RemoteEvent.FireServer)", errFire)
             end
 
             local okInvoke, errInvoke = pcall(function()
-                local probe = Instance.new("RemoteFunction")
-                local oldInvoke
-                oldInvoke = hookFunc(probe.InvokeServer, newClosure(function(selfRef, ...)
-                    if typeof(selfRef) == "Instance" then
-                        process(selfRef, "InvokeServer", ...)
-                    end
-                    return oldInvoke(selfRef, ...)
-                end))
-                probe:Destroy()
+                originalFunction = hookFunc(Instance.new("RemoteFunction").InvokeServer, cloneFn(newInvokeServer))
+                if typeof(originalFunction) ~= "function" then
+                    error("hookfunction returned invalid RemoteFunction function")
+                end
             end)
             if okInvoke then
-                installedCount = installedCount + 1
-                table.insert(simpleSpy.HookDetails, "hookfunction(RemoteFunction.InvokeServer)")
+                markInstalled("hookfunction(RemoteFunction.InvokeServer)")
             else
-                table.insert(errors, tostring(errInvoke))
+                markFailed("hookfunction(RemoteFunction.InvokeServer)", errInvoke)
             end
+
+            if originalUnreliableEvent then
+                local newUnreliableFireServer = newClosure(function(...)
+                    local remote = ...
+                    if isRemoteInstance(remote) then
+                        process(remote, "FireServer", "hookfunction(UnreliableRemoteEvent.FireServer)", select(2, ...))
+                    end
+                    return originalUnreliableEvent(...)
+                end)
+
+                local okUnreliable, errUnreliable = pcall(function()
+                    local unreliable = Instance.new("UnreliableRemoteEvent")
+                    originalUnreliableEvent = hookFunc(unreliable.FireServer, cloneFn(newUnreliableFireServer))
+                    unreliable:Destroy()
+                    if typeof(originalUnreliableEvent) ~= "function" then
+                        error("hookfunction returned invalid UnreliableRemoteEvent function")
+                    end
+                end)
+                if okUnreliable then
+                    markInstalled("hookfunction(UnreliableRemoteEvent.FireServer)")
+                else
+                    markFailed("hookfunction(UnreliableRemoteEvent.FireServer)", errUnreliable)
+                end
+            end
+        else
+            markFailed("hookfunction", "not available")
         end
 
         if installedCount > 0 then
@@ -2767,7 +2887,7 @@ function Window:CreateUniversalCategory(options)
             local entry = getSelectedEntry()
             if not entry then
                 selectedLabel:Set("Selected: None")
-                selectedMeta:Set("Method: - | Args: -")
+                selectedMeta:Set("Method: - | Args: - | Via: -")
                 codeBox.Text = "-- Select a remote call to inspect generated code."
                 return
             end
@@ -2776,6 +2896,7 @@ function Window:CreateUniversalCategory(options)
             selectedMeta:Set(
                 "Method: " .. tostring(entry.Method)
                     .. " | Args: " .. tostring(entry.ArgCount or 0)
+                    .. " | Via: " .. tostring(entry.Recorder or "?")
             )
             codeBox.Text = entry.Code or "-- No code."
         end
@@ -2807,12 +2928,13 @@ function Window:CreateUniversalCategory(options)
                 local timeText = os.date("%H:%M:%S", entry.TimeUnix or os.time())
                 local remoteName = tostring(entry.RemoteName or "Remote")
                 local rowText = string.format(
-                    "[%d] %s  %s  (%d args)  %s",
+                    "[%d] %s  %s  (%d args)  %s  [%s]",
                     tonumber(entry.Id or 0),
                     tostring(entry.Method or "?"),
                     remoteName,
                     tonumber(entry.ArgCount or 0),
-                    timeText
+                    timeText,
+                    tostring(entry.Recorder or "?")
                 )
                 local row = mk("TextButton", {
                     Parent = listScroll,
