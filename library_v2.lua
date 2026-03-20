@@ -2191,11 +2191,21 @@ function Window:CreateUniversalCategory(options)
         BindableFunction = false,
         UnreliableRemoteEvent = true,
     }
-    spyState.CurrentRemotes = spyState.CurrentRemotes or {}
-    spyState.Removed = spyState.Removed or {}
-    spyState.NextCallId = tonumber(spyState.NextCallId) or 1
-    spyState.LogExecutorCalls = spyState.LogExecutorCalls == true
-    spyState.HookDetails = spyState.HookDetails or {}
+    -- Always start with a clean runtime state to avoid stale Hooked flags from previous executions.
+    spyState.CurrentRemotes = {}
+    spyState.Removed = {}
+    spyState.NextCallId = 1
+    spyState.Hooked = false
+    spyState.HookType = nil
+    spyState.HookError = nil
+    spyState.HookDetails = {}
+    spyState.LastCaptureHash = nil
+    spyState.LastCaptureAt = 0
+    if spyState.LogExecutorCalls == nil then
+        spyState.LogExecutorCalls = true
+    else
+        spyState.LogExecutorCalls = spyState.LogExecutorCalls == true
+    end
     if typeof(spyState.Event) ~= "Instance" or not spyState.Event:IsA("BindableEvent") then
         spyState.Event = Instance.new("BindableEvent")
     end
