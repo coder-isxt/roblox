@@ -1410,7 +1410,7 @@ local UILibrary = (function()
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = TitleDot})
 
-        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 24, 0, 0), Size = UDim2.new(0.3, 0, 1, 0), Font = Enum.Font.GothamBold, Text = windowTitle, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 24, 0, 0), Size = UDim2.new(0.3, 0, 1, 0), Font = Enum.Font.GothamBold, Text = windowTitle, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd }, {TextColor3 = "Text"})
         local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 8, 0.5, -11), Size = UDim2.new(0, 24, 0, 22), Font = Enum.Font.GothamBold, Text = "<", TextSize = 13, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = TabletBackButton})
         
@@ -1485,6 +1485,42 @@ local UILibrary = (function()
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = MinimizeButton})
         local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -66, 0.5, 0), Size = UDim2.new(0, 22, 0, 22), Font = Enum.Font.GothamBold, Text = "S", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = SettingsButton})
+
+        local function UpdateTopBarLayout()
+            local topWidth = TopBar.AbsoluteSize.X
+            if topWidth <= 0 then
+                return
+            end
+
+            local buttonSize = 22
+            local buttonGap = 6
+            local rightInset = 10
+            local rightButtonsWidth = (buttonSize * 3) + (buttonGap * 2)
+            local buttonsLeft = topWidth - rightInset - rightButtonsWidth
+
+            local titleLeft = TabletBackButton.Visible and 34 or 24
+            local titleWidth = math.clamp(math.floor(topWidth * 0.28), 108, 230)
+            local titleMax = buttonsLeft - titleLeft - 120
+            if titleMax < titleWidth then
+                titleWidth = math.max(78, titleMax)
+            end
+            TitleLabel.Position = UDim2.new(0, titleLeft, 0, 0)
+            TitleLabel.Size = UDim2.new(0, titleWidth, 1, 0)
+
+            local searchLeft = titleLeft + titleWidth + 8
+            local searchRight = buttonsLeft - 8
+            local available = searchRight - searchLeft
+            if available < 70 then
+                SearchBox.Visible = false
+                return
+            end
+
+            SearchBox.Visible = true
+            local searchWidth = math.clamp(available, 110, 220)
+            SearchBox.Size = UDim2.new(0, searchWidth, 0, VisualTokens.SearchHeight)
+            SearchBox.Position = UDim2.new(0, math.floor((searchLeft + searchRight) * 0.5), 0.5, 0)
+        end
+        UpdateTopBarLayout()
 
         -- Sidebar Navigation Components
         local sidebarWidth = VisualTokens.SidebarWidth
@@ -1757,6 +1793,10 @@ local UILibrary = (function()
                 TrollLoopHeartbeatConnection:Disconnect()
                 TrollLoopHeartbeatConnection = nil
             end
+            local localRoot = GetLocalRootPart()
+            if localRoot then
+                localRoot.AssemblyAngularVelocity = Vector3.zero
+            end
         end
 
         local function SetTrollLoopMode(modeName)
@@ -1809,6 +1849,30 @@ local UILibrary = (function()
                         math.cos(now * 23) * 35
                     )
                     if now - TrollLoopJumpTick > 0.55 then
+                        TrollLoopJumpTick = now
+                        pcall(function()
+                            localHumanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                        end)
+                    end
+                elseif TrollLoopMode == "FlingAnnoy" then
+                    -- Fast, close-range orbit with aggressive velocity/rotation to increase fling chance.
+                    local spinSpeed = 52
+                    local radius = 0.14
+                    local theta = now * spinSpeed
+                    local orbitOffset = Vector3.new(
+                        math.cos(theta) * radius,
+                        0.08 + math.sin(theta * 0.6) * 0.06,
+                        math.sin(theta) * radius
+                    )
+
+                    local flingCf = targetRoot.CFrame * CFrame.new(orbitOffset) * CFrame.Angles(0, theta * 1.4, 0)
+                    localRoot.CFrame = flingCf
+                    localRoot.AssemblyAngularVelocity = Vector3.new(0, 780, 0)
+
+                    local tangential = Vector3.new(-math.sin(theta), 0, math.cos(theta))
+                    localRoot.AssemblyLinearVelocity = (tangential * 360) + Vector3.new(0, 42, 0)
+
+                    if now - TrollLoopJumpTick > 0.24 then
                         TrollLoopJumpTick = now
                         pcall(function()
                             localHumanoid:ChangeState(Enum.HumanoidStateType.Jumping)
@@ -2216,6 +2280,7 @@ local UILibrary = (function()
         local BangActionButton = nil
         local SpinActionButton = nil
         local AnnoyActionButton = nil
+        local FlingAnnoyActionButton = nil
 
         local function RefreshSpectateButtonText()
             if not SpectateActionButton then
@@ -2243,6 +2308,9 @@ local UILibrary = (function()
             end
             if AnnoyActionButton then
                 AnnoyActionButton.Text = (TrollLoopMode == "Annoy") and "Annoy Loop: ON" or "Annoy Loop: OFF"
+            end
+            if FlingAnnoyActionButton then
+                FlingAnnoyActionButton.Text = (TrollLoopMode == "FlingAnnoy") and "Annoy Loop Fling: ON" or "Annoy Loop Fling: OFF"
             end
         end
 
@@ -2394,6 +2462,16 @@ local UILibrary = (function()
             RefreshTrollButtonTexts()
             PlayerAdminNotify("Annoy", enabled and ("Now annoying " .. tostring(targetPlayer.Name) .. ".") or "Annoy loop stopped.", 2.2)
         end)
+        FlingAnnoyActionButton = CreatePlayerActionButton("Annoy Loop Fling: OFF", function()
+            local targetPlayer = GetTrollTarget()
+            if not targetPlayer then
+                PlayerAdminNotify("Annoy Fling", "Select a valid player first.", 2.4)
+                return
+            end
+            local enabled = SetTrollLoopMode("FlingAnnoy")
+            RefreshTrollButtonTexts()
+            PlayerAdminNotify("Annoy Fling", enabled and ("Now fling-looping " .. tostring(targetPlayer.Name) .. ".") or "Annoy fling loop stopped.", 2.2)
+        end)
         RefreshTrollButtonTexts()
         PlayerAdminCloseButton.MouseButton1Click:Connect(ClosePlayerAdminMenu)
         PlayerAdminOverlay.InputBegan:Connect(function(input)
@@ -2474,6 +2552,14 @@ local UILibrary = (function()
             local panelX = mainPos.X + mainSize.X + PlayerListGap
             local panelY = mainPos.Y + topBarHeight + 8
             local panelHeight = math.max(120, mainSize.Y - (topBarHeight + 20))
+            local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+
+            if panelX + panelWidth > viewport.X - 6 then
+                panelX = mainPos.X - panelWidth - PlayerListGap
+            end
+            panelX = math.clamp(panelX, 6, math.max(6, viewport.X - panelWidth - 6))
+            panelY = math.clamp(panelY, 6, math.max(6, viewport.Y - panelHeight - 6))
+
             return panelX, panelY, panelWidth, panelHeight
         end
 
@@ -2668,13 +2754,7 @@ local UILibrary = (function()
         local function SetTabletBackVisible(visible)
             TabletBackButton.Visible = visible
             TitleDot.Visible = not visible
-            if visible then
-                TitleLabel.Position = UDim2.new(0, 34, 0, 0)
-                TitleLabel.Size = UDim2.new(0.28, 0, 1, 0)
-            else
-                TitleLabel.Position = UDim2.new(0, 24, 0, 0)
-                TitleLabel.Size = UDim2.new(0.3, 0, 1, 0)
-            end
+            UpdateTopBarLayout()
         end
 
         local function UpdateTabletGridSizing()
@@ -3830,6 +3910,7 @@ local UILibrary = (function()
                 cameraViewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
                     if UIVisible then
                         UpdateWindowSize(false)
+                        UpdateTopBarLayout()
                     end
                 end)
                 table.insert(window.connections, cameraViewportConnection)
@@ -3840,13 +3921,18 @@ local UILibrary = (function()
             BindViewportListener()
             if UIVisible then
                 UpdateWindowSize(false)
+                UpdateTopBarLayout()
             end
         end)
         table.insert(window.connections, cameraSwapConnection)
         local contentResizeConnection = ContentFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             UpdateTabletGridSizing()
+            UpdateTopBarLayout()
         end)
         table.insert(window.connections, contentResizeConnection)
+        table.insert(window.connections, TopBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            UpdateTopBarLayout()
+        end))
 
         function window:SwitchToTab(tabToSelect)
             CurrentTab = tabToSelect
@@ -4006,7 +4092,7 @@ local UILibrary = (function()
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = toggleFrame})
                 CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = toggleFrame}, {Color = "Stroke"})
                 
-                CreateElement("TextLabel", { Parent = toggleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 38, 0, 0), Size = UDim2.new(1, -44, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+                CreateElement("TextLabel", { Parent = toggleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 0), Size = UDim2.new(1, -50, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
                 local toggleButton = CreateElement("TextButton", { Parent = toggleFrame, BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Text = "" })
                 
                 local switchBg = CreateElement("Frame", { Parent = toggleButton, BorderSizePixel = 0, Size = UDim2.new(1, 0, 1, 0) }, {BackgroundColor3 = "QuarBg"})
