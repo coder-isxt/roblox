@@ -2255,6 +2255,9 @@ function Window:CreateUniversalCategory(options)
         ["nil"] = true, ["not"] = true, ["or"] = true, ["repeat"] = true, ["return"] = true, ["then"] = true,
         ["true"] = true, ["until"] = true, ["while"] = true,
     }
+    local packArgs = table.pack or function(...)
+        return { n = select("#", ...), ... }
+    end
 
     local function isIdentifier(name)
         return type(name) == "string" and name:match("^[A-Za-z_][A-Za-z0-9_]*$") ~= nil and not luaKeywords[name]
@@ -2502,7 +2505,7 @@ function Window:CreateUniversalCategory(options)
 
         local function process(remote, method, ...)
             local ok, err = pcall(function()
-                captureRemote(remote, method, table.pack(...))
+                captureRemote(remote, method, packArgs(...))
             end)
             if not ok then
                 warn("[library_v2] remotes capture error:", err)
