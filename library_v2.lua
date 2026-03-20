@@ -2234,6 +2234,662 @@ function Window:CreateUniversalCategory(options)
         end
     end
 
+    local sharedGlobals = _G
+    if typeof(getgenv) == "function" then
+        local okEnv, env = pcall(getgenv)
+        if okEnv and type(env) == "table" then
+            sharedGlobals = env
+        end
+    end
+
+    local remoteSpy = sharedGlobals.__LIMBO_REMOTE_SPY_STATE
+    if type(remoteSpy) ~= "table" then
+        remoteSpy = {
+            Logs = {},
+            Blacklist = {},
+            Excluded = {},
+            Blocklist = {},
+            Listeners = {},
+            NextId = 1,
+            MaxLogs = 450,
+            Hooked = false,
+            HookType = nil,
+            HookError = nil,
+            HookDetails = {},
+            LogCheckCaller = true,
+            Scheduled = {},
+            SchedulerConnection = nil,
+            CaptureErrorCount = 0,
+            LastCaptureKey = nil,
+            LastCaptureTime = 0,
+        }
+        sharedGlobals.__LIMBO_REMOTE_SPY_STATE = remoteSpy
+    end
+
+    remoteSpy.Logs = remoteSpy.Logs or {}
+    remoteSpy.Blacklist = remoteSpy.Blacklist or remoteSpy.Excluded or {}
+    remoteSpy.Excluded = remoteSpy.Blacklist
+    remoteSpy.Blocklist = remoteSpy.Blocklist or {}
+    remoteSpy.Listeners = remoteSpy.Listeners or {}
+    remoteSpy.NextId = tonumber(remoteSpy.NextId) or 1
+    remoteSpy.MaxLogs = tonumber(remoteSpy.MaxLogs) or 450
+    remoteSpy.LogCheckCaller = remoteSpy.LogCheckCaller ~= false
+    remoteSpy.HookDetails = remoteSpy.HookDetails or {}
+    remoteSpy.Scheduled = remoteSpy.Scheduled or {}
+    remoteSpy.CaptureErrorCount = tonumber(remoteSpy.CaptureErrorCount) or 0
+
+    UILibrary._remoteSpyState = remoteSpy
+
+    local packArgs = table.pack or function(...)
+        return { n = select("#", ...), ... }
+    end
+    local unpackArgs = table.unpack or unpack
+    local cloneRef = (typeof(cloneref) == "function") and cloneref or function(v)
+        return v
+    end
+
+    local luaKeywords = {
+        ["and"] = true, ["break"] = true, ["do"] = true, ["else"] = true, ["elseif"] = true, ["end"] = true,
+        ["false"] = true, ["for"] = true, ["function"] = true, ["if"] = true, ["in"] = true, ["local"] = true,
+        ["nil"] = true, ["not"] = true, ["or"] = true, ["repeat"] = true, ["return"] = true, ["then"] = true,
+        ["true"] = true, ["until"] = true, ["while"] = true,
+    }
+
+    local function isIdentifier(name)
+        return type(name) == "string" and name:match("^[A-Za-z_][A-Za-z0-9_]*$") ~= nil and not luaKeywords[name]
+    end
+
+    local function numberToCode(n)
+        if n ~= n then
+            return "(0/0)"
+        end
+        if n == math.huge then
+            return "math.huge"
+        end
+        if n == -math.huge then
+            return "-math.huge"
+        end
+        return tostring(n)
+    end
+
+    local function canonicalRemoteMethod(method)
+        local methodLower = string.lower(tostring(method or ""))
+        if methodLower == "fireserver" then
+            return "FireServer"
+        end
+        if methodLower == "invokeserver" then
+            return "InvokeServer"
+        end
+        return nil
+    end
+
+    local function isRemoteInstance(remote)
+        if typeof(remote) ~= "Instance" then
+            return false
+        end
+        local ok, result = pcall(function()
+            return remote:IsA("RemoteEvent")
+                or remote:IsA("RemoteFunction")
+                or remote:IsA("UnreliableRemoteEvent")
+        end)
+        return ok and result == true
+    end
+
+    local function tablecheck(tableToCheck, remote, remoteId)
+        return tableToCheck[remoteId] or tableToCheck[tostring(remote.Name or "")]
+    end
+
+    local function instanceToCode(inst)
+        if typeof(inst) ~= "Instance" then
+            return "nil"
+        end
+        if inst == game then
+            return "game"
+        end
+
+        local chain = {}
+        local cur = inst
+        while cur and cur ~= game do
+            table.insert(chain, 1, cur)
+            cur = cur.Parent
+        end
+        if cur ~= game or #chain == 0 then
+            return "nil --[[instance not in game]]"
+        end
+
+        local root = chain[1]
+        local expr
+        local okService, service = pcall(game.GetService, game, root.Name)
+        if okService and service == root then
+            expr = string.format("game:GetService(%q)", root.Name)
+        else
+            expr = string.format("game[%q]", root.Name)
+        end
+
+        for i = 2, #chain do
+            local name = chain[i].Name
+            if isIdentifier(name) then
+                expr = expr .. "." .. name
+            else
+                expr = expr .. string.format("[%q]", name)
+            end
+        end
+        return expr
+    end
+
+    local function serializeValue(value, depth, seen)
+        depth = depth or 0
+        if depth > 5 then
+            return "nil --[[max depth]]"
+        end
+
+        local valueType = typeof(value)
+        if valueType == "nil" then
+            return "nil"
+        elseif valueType == "boolean" then
+            return value and "true" or "false"
+        elseif valueType == "number" then
+            return numberToCode(value)
+        elseif valueType == "string" then
+            return string.format("%q", value)
+        elseif valueType == "EnumItem" then
+            return tostring(value)
+        elseif valueType == "Vector2" then
+            return string.format("Vector2.new(%s, %s)", numberToCode(value.X), numberToCode(value.Y))
+        elseif valueType == "Vector3" then
+            return string.format("Vector3.new(%s, %s, %s)", numberToCode(value.X), numberToCode(value.Y), numberToCode(value.Z))
+        elseif valueType == "Color3" then
+            return string.format("Color3.new(%s, %s, %s)", numberToCode(value.R), numberToCode(value.G), numberToCode(value.B))
+        elseif valueType == "UDim" then
+            return string.format("UDim.new(%s, %s)", numberToCode(value.Scale), tostring(value.Offset))
+        elseif valueType == "UDim2" then
+            return string.format(
+                "UDim2.new(%s, %s, %s, %s)",
+                numberToCode(value.X.Scale),
+                tostring(value.X.Offset),
+                numberToCode(value.Y.Scale),
+                tostring(value.Y.Offset)
+            )
+        elseif valueType == "BrickColor" then
+            return string.format("BrickColor.new(%q)", tostring(value.Name))
+        elseif valueType == "CFrame" then
+            local components = { value:GetComponents() }
+            for i = 1, #components do
+                components[i] = numberToCode(components[i])
+            end
+            return "CFrame.new(" .. table.concat(components, ", ") .. ")"
+        elseif valueType == "Instance" then
+            return instanceToCode(value)
+        elseif valueType == "table" then
+            seen = seen or {}
+            if seen[value] then
+                return "nil --[[cycle]]"
+            end
+            seen[value] = true
+
+            local arrayLike = true
+            local maxIndex = 0
+            local keyedParts = {}
+            for k, v in next, value do
+                if type(k) == "number" and k > 0 and math.floor(k) == k then
+                    if k > maxIndex then
+                        maxIndex = k
+                    end
+                else
+                    arrayLike = false
+                end
+                if not arrayLike then
+                    local keyCode
+                    if type(k) == "string" and isIdentifier(k) then
+                        keyCode = k
+                    else
+                        keyCode = "[" .. serializeValue(k, depth + 1, seen) .. "]"
+                    end
+                    keyedParts[#keyedParts + 1] = keyCode .. " = " .. serializeValue(v, depth + 1, seen)
+                end
+            end
+
+            if arrayLike then
+                local arrayParts = {}
+                for i = 1, maxIndex do
+                    arrayParts[#arrayParts + 1] = serializeValue(value[i], depth + 1, seen)
+                end
+                seen[value] = nil
+                return "{ " .. table.concat(arrayParts, ", ") .. " }"
+            end
+
+            table.sort(keyedParts)
+            seen[value] = nil
+            return "{ " .. table.concat(keyedParts, ", ") .. " }"
+        end
+
+        return "nil --[[" .. tostring(valueType) .. "]]"
+    end
+
+    local function buildRemoteCode(remote, method, argsPack, entryId)
+        local callMethod = canonicalRemoteMethod(method) or "FireServer"
+        local lines = {
+            "-- [[ Generated by Limbo Remotes Spy #" .. tostring(entryId) .. " ]]",
+            "local remote = " .. instanceToCode(remote),
+            "local args = {",
+        }
+        for i = 1, (argsPack.n or 0) do
+            lines[#lines + 1] = "    [" .. tostring(i) .. "] = " .. serializeValue(argsPack[i], 0, {}) .. ","
+        end
+        lines[#lines + 1] = "    n = " .. tostring(argsPack.n or 0)
+        lines[#lines + 1] = "}"
+        lines[#lines + 1] = "local unpackFn = table.unpack or unpack"
+        lines[#lines + 1] = "if remote then"
+        if callMethod == "InvokeServer" then
+            lines[#lines + 1] = "    local result = remote:InvokeServer(unpackFn(args, 1, args.n))"
+            lines[#lines + 1] = "    print(\"[RemotesSpy] Invoke result:\", result)"
+        else
+            lines[#lines + 1] = "    remote:FireServer(unpackFn(args, 1, args.n))"
+        end
+        lines[#lines + 1] = "end"
+        return table.concat(lines, "\n")
+    end
+
+    local function getRemoteDebugId(remote)
+        local okId, id = pcall(function()
+            return remote:GetDebugId(0)
+        end)
+        if okId and type(id) == "string" and id ~= "" then
+            return id
+        end
+        local okName, full = pcall(function()
+            return remote:GetFullName()
+        end)
+        if okName and type(full) == "string" and full ~= "" then
+            return full
+        end
+        return tostring(remote)
+    end
+
+    local function deepclone(value, copies)
+        copies = copies or {}
+        if type(value) == "table" then
+            if copies[value] then
+                return copies[value]
+            end
+            local copy = {}
+            copies[value] = copy
+            for k, v in next, value do
+                copy[deepclone(k, copies)] = deepclone(v, copies)
+            end
+            return copy
+        end
+        if typeof(value) == "Instance" then
+            return cloneRef(value)
+        end
+        return value
+    end
+
+    local function isCyclicTable(tbl, seen, stack)
+        if type(tbl) ~= "table" then
+            return false
+        end
+        seen = seen or {}
+        stack = stack or {}
+        if stack[tbl] then
+            return true
+        end
+        if seen[tbl] then
+            return false
+        end
+        seen[tbl] = true
+        stack[tbl] = true
+        for k, v in next, tbl do
+            if type(k) == "table" and isCyclicTable(k, seen, stack) then
+                stack[tbl] = nil
+                return true
+            end
+            if type(v) == "table" and isCyclicTable(v, seen, stack) then
+                stack[tbl] = nil
+                return true
+            end
+        end
+        stack[tbl] = nil
+        return false
+    end
+
+    local function isCyclicPack(argsPack)
+        local count = (type(argsPack) == "table" and argsPack.n) or 0
+        for i = 1, count do
+            if type(argsPack[i]) == "table" and isCyclicTable(argsPack[i]) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function emitRemoteSpyUpdate(entry)
+        for token, callback in pairs(remoteSpy.Listeners) do
+            if typeof(callback) == "function" then
+                task.defer(callback, entry)
+            else
+                remoteSpy.Listeners[token] = nil
+            end
+        end
+    end
+
+    local function ensureRemoteSpyScheduler()
+        if remoteSpy.SchedulerConnection and remoteSpy.SchedulerConnection.Connected then
+            return
+        end
+        remoteSpy.SchedulerConnection = RunService.Heartbeat:Connect(function()
+            local job = table.remove(remoteSpy.Scheduled, 1)
+            if not job then
+                return
+            end
+            if typeof(job.Callback) ~= "function" then
+                return
+            end
+            local argsPack = job.Args or { n = 0 }
+            local okCall, callErr = pcall(job.Callback, unpackArgs(argsPack, 1, argsPack.n or 0))
+            if not okCall then
+                remoteSpy.CaptureErrorCount = (remoteSpy.CaptureErrorCount or 0) + 1
+                local n = remoteSpy.CaptureErrorCount
+                if n <= 3 or (n % 50) == 0 then
+                    warn("[library_v2] remotes capture error:", tostring(callErr or "unknown"))
+                end
+            end
+        end)
+    end
+
+    local function scheduleRemoteSpy(callback, ...)
+        ensureRemoteSpyScheduler()
+        table.insert(remoteSpy.Scheduled, {
+            Callback = callback,
+            Args = packArgs(...),
+        })
+    end
+
+    local function captureRemoteCall(payload)
+        if type(payload) ~= "table" then
+            return
+        end
+        local remote = payload.Remote
+        if not isRemoteInstance(remote) then
+            return
+        end
+
+        local method = canonicalRemoteMethod(payload.Method)
+        if not method then
+            return
+        end
+
+        local remoteId = tostring(payload.RemoteId or getRemoteDebugId(remote))
+        if tablecheck(remoteSpy.Blacklist, remote, remoteId) then
+            return
+        end
+
+        local argsPack = payload.Args or { n = 0 }
+        if type(argsPack) ~= "table" then
+            argsPack = { n = 0 }
+        end
+        if argsPack.n == nil then
+            argsPack.n = #argsPack
+        end
+
+        local dedupeKey = table.concat({
+            remoteId,
+            method,
+            tostring(argsPack.n or 0),
+            tostring(payload.Recorder or "?"),
+            tostring(payload.Blocked == true),
+        }, "|")
+        local nowClock = os.clock()
+        if remoteSpy.LastCaptureKey == dedupeKey and (nowClock - (remoteSpy.LastCaptureTime or 0)) < 0.001 then
+            return
+        end
+        remoteSpy.LastCaptureKey = dedupeKey
+        remoteSpy.LastCaptureTime = nowClock
+
+        local entryId = remoteSpy.NextId
+        remoteSpy.NextId = entryId + 1
+
+        local entry = {
+            Id = entryId,
+            Remote = cloneRef(remote),
+            RemoteId = remoteId,
+            RemoteName = tostring(remote.Name or "Remote"),
+            RemotePath = instanceToCode(remote),
+            Method = method,
+            Recorder = tostring(payload.Recorder or "?"),
+            Blocked = payload.Blocked == true,
+            Args = argsPack,
+            ArgCount = argsPack.n or 0,
+            TimeUnix = os.time(),
+            Code = buildRemoteCode(remote, method, argsPack, entryId),
+        }
+
+        table.insert(remoteSpy.Logs, 1, entry)
+        if #remoteSpy.Logs > (remoteSpy.MaxLogs or 450) then
+            table.remove(remoteSpy.Logs, #remoteSpy.Logs)
+        end
+
+        emitRemoteSpyUpdate(entry)
+    end
+
+    local function installRemoteSpyHooks()
+        if remoteSpy.Hooked then
+            return true
+        end
+
+        ensureRemoteSpyScheduler()
+        remoteSpy.HookError = nil
+        remoteSpy.HookDetails = {}
+        remoteSpy.HookType = nil
+
+        local hookMeta = hookmetamethod
+        local hookFn = hookfunction
+        if not hookMeta and syn and typeof(syn.hookmetamethod) == "function" then
+            hookMeta = syn.hookmetamethod
+        end
+        if not hookFn and syn and typeof(syn.hookfunction) == "function" then
+            hookFn = syn.hookfunction
+        end
+        if not hookFn and syn and syn.oth and typeof(syn.oth.hook) == "function" then
+            hookFn = syn.oth.hook
+        end
+
+        local newClosure = (typeof(newcclosure) == "function") and newcclosure or function(f)
+            return f
+        end
+        local cloneFn = (typeof(clonefunction) == "function") and clonefunction or function(f)
+            return f
+        end
+
+        local installedCount = 0
+        local errors = {}
+
+        local function markInstalled(detail)
+            installedCount = installedCount + 1
+            table.insert(remoteSpy.HookDetails, detail)
+        end
+
+        local function markFailed(detail, errValue)
+            table.insert(errors, detail .. ": " .. tostring(errValue))
+        end
+
+        local originalNamecall = nil
+        local originalEvent = nil
+        local originalFunction = nil
+        local originalUnreliable = nil
+
+        local function interceptRemote(method, originalFunctionRef, recorderType, ...)
+            if typeof(originalFunctionRef) ~= "function" then
+                return
+            end
+
+            local remote = ...
+            if not isRemoteInstance(remote) then
+                return originalFunctionRef(...)
+            end
+
+            local canonicalMethod = canonicalRemoteMethod(method)
+            if not canonicalMethod then
+                return originalFunctionRef(...)
+            end
+            if not remoteSpy.LogCheckCaller and typeof(checkcaller) == "function" and checkcaller() then
+                return originalFunctionRef(...)
+            end
+
+            remote = cloneRef(remote)
+            local remoteId = getRemoteDebugId(remote)
+            local blockcheck = tablecheck(remoteSpy.Blocklist, remote, remoteId) == true
+            local argsPack = packArgs(select(2, ...))
+
+            if not tablecheck(remoteSpy.Blacklist, remote, remoteId) and not isCyclicPack(argsPack) then
+                scheduleRemoteSpy(captureRemoteCall, {
+                    Method = canonicalMethod,
+                    Remote = remote,
+                    Args = deepclone(argsPack, {}),
+                    Recorder = recorderType,
+                    Blocked = blockcheck,
+                    RemoteId = remoteId,
+                })
+            end
+
+            if blockcheck then
+                return
+            end
+            return originalFunctionRef(...)
+        end
+
+        local newNamecall = newClosure(function(...)
+            local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
+            if canonicalRemoteMethod(method) then
+                return interceptRemote(method, originalNamecall, "__namecall", ...)
+            end
+            return originalNamecall(...)
+        end)
+
+        if typeof(hookMeta) == "function" then
+            local okHook, hookErr = pcall(function()
+                originalNamecall = hookMeta(game, "__namecall", cloneFn(newNamecall))
+                if typeof(originalNamecall) ~= "function" then
+                    error("invalid __namecall hook return")
+                end
+            end)
+            if okHook then
+                markInstalled("hookmetamethod(__namecall)")
+            else
+                markFailed("hookmetamethod(__namecall)", hookErr)
+            end
+        end
+
+        if not originalNamecall and typeof(hookFn) == "function" then
+            local okRaw, rawErr = pcall(function()
+                local mt = nil
+                if typeof(getrawmetatable) == "function" then
+                    mt = getrawmetatable(game)
+                elseif debug and typeof(debug.getmetatable) == "function" then
+                    mt = debug.getmetatable(game)
+                end
+                if not mt or typeof(mt.__namecall) ~= "function" then
+                    error("missing raw __namecall")
+                end
+                originalNamecall = hookFn(mt.__namecall, cloneFn(newNamecall))
+                if typeof(originalNamecall) ~= "function" then
+                    error("invalid raw __namecall hook return")
+                end
+            end)
+            if okRaw then
+                markInstalled("hookfunction(raw __namecall)")
+            else
+                markFailed("hookfunction(raw __namecall)", rawErr)
+            end
+        end
+
+        if typeof(hookFn) == "function" then
+            local tempEvent = Instance.new("RemoteEvent")
+            local tempFunction = Instance.new("RemoteFunction")
+            local tempUnreliable = nil
+            local hasUnreliable = false
+
+            originalEvent = tempEvent.FireServer
+            originalFunction = tempFunction.InvokeServer
+
+            local okUnreliable, unreliableOrErr = pcall(function()
+                return Instance.new("UnreliableRemoteEvent")
+            end)
+            if okUnreliable and unreliableOrErr then
+                tempUnreliable = unreliableOrErr
+                hasUnreliable = true
+                originalUnreliable = tempUnreliable.FireServer
+            end
+
+            local newFireServer = newClosure(function(...)
+                return interceptRemote("FireServer", originalEvent, "__index", ...)
+            end)
+            local newInvokeServer = newClosure(function(...)
+                return interceptRemote("InvokeServer", originalFunction, "__index", ...)
+            end)
+
+            local okFire, errFire = pcall(function()
+                originalEvent = hookFn(tempEvent.FireServer, cloneFn(newFireServer))
+                if typeof(originalEvent) ~= "function" then
+                    error("invalid RemoteEvent.FireServer hook return")
+                end
+            end)
+            if okFire then
+                markInstalled("hookfunction(RemoteEvent.FireServer)")
+            else
+                markFailed("hookfunction(RemoteEvent.FireServer)", errFire)
+            end
+
+            local okInvoke, errInvoke = pcall(function()
+                originalFunction = hookFn(tempFunction.InvokeServer, cloneFn(newInvokeServer))
+                if typeof(originalFunction) ~= "function" then
+                    error("invalid RemoteFunction.InvokeServer hook return")
+                end
+            end)
+            if okInvoke then
+                markInstalled("hookfunction(RemoteFunction.InvokeServer)")
+            else
+                markFailed("hookfunction(RemoteFunction.InvokeServer)", errInvoke)
+            end
+
+            if hasUnreliable and tempUnreliable and originalUnreliable then
+                local newUnreliable = newClosure(function(...)
+                    return interceptRemote("FireServer", originalUnreliable, "__index", ...)
+                end)
+                local okUre, errUre = pcall(function()
+                    originalUnreliable = hookFn(tempUnreliable.FireServer, cloneFn(newUnreliable))
+                    if typeof(originalUnreliable) ~= "function" then
+                        error("invalid UnreliableRemoteEvent.FireServer hook return")
+                    end
+                end)
+                if okUre then
+                    markInstalled("hookfunction(UnreliableRemoteEvent.FireServer)")
+                else
+                    markFailed("hookfunction(UnreliableRemoteEvent.FireServer)", errUre)
+                end
+            end
+
+            tempEvent:Destroy()
+            tempFunction:Destroy()
+            if tempUnreliable then
+                tempUnreliable:Destroy()
+            end
+        end
+
+        if installedCount > 0 then
+            remoteSpy.Hooked = true
+            remoteSpy.HookType = table.concat(remoteSpy.HookDetails, " + ")
+            return true
+        end
+
+        if #errors > 0 then
+            remoteSpy.HookError = table.concat(errors, " | ")
+        else
+            remoteSpy.HookError = "Executor does not support required hook APIs."
+        end
+        return false
+    end
+
     local function ensureRemotesTab()
         if remotesTab and remotesTab.Button and remotesTab.Button.Parent then
             return remotesTab
@@ -2242,9 +2898,384 @@ function Window:CreateUniversalCategory(options)
             Name = "Remotes",
             Icon = options.RemotesTabIcon or options.RemotesIcon or "remotes",
         })
-        local remotesMain = remotesTab:CreateSection({ Name = "Remotes", Side = "Left" })
-        remotesMain:CreateParagraph("Remotes", "Remotes tools are temporarily removed.")
-        remotesMain:CreateLabel("Remotes feature will be reworked.")
+        local callsSection = remotesTab:CreateSection({ Name = "Calls", Side = "Left" })
+        local inspectorSection = remotesTab:CreateSection({ Name = "Inspector", Side = "Right" })
+        local selectedEntryId = nil
+        local refreshQueued = false
+
+        local hookStatusLabel = callsSection:CreateLabel("Hook: Checking...")
+        local statsLabel = callsSection:CreateLabel("Captured: 0 | Excluded: 0 | Blocked: 0")
+        callsSection:CreateToggle("Log Executor Calls", function(v)
+            remoteSpy.LogCheckCaller = v == true
+        end, remoteSpy.LogCheckCaller == true)
+
+        local listShell = mk("Frame", {
+            Parent = callsSection.Content,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 330),
+        })
+        local listBack = mk("Frame", {
+            Parent = listShell,
+            BackgroundColor3 = C.Control,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 1, 0),
+        })
+        corner(listBack, 4)
+        stroke(listBack, C.Stroke, 0.55)
+        local listScroll = mk("ScrollingFrame", {
+            Parent = listBack,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 6, 0, 6),
+            Size = UDim2.new(1, -12, 1, -12),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = C.Stroke,
+        })
+        mk("UIListLayout", {
+            Parent = listScroll,
+            FillDirection = Enum.FillDirection.Vertical,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 4),
+        })
+
+        local selectedLabel = inspectorSection:CreateLabel("Selected: None")
+        local selectedMeta = inspectorSection:CreateLabel("Method: - | Args: - | Via: -")
+
+        local codeShell = mk("Frame", {
+            Parent = inspectorSection.Content,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 330),
+        })
+        local codeBack = mk("Frame", {
+            Parent = codeShell,
+            BackgroundColor3 = Color3.fromRGB(8, 12, 20),
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 1, 0),
+        })
+        corner(codeBack, 4)
+        stroke(codeBack, C.Stroke, 0.6)
+        local codeBox = mk("TextBox", {
+            Parent = codeBack,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 8, 0, 6),
+            Size = UDim2.new(1, -16, 1, -12),
+            Font = Enum.Font.Code,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            MultiLine = true,
+            ClearTextOnFocus = false,
+            TextWrapped = false,
+            TextColor3 = C.Text,
+            PlaceholderColor3 = C.SubText,
+            Text = "-- Select a captured call to inspect and replay.",
+        })
+        pcall(function()
+            codeBox.TextEditable = false
+        end)
+
+        local function getSelectedEntry()
+            if not selectedEntryId then
+                return nil
+            end
+            for _, entry in ipairs(remoteSpy.Logs) do
+                if entry.Id == selectedEntryId then
+                    return entry
+                end
+            end
+            return nil
+        end
+
+        local function countMapEntries(map)
+            local n = 0
+            for _ in pairs(map) do
+                n = n + 1
+            end
+            return n
+        end
+
+        local function refreshStats()
+            statsLabel:Set(
+                "Captured: " .. tostring(#remoteSpy.Logs)
+                    .. " | Excluded: " .. tostring(countMapEntries(remoteSpy.Blacklist))
+                    .. " | Blocked: " .. tostring(countMapEntries(remoteSpy.Blocklist))
+            )
+        end
+
+        local function refreshInspector()
+            local entry = getSelectedEntry()
+            if not entry then
+                selectedLabel:Set("Selected: None")
+                selectedMeta:Set("Method: - | Args: - | Via: -")
+                codeBox.Text = "-- Select a captured call to inspect and replay."
+                return
+            end
+
+            selectedLabel:Set("Selected: " .. tostring(entry.RemotePath or entry.RemoteName or "Unknown"))
+            selectedMeta:Set(
+                "Method: " .. tostring(entry.Method)
+                    .. " | Args: " .. tostring(entry.ArgCount or 0)
+                    .. " | Via: " .. tostring(entry.Recorder or "?")
+                    .. " | Blocked: " .. tostring(entry.Blocked == true)
+            )
+            codeBox.Text = entry.Code or "-- No generated code."
+        end
+
+        local function rebuildList()
+            for _, child in ipairs(listScroll:GetChildren()) do
+                if child:IsA("TextButton") or child:IsA("TextLabel") then
+                    child:Destroy()
+                end
+            end
+
+            if #remoteSpy.Logs == 0 then
+                mk("TextLabel", {
+                    Parent = listScroll,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 24),
+                    Font = FONT,
+                    TextSize = 12,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextColor3 = C.SubText,
+                    Text = "No captured remote calls yet.",
+                })
+                return
+            end
+
+            local displayCount = math.min(#remoteSpy.Logs, 260)
+            for i = 1, displayCount do
+                local entry = remoteSpy.Logs[i]
+                local timeText = os.date("%H:%M:%S", entry.TimeUnix or os.time())
+                local rowText = string.format(
+                    "[%d] %s  %s  (%d args)  [%s]  %s%s",
+                    tonumber(entry.Id or 0),
+                    tostring(entry.Method or "?"),
+                    tostring(entry.RemoteName or "Remote"),
+                    tonumber(entry.ArgCount or 0),
+                    tostring(entry.Recorder or "?"),
+                    timeText,
+                    entry.Blocked and " [BLOCKED]" or ""
+                )
+                local row = mk("TextButton", {
+                    Parent = listScroll,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(1, 0, 0, 30),
+                    BackgroundColor3 = (selectedEntryId == entry.Id) and C.ControlPress or C.Control,
+                    Font = FONT,
+                    TextSize = 11,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextColor3 = C.Text,
+                    AutoButtonColor = false,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    Text = rowText,
+                    LayoutOrder = i,
+                })
+                corner(row, 3)
+                stroke(row, C.Stroke, 0.6)
+                mk("UIPadding", {
+                    Parent = row,
+                    PaddingLeft = UDim.new(0, 8),
+                    PaddingRight = UDim.new(0, 6),
+                })
+
+                row.MouseEnter:Connect(function()
+                    if selectedEntryId ~= entry.Id then
+                        tw(row, 0.08, { BackgroundColor3 = C.ControlHover }):Play()
+                    end
+                end)
+                row.MouseLeave:Connect(function()
+                    tw(row, 0.08, {
+                        BackgroundColor3 = (selectedEntryId == entry.Id) and C.ControlPress or C.Control,
+                    }):Play()
+                end)
+                row.MouseButton1Click:Connect(function()
+                    selectedEntryId = entry.Id
+                    refreshInspector()
+                    rebuildList()
+                end)
+            end
+        end
+
+        local function queueRefresh()
+            if refreshQueued then
+                return
+            end
+            refreshQueued = true
+            task.defer(function()
+                refreshQueued = false
+                if not remotesTab or not remotesTab.Page or not remotesTab.Page.Parent then
+                    return
+                end
+                refreshStats()
+                rebuildList()
+                refreshInspector()
+            end)
+        end
+
+        callsSection:CreateButton("Clear List", function()
+            table.clear(remoteSpy.Logs)
+            selectedEntryId = nil
+            emitRemoteSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Captured list cleared.", 1.9)
+        end)
+
+        callsSection:CreateButton("Clear Exclude List", function()
+            table.clear(remoteSpy.Blacklist)
+            emitRemoteSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Exclude list cleared.", 1.9)
+        end)
+
+        callsSection:CreateButton("Clear Block List", function()
+            table.clear(remoteSpy.Blocklist)
+            emitRemoteSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Block list cleared.", 1.9)
+        end)
+
+        inspectorSection:CreateButton("Run Code", function()
+            local entry = getSelectedEntry()
+            if not entry then
+                notify("Remotes", "Select a remote call first.", 2.2)
+                return
+            end
+            if typeof(loadstring) ~= "function" then
+                notify("Remotes", "loadstring is not available in this executor.", 3)
+                return
+            end
+
+            local okCompile, chunkOrErr = pcall(loadstring, entry.Code or "")
+            if not okCompile or type(chunkOrErr) ~= "function" then
+                notify("Remotes", "Failed to compile selected code.", 2.5)
+                return
+            end
+
+            local okRun, runErr = pcall(chunkOrErr)
+            if not okRun then
+                notify("Remotes", "Run error: " .. tostring(runErr), 3)
+                return
+            end
+            notify("Remotes", "Selected code executed.", 1.8)
+        end)
+
+        inspectorSection:CreateButton("Copy Code", function()
+            local entry = getSelectedEntry()
+            if not entry then
+                notify("Remotes", "Select a remote call first.", 2.2)
+                return
+            end
+
+            local clipboardFn = setclipboard or toclipboard
+            if not clipboardFn and syn and typeof(syn.write_clipboard) == "function" then
+                clipboardFn = syn.write_clipboard
+            end
+            if typeof(clipboardFn) ~= "function" then
+                notify("Remotes", "Clipboard API is not available in this executor.", 3)
+                return
+            end
+
+            local okCopy = pcall(clipboardFn, entry.Code or "")
+            if okCopy then
+                notify("Remotes", "Code copied to clipboard.", 1.8)
+            else
+                notify("Remotes", "Failed to copy code.", 2.4)
+            end
+        end)
+
+        inspectorSection:CreateButton("Exclude From List", function()
+            local entry = getSelectedEntry()
+            if not entry then
+                notify("Remotes", "Select a remote call first.", 2.2)
+                return
+            end
+
+            local remoteId = tostring(entry.RemoteId or "")
+            if remoteId == "" then
+                notify("Remotes", "Selected entry has no valid remote id.", 2.4)
+                return
+            end
+
+            remoteSpy.Blacklist[remoteId] = true
+            local filtered = {}
+            for _, item in ipairs(remoteSpy.Logs) do
+                if tostring(item.RemoteId or "") ~= remoteId then
+                    filtered[#filtered + 1] = item
+                end
+            end
+            remoteSpy.Logs = filtered
+            selectedEntryId = nil
+            emitRemoteSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Excluded: " .. tostring(entry.RemoteName or remoteId), 2.2)
+        end)
+
+        inspectorSection:CreateButton("Exclude Name", function()
+            local entry = getSelectedEntry()
+            if not entry then
+                notify("Remotes", "Select a remote call first.", 2.2)
+                return
+            end
+
+            local nameKey = tostring(entry.RemoteName or "")
+            if nameKey == "" then
+                notify("Remotes", "Selected entry has no valid remote name.", 2.2)
+                return
+            end
+
+            remoteSpy.Blacklist[nameKey] = true
+            local filtered = {}
+            for _, item in ipairs(remoteSpy.Logs) do
+                if tostring(item.RemoteName or "") ~= nameKey then
+                    filtered[#filtered + 1] = item
+                end
+            end
+            remoteSpy.Logs = filtered
+            selectedEntryId = nil
+            emitRemoteSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Excluded by name: " .. nameKey, 2.2)
+        end)
+
+        inspectorSection:CreateButton("Block From Firing", function()
+            local entry = getSelectedEntry()
+            if not entry then
+                notify("Remotes", "Select a remote call first.", 2.2)
+                return
+            end
+
+            local remoteId = tostring(entry.RemoteId or "")
+            if remoteId == "" then
+                notify("Remotes", "Selected entry has no valid remote id.", 2.4)
+                return
+            end
+
+            remoteSpy.Blocklist[remoteId] = true
+            emitRemoteSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Blocking: " .. tostring(entry.RemoteName or remoteId), 2.2)
+        end)
+
+        local hookOk = installRemoteSpyHooks()
+        if hookOk then
+            hookStatusLabel:Set("Hook: Active (" .. tostring(remoteSpy.HookType or "unknown") .. ")")
+        else
+            local reason = tostring(remoteSpy.HookError or "unknown")
+            hookStatusLabel:Set("Hook: Failed - " .. reason)
+            notify("Remotes", "Hook failed: " .. reason, 4.2)
+        end
+
+        local listenerToken = {}
+        remoteSpy.Listeners[listenerToken] = function()
+            queueRefresh()
+        end
+        track(self.Connections, remotesTab.Page.Destroying:Connect(function()
+            remoteSpy.Listeners[listenerToken] = nil
+        end))
+
+        queueRefresh()
         return remotesTab
     end
 
@@ -2290,8 +3321,8 @@ function Window:CreateUniversalCategory(options)
 
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
     otherSection:CreateLabel("Enable Developer to unlock Remotes/Scripts tabs.")
-    infoSection:CreateParagraph("Developer Tabs", "Remotes is temporarily disabled.")
-    infoSection:CreateLabel("Remotes: feature will return in a later update")
+    infoSection:CreateParagraph("Developer Tabs", "Remotes includes a simple-spy style logger.")
+    infoSection:CreateLabel("Remotes: run/copy code, exclude remotes, clear lists")
     infoSection:CreateLabel("Scripts: DevEx copy/dump tools (later)")
 
     setDeveloperEnabled(options.DeveloperEnabled == true, true)
