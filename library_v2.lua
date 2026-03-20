@@ -6,7 +6,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local FONT = Enum.Font.Gotham
-local GUI_NAME = "XenoUILibraryV2"
+local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
 
 local C = {
@@ -212,12 +212,27 @@ function Window:OnClose(cb)
     return self
 end
 
+function Window:Cleanup()
+    if self.CleanupRan then
+        return
+    end
+    self.CleanupRan = true
+
+    for _, cb in ipairs(self.CloseCallbacks) do
+        safe(cb)
+    end
+    table.clear(self.CloseCallbacks)
+end
+
 function Window:Destroy()
     if self.Destroyed then
         return
     end
     self.Destroyed = true
     closeDropdowns(nil)
+
+    self:Cleanup()
+
     for _, c in ipairs(self.Connections) do
         if c and c.Disconnect then
             pcall(function()
@@ -226,9 +241,6 @@ function Window:Destroy()
         end
     end
     table.clear(self.Connections)
-    for _, cb in ipairs(self.CloseCallbacks) do
-        safe(cb)
-    end
     if self.ScreenGui then
         self.ScreenGui:Destroy()
     end
@@ -2260,12 +2272,27 @@ function Window:CreateTab(a, iconMaybe)
         name = tostring(a or "Tab")
         icon = iconMaybe
     end
+    local tabNameLower = string.lower(name)
+    local tabLayoutOrder = nil
+
+    if tabNameLower == "local" then
+        tabLayoutOrder = 10
+    elseif tabNameLower == "players" then
+        tabLayoutOrder = 20
+    else
+        tabLayoutOrder = self.NextCustomTabOrder or 200
+        self.NextCustomTabOrder = tabLayoutOrder + 1
+        if self.SectionsLabel then
+            self.SectionsLabel.Visible = true
+        end
+    end
 
     local btn = mk("TextButton", {
         Parent = self.TabList,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 28),
+        LayoutOrder = tabLayoutOrder,
         Text = "",
         AutoButtonColor = false,
     })
@@ -2547,6 +2574,23 @@ function UILibrary:CreateWindow(arg)
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 4),
     })
+    local sectionsLabel = mk("TextLabel", {
+        Parent = tabList,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 16),
+        Font = FONT,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = C.SubText,
+        Text = "Sections",
+        LayoutOrder = 150,
+        Visible = false,
+    })
+    mk("UIPadding", {
+        Parent = sectionsLabel,
+        PaddingLeft = UDim.new(0, 4),
+        PaddingRight = UDim.new(0, 2),
+    })
 
     local content = mk("Frame", {
         Parent = body,
@@ -2591,14 +2635,17 @@ function UILibrary:CreateWindow(arg)
         MainScale = mainScale,
         TitleLabel = titleLbl,
         TabList = tabList,
+        SectionsLabel = sectionsLabel,
         PageHolder = pageHolder,
         Tabs = {},
         ActiveTab = nil,
+        NextCustomTabOrder = 200,
         Connections = {},
         CloseCallbacks = {},
         ToggleKey = toggleKey,
         VisibleState = false,
         Animating = false,
+        CleanupRan = false,
         Destroyed = false,
     }, Window)
 
@@ -2630,6 +2677,9 @@ function UILibrary:CreateWindow(arg)
         w:SetVisible(false)
     end))
     track(w.Connections, close.MouseButton1Click:Connect(function()
+        w:Destroy()
+    end))
+    track(w.Connections, sg.Destroying:Connect(function()
         w:Destroy()
     end))
     track(w.Connections, UIS.InputBegan:Connect(function(i, gpe)
