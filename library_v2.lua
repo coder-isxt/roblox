@@ -301,7 +301,7 @@ function Window:CreatePlayersCategory(options)
     local listShell = mk("Frame", {
         Parent = listSection.Content,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 300),
+        Size = UDim2.new(1, 0, 0, 430),
     })
     local listBack = mk("Frame", {
         Parent = listShell,
@@ -312,12 +312,37 @@ function Window:CreatePlayersCategory(options)
     corner(listBack, 4)
     stroke(listBack, C.Stroke, 0.55)
 
+    local searchBack = mk("Frame", {
+        Parent = listBack,
+        BackgroundColor3 = Color3.fromRGB(14, 21, 31),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 6, 0, 6),
+        Size = UDim2.new(1, -12, 0, 24),
+    })
+    corner(searchBack, 3)
+    stroke(searchBack, C.Stroke, 0.65)
+
+    local searchBox = mk("TextBox", {
+        Parent = searchBack,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 8, 0, 0),
+        Size = UDim2.new(1, -16, 1, 0),
+        Font = FONT,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = C.Text,
+        PlaceholderColor3 = C.SubText,
+        PlaceholderText = "Search player...",
+        Text = "",
+        ClearTextOnFocus = false,
+    })
+
     local listScroll = mk("ScrollingFrame", {
         Parent = listBack,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Position = UDim2.new(0, 6, 0, 6),
-        Size = UDim2.new(1, -12, 1, -12),
+        Position = UDim2.new(0, 6, 0, 34),
+        Size = UDim2.new(1, -12, 1, -40),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollBarThickness = 3,
@@ -330,7 +355,17 @@ function Window:CreatePlayersCategory(options)
         Padding = UDim.new(0, 4),
     })
 
+    local function updateListShellHeight()
+        local pageHeight = playersTab.Page.AbsoluteSize.Y
+        if pageHeight <= 0 then
+            return
+        end
+        local wanted = math.max(300, pageHeight - 44)
+        listShell.Size = UDim2.new(1, 0, 0, wanted)
+    end
+
     local selectedPlayer = nil
+    local playerSearchQuery = ""
     local targetMode = "Selected"
     local targetModes = { "Selected", "Others", "All" }
 
@@ -742,7 +777,35 @@ function Window:CreatePlayersCategory(options)
             return
         end
 
-        for _, p in ipairs(allPlayers) do
+        local filtered = {}
+        local query = string.lower(playerSearchQuery or "")
+        if query == "" then
+            filtered = allPlayers
+        else
+            for _, p in ipairs(allPlayers) do
+                local name = string.lower(tostring(p.Name or ""))
+                local display = string.lower(tostring(p.DisplayName or ""))
+                if string.find(name, query, 1, true) or string.find(display, query, 1, true) then
+                    table.insert(filtered, p)
+                end
+            end
+        end
+
+        if #filtered == 0 then
+            mk("TextLabel", {
+                Parent = listScroll,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, 0, 0, 26),
+                Font = FONT,
+                TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextColor3 = C.SubText,
+                Text = "No matching players",
+            })
+            return
+        end
+
+        for _, p in ipairs(filtered) do
             local displayText = tostring(p.DisplayName or p.Name) .. "  @" .. tostring(p.Name)
             local row = mk("TextButton", {
                 Parent = listScroll,
@@ -901,6 +964,15 @@ function Window:CreatePlayersCategory(options)
         refreshPlayerList()
     end)
 
+    track(self.Connections, searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        playerSearchQuery = searchBox.Text or ""
+        refreshPlayerList()
+    end))
+
+    track(self.Connections, playersTab.Page:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        updateListShellHeight()
+    end))
+
     track(self.Connections, Players.PlayerAdded:Connect(function()
         refreshPlayerList()
     end))
@@ -923,6 +995,10 @@ function Window:CreatePlayersCategory(options)
     end)
 
     setSelectedPlayer(UILibrary:GetSelectedPlayer())
+    updateListShellHeight()
+    task.defer(function()
+        updateListShellHeight()
+    end)
     refreshPlayerList()
     refreshTargetSelectionLabels()
 
