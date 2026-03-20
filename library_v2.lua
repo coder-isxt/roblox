@@ -891,9 +891,10 @@ function Window:CreatePlayersCategory(options)
         local startAt = os.clock()
         local endAt = os.clock() + 5
         local done = false
-        local burstTick = 0
-        local orbitDirection = 1
-        local radialDirection = 1
+        local thrust = Instance.new("BodyThrust")
+        thrust.Name = "YeetForce"
+        thrust.Force = Vector3.new(9999, 9999, 9999)
+        thrust.Parent = localRoot
 
         local function restore()
             if done then
@@ -912,6 +913,11 @@ function Window:CreatePlayersCategory(options)
                 currentRoot.AssemblyLinearVelocity = oldLinear
                 currentRoot.CFrame = startCFrame
             end
+
+            if thrust and thrust.Parent then
+                thrust:Destroy()
+            end
+
             flingRestore = nil
         end
 
@@ -919,45 +925,34 @@ function Window:CreatePlayersCategory(options)
         flingConnection = RunService.Heartbeat:Connect(function()
             local currentRoot = getLocalRoot()
             local currentTargetRoot = getTargetRoot(targetPlayer)
-            if os.clock() >= endAt or not currentRoot or not currentTargetRoot then
+            local targetCharacter = targetPlayer and targetPlayer.Character
+            if os.clock() >= endAt or not currentRoot or not currentTargetRoot or not targetCharacter or not targetCharacter:FindFirstChild("Head") then
                 restore()
                 return
             end
 
             local now = os.clock()
             local elapsed = now - startAt
-
-            if now - burstTick > 0.11 then
-                burstTick = now
-                orbitDirection = (math.random() > 0.5) and 1 or -1
-                radialDirection = (math.random() > 0.5) and 1 or -1
-            end
-
-            local spinSpeed = 145 + (elapsed * 18)
-            local theta = now * spinSpeed * orbitDirection
-
-            local radius = 0.09 + math.abs(math.sin(elapsed * 13.5)) * 0.38
-            local bob = 0.09 + (math.sin(elapsed * 20) * 0.16) + (math.cos(elapsed * 11) * 0.05)
-            local radialPulse = radialDirection * (0.05 + math.abs(math.sin(elapsed * 17)) * 0.22)
-
+            local theta = now * (130 + elapsed * 32)
+            local closeRadius = 0.2 + math.abs(math.sin(elapsed * 16)) * 0.65
+            local rise = 0.15 + math.sin(elapsed * 22) * 0.25
             local offset = Vector3.new(
-                (math.cos(theta) * radius) + (math.cos(theta * 2.2) * radialPulse),
-                bob,
-                (math.sin(theta) * radius) + (math.sin(theta * 2.2) * radialPulse)
+                math.cos(theta) * closeRadius,
+                rise,
+                math.sin(theta) * closeRadius
             )
 
-            currentRoot.CFrame = currentTargetRoot.CFrame * CFrame.new(offset) * CFrame.Angles(theta * 2.0, theta * 1.4, theta * 1.1)
+            local attackCFrame = currentTargetRoot.CFrame * CFrame.new(offset) * CFrame.Angles(theta * 2.4, theta * 1.6, theta * 2.2)
+            currentRoot.CFrame = attackCFrame
+            if thrust.Parent ~= currentRoot then
+                thrust.Parent = currentRoot
+            end
+            thrust.Location = currentTargetRoot.Position
 
-            local tangential = Vector3.new(-math.sin(theta), 0, math.cos(theta))
-            local radial = Vector3.new(math.cos(theta), 0, math.sin(theta)) * radialDirection
-            local impulse = (tangential * 560) + (radial * 230) + Vector3.new(0, 110 + math.abs(math.sin(elapsed * 9)) * 75, 0)
-
-            currentRoot.AssemblyLinearVelocity = impulse
-            currentRoot.AssemblyAngularVelocity = Vector3.new(
-                3200 * orbitDirection,
-                4500 * orbitDirection,
-                3100 * radialDirection
-            )
+            local tangent = Vector3.new(-math.sin(theta), 0, math.cos(theta))
+            local shove = (tangent * 650) + (currentTargetRoot.CFrame.LookVector * 220) + Vector3.new(0, 145, 0)
+            currentRoot.AssemblyLinearVelocity = shove
+            currentRoot.AssemblyAngularVelocity = Vector3.new(4200, 6000, 4200)
         end)
 
         task.delay(5.2, restore)
@@ -1670,16 +1665,68 @@ function Window:CreateUniversalCategory(options)
         universalTab = self:CreateTab("Universal")
     end
 
-    local universalSection = universalTab:CreateSection({ Name = "Universal", Side = "Left" })
-    local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Right" })
+    local developerSection = universalTab:CreateSection({ Name = "Developer", Side = "Left" })
+    local infoSection = universalTab:CreateSection({ Name = "Universal", Side = "Right" })
 
-    universalSection:CreateParagraph("Universal", "Persistent tab for cross-game features.")
-    otherSection:CreateLabel("Ready")
+    local function notify(title, content, duration)
+        UILibrary:Notify({
+            Title = title,
+            Content = content,
+            Duration = duration or 2.6,
+        })
+    end
+
+    local function runRemoteDevTool(toolName, url, useAsync)
+        if typeof(loadstring) ~= "function" then
+            notify(toolName, "loadstring is not available in this executor.", 3.1)
+            return false
+        end
+
+        local okFetch, source = pcall(function()
+            if useAsync then
+                return game:HttpGetAsync(url)
+            end
+            return game:HttpGet(url)
+        end)
+        if not okFetch or type(source) ~= "string" or source == "" then
+            notify(toolName, "Failed to download script.", 3)
+            return false
+        end
+
+        local okCompile, chunkOrErr = pcall(loadstring, source)
+        if not okCompile or type(chunkOrErr) ~= "function" then
+            notify(toolName, "Failed to compile script.", 3)
+            return false
+        end
+
+        local okRun, runErr = pcall(chunkOrErr)
+        if not okRun then
+            notify(toolName, "Runtime error: " .. tostring(runErr), 3.2)
+            return false
+        end
+
+        notify(toolName, "Loaded successfully.", 2.2)
+        return true
+    end
+
+    developerSection:CreateButton("Load Remotespy", function()
+        runRemoteDevTool("Remotespy", "https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578", false)
+    end)
+    developerSection:CreateButton("Load SimpleSpy", function()
+        runRemoteDevTool("SimpleSpy", "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua", true)
+    end)
+    developerSection:CreateButton("Load DevEx", function()
+        runRemoteDevTool("DevEx", "https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265", false)
+    end)
+
+    infoSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
+    infoSection:CreateLabel("Developer tools are loaded client-side.")
 
     self.UniversalCategory = {
         Tab = universalTab,
-        UniversalSection = universalSection,
-        OtherSection = otherSection,
+        DeveloperSection = developerSection,
+        UniversalSection = infoSection,
+        OtherSection = infoSection,
         Options = options,
     }
 
