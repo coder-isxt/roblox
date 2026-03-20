@@ -726,7 +726,7 @@ function Window:CreatePlayersCategory(options)
             currentRoot.AssemblyLinearVelocity = (tangential * 340) + Vector3.new(0, 60, 0)
         end)
 
-        task.delay(5.2, restore)
+        task.delay(4.5, restore)
         return true
     end
 
