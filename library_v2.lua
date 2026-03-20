@@ -1045,16 +1045,26 @@ function Window:CreateLocalCategory(options)
     local otherSection = localTab:CreateSection({ Name = "Other", Side = "Right" })
 
     local flyEnabled = false
-    local flySpeed = tonumber(options.FlySpeed) or 70
-    flySpeed = math.clamp(flySpeed, 10, 300)
+    local flySpeed = tonumber(options.FlySpeed) or 80
+    flySpeed = math.clamp(flySpeed, 20, 250)
     local flyKey = keycode(options.FlyKey) or Enum.KeyCode.F
-    local flyInput = {}
+    local flyControls = {
+        Forward = false,
+        Back = false,
+        Left = false,
+        Right = false,
+        Up = false,
+        Down = false,
+    }
+    local flyBV = nil
+    local flyBG = nil
 
     local flingProtectEnabled = false
 
     local flyInputConnectionBegan = nil
     local flyInputConnectionEnded = nil
-    local flyRunConnection = nil
+    local flyVelocityConnection = nil
+    local flyCharacterAddedConnection = nil
     local flingProtectConnection = nil
 
     local flyToggleControl = nil
@@ -1072,90 +1082,147 @@ function Window:CreateLocalCategory(options)
         return character and character:FindFirstChild("HumanoidRootPart")
     end
 
-    local function startFlyLoop()
-        if flyRunConnection then
+    local function getLocalHumanoid()
+        local character = localPlayer.Character
+        return character and character:FindFirstChildOfClass("Humanoid")
+    end
+
+    local function stopFly()
+        local humanoid = getLocalHumanoid()
+        if humanoid then
+            humanoid.PlatformStand = false
+        end
+
+        if flyBV then
+            pcall(function()
+                flyBV:Destroy()
+            end)
+            flyBV = nil
+        end
+
+        if flyBG then
+            pcall(function()
+                flyBG:Destroy()
+            end)
+            flyBG = nil
+        end
+    end
+
+    local function startFly()
+        local rootPart = getLocalRoot()
+        local humanoid = getLocalHumanoid()
+        if not rootPart or not humanoid then
+            return false
+        end
+
+        if flyBV then
+            flyBV:Destroy()
+            flyBV = nil
+        end
+        if flyBG then
+            flyBG:Destroy()
+            flyBG = nil
+        end
+
+        flyBG = Instance.new("BodyGyro")
+        flyBG.Name = "XenoFlyBG"
+        flyBG.P = 9e4
+        flyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        flyBG.CFrame = rootPart.CFrame
+        flyBG.Parent = rootPart
+
+        flyBV = Instance.new("BodyVelocity")
+        flyBV.Name = "XenoFlyBV"
+        flyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        flyBV.Velocity = Vector3.new(0, 0, 0)
+        flyBV.Parent = rootPart
+
+        humanoid.PlatformStand = true
+        return true
+    end
+
+    local function setControlFromKey(keyCode, isDown)
+        if keyCode == Enum.KeyCode.W then
+            flyControls.Forward = isDown
+        elseif keyCode == Enum.KeyCode.S then
+            flyControls.Back = isDown
+        elseif keyCode == Enum.KeyCode.A then
+            flyControls.Left = isDown
+        elseif keyCode == Enum.KeyCode.D then
+            flyControls.Right = isDown
+        elseif keyCode == Enum.KeyCode.Space then
+            flyControls.Up = isDown
+        elseif keyCode == Enum.KeyCode.LeftControl then
+            flyControls.Down = isDown
+        end
+    end
+
+    local function updateFlyVelocity()
+        if not flyEnabled or not flyBV or not flyBG then
             return
         end
 
-        flyRunConnection = RunService.RenderStepped:Connect(function(dt)
-            if not flyEnabled then
-                return
+        local rootPart = getLocalRoot()
+        if not rootPart then
+            stopFly()
+            flyEnabled = false
+            if flyToggleControl and flyToggleControl.Set then
+                flyToggleControl:Set(false, true)
             end
-
-            local root = getLocalRoot()
-            local cam = workspace.CurrentCamera
-            if not root or not cam then
-                return
-            end
-
-            local look = cam.CFrame.LookVector
-            local right = cam.CFrame.RightVector
-            local flatLook = Vector3.new(look.X, 0, look.Z)
-            local flatRight = Vector3.new(right.X, 0, right.Z)
-            if flatLook.Magnitude > 0 then
-                flatLook = flatLook.Unit
-            end
-            if flatRight.Magnitude > 0 then
-                flatRight = flatRight.Unit
-            end
-
-            local dir = Vector3.new(0, 0, 0)
-            if flyInput[Enum.KeyCode.W] then
-                dir = dir + flatLook
-            end
-            if flyInput[Enum.KeyCode.S] then
-                dir = dir - flatLook
-            end
-            if flyInput[Enum.KeyCode.D] then
-                dir = dir + flatRight
-            end
-            if flyInput[Enum.KeyCode.A] then
-                dir = dir - flatRight
-            end
-            if flyInput[Enum.KeyCode.Space] or flyInput[Enum.KeyCode.E] then
-                dir = dir + Vector3.new(0, 1, 0)
-            end
-            if flyInput[Enum.KeyCode.LeftControl] or flyInput[Enum.KeyCode.Q] then
-                dir = dir - Vector3.new(0, 1, 0)
-            end
-
-            if dir.Magnitude > 0 then
-                dir = dir.Unit
-            end
-
-            local nextPos = root.Position + (dir * flySpeed * dt)
-            local facing = flatLook
-            if facing.Magnitude <= 0 then
-                facing = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
-            end
-            if facing.Magnitude <= 0 then
-                facing = Vector3.new(0, 0, -1)
-            else
-                facing = facing.Unit
-            end
-
-            root.CFrame = CFrame.lookAt(nextPos, nextPos + facing)
-            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-        end)
-    end
-
-    local function stopFlyLoop()
-        if flyRunConnection then
-            flyRunConnection:Disconnect()
-            flyRunConnection = nil
+            return
         end
+
+        local cam = workspace.CurrentCamera
+        if not cam then
+            return
+        end
+
+        local move = Vector3.new(0, 0, 0)
+        if flyControls.Forward then
+            move = move + cam.CFrame.LookVector
+        end
+        if flyControls.Back then
+            move = move - cam.CFrame.LookVector
+        end
+        if flyControls.Left then
+            move = move - cam.CFrame.RightVector
+        end
+        if flyControls.Right then
+            move = move + cam.CFrame.RightVector
+        end
+        if flyControls.Up then
+            move = move + Vector3.new(0, 1, 0)
+        end
+        if flyControls.Down then
+            move = move - Vector3.new(0, 1, 0)
+        end
+
+        if move.Magnitude > 0 then
+            move = move.Unit * flySpeed
+        end
+
+        flyBV.Velocity = move
+        flyBG.CFrame = cam.CFrame
     end
 
     local function setFlyEnabled(state, silent)
-        flyEnabled = state == true
-        if flyEnabled then
-            startFlyLoop()
-        else
-            stopFlyLoop()
+        state = state == true
+        if state == flyEnabled then
+            return
         end
-        if not silent then
-            notify("Fly", flyEnabled and "Fly enabled." or "Fly disabled.", 1.8)
+
+        flyEnabled = state
+        if flyEnabled then
+            local ok = startFly()
+            if not ok then
+                flyEnabled = false
+                if not silent then
+                    notify("Fly", "Character not ready.", 1.8)
+                end
+                return
+            end
+        else
+            stopFly()
         end
     end
 
@@ -1168,14 +1235,36 @@ function Window:CreateLocalCategory(options)
         if gpe then
             return
         end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            flyInput[input.KeyCode] = true
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then
+            return
         end
+
+        local key = input.KeyCode
+        if key == flyKey then
+            local newState = not flyEnabled
+            if flyToggleControl and flyToggleControl.Set then
+                flyToggleControl:Set(newState, true)
+            end
+            setFlyEnabled(newState, false)
+        end
+        setControlFromKey(key, true)
     end))
     flyInputConnectionEnded = track(self.Connections, UIS.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Keyboard then
-            flyInput[input.KeyCode] = nil
+            setControlFromKey(input.KeyCode, false)
         end
+    end))
+
+    flyVelocityConnection = track(self.Connections, RunService.Heartbeat:Connect(function()
+        updateFlyVelocity()
+    end))
+
+    flyCharacterAddedConnection = track(self.Connections, localPlayer.CharacterAdded:Connect(function()
+        task.defer(function()
+            if flyEnabled then
+                startFly()
+            end
+        end)
     end))
 
     flingProtectConnection = track(self.Connections, RunService.Heartbeat:Connect(function()
@@ -1210,21 +1299,13 @@ function Window:CreateLocalCategory(options)
         if changed then
             flyKey = key
             notify("Fly Keybind", "Set to " .. tostring(key.Name) .. ".", 1.8)
-            return
-        end
-
-        if key == flyKey then
-            if flyToggleControl and flyToggleControl.Set then
-                flyToggleControl:Set(not flyEnabled, true)
-            end
-            setFlyEnabled(not flyEnabled, false)
         end
     end, flyKey)
 
-    flySection:CreateSlider("Fly Speed", 10, 300, flySpeed, function(v)
+    flySection:CreateSlider("Fly Speed", 20, 250, flySpeed, function(v)
         flySpeed = tonumber(v) or flySpeed
     end)
-    flySection:CreateLabel("Fly controls: WASD, Space/E up, Ctrl/Q down")
+    flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
 
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
@@ -1233,6 +1314,12 @@ function Window:CreateLocalCategory(options)
     self:OnClose(function()
         setFlyEnabled(false, true)
         flingProtectEnabled = false
+        flyControls.Forward = false
+        flyControls.Back = false
+        flyControls.Left = false
+        flyControls.Right = false
+        flyControls.Up = false
+        flyControls.Down = false
     end)
 
     self.LocalCategory = {
@@ -1249,7 +1336,7 @@ function Window:CreateLocalCategory(options)
             return flyEnabled
         end,
         SetFlySpeed = function(_, speed)
-            flySpeed = math.clamp(tonumber(speed) or flySpeed, 10, 300)
+            flySpeed = math.clamp(tonumber(speed) or flySpeed, 20, 250)
         end,
         GetFlySpeed = function()
             return flySpeed
