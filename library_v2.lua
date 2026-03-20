@@ -202,6 +202,11 @@ local function normalizeSectionSide(side)
     return "Left"
 end
 
+local function isPersistentTabName(name)
+    local n = string.lower(tostring(name or ""))
+    return n == "local" or n == "players" or n == "universal" or n == "remotes" or n == "scripts"
+end
+
 local function closeDropdowns(except)
     for d in pairs(OPEN_DROPDOWNS) do
         if d ~= except and d.SetOpen then
@@ -2220,8 +2225,7 @@ function Window:CreateUniversalCategory(options)
         if self.SectionsLabel then
             local hasCustom = false
             for _, t in ipairs(self.Tabs) do
-                local nameLower = string.lower(tostring(t.Name or ""))
-                if nameLower ~= "local" and nameLower ~= "players" and nameLower ~= "universal" then
+                if not isPersistentTabName(t.Name) then
                     hasCustom = true
                     break
                 end
@@ -3019,13 +3023,25 @@ function Section:CreateLabel(text)
         TextSize = 13,
         TextColor3 = C.SubText,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true,
         Text = tostring(text or ""),
     })
+
+    local function refreshHeight()
+        local needed = math.max(24, lbl.TextBounds.Y + 2)
+        shell.Size = UDim2.new(1, 0, 0, needed)
+    end
+    track(self.Window.Connections, lbl:GetPropertyChangedSignal("Text"):Connect(refreshHeight))
+    track(self.Window.Connections, lbl:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshHeight))
+    task.defer(refreshHeight)
+
     return {
         Frame = shell,
         Label = lbl,
         Set = function(_, v)
             lbl.Text = tostring(v or "")
+            refreshHeight()
         end,
     }
 end
@@ -3222,10 +3238,11 @@ function Tab:GetIcon()
 end
 
 function Window:CreateTab(a, iconMaybe)
-    local name, icon = "Tab", nil
+    local name, icon, requestedLayoutOrder = "Tab", nil, nil
     if typeof(a) == "table" then
         name = tostring(a.Name or a.Title or "Tab")
         icon = a.Icon
+        requestedLayoutOrder = tonumber(a.LayoutOrder)
     else
         name = tostring(a or "Tab")
         icon = iconMaybe
@@ -3233,12 +3250,18 @@ function Window:CreateTab(a, iconMaybe)
     local tabNameLower = string.lower(name)
     local tabLayoutOrder = nil
 
-    if tabNameLower == "local" then
+    if requestedLayoutOrder then
+        tabLayoutOrder = requestedLayoutOrder
+    elseif tabNameLower == "local" then
         tabLayoutOrder = 10
     elseif tabNameLower == "players" then
         tabLayoutOrder = 20
     elseif tabNameLower == "universal" then
         tabLayoutOrder = 30
+    elseif tabNameLower == "remotes" then
+        tabLayoutOrder = 40
+    elseif tabNameLower == "scripts" then
+        tabLayoutOrder = 50
     else
         tabLayoutOrder = self.NextCustomTabOrder or 200
         self.NextCustomTabOrder = tabLayoutOrder + 1
