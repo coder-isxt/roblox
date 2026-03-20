@@ -2249,13 +2249,21 @@ function Window:CreateUniversalCategory(options)
             LastCaptureKey = nil,
             LastCaptureTime = 0,
             CaptureErrorCount = 0,
+            InterceptCount = 0,
+            QueueCount = 0,
         }
         UILibrary._simpleSpyState = simpleSpy
     end
     simpleSpy.Blacklist = simpleSpy.Blacklist or simpleSpy.Excluded or {}
     simpleSpy.Excluded = simpleSpy.Blacklist
     simpleSpy.Blocklist = simpleSpy.Blocklist or {}
+    if simpleSpy.LogCheckCaller == nil then
+        simpleSpy.LogCheckCaller = true
+    else
     simpleSpy.LogCheckCaller = simpleSpy.LogCheckCaller == true
+    end
+    simpleSpy.InterceptCount = tonumber(simpleSpy.InterceptCount) or 0
+    simpleSpy.QueueCount = tonumber(simpleSpy.QueueCount) or 0
     simpleSpy.Scheduled = simpleSpy.Scheduled or {}
     simpleSpy.SchedulerConnection = simpleSpy.SchedulerConnection or nil
 
@@ -2601,6 +2609,7 @@ function Window:CreateUniversalCategory(options)
     end
 
     local function captureRemote(remote, method, argsPack, recorderType, remoteId, blocked)
+        simpleSpy.QueueCount = (simpleSpy.QueueCount or 0) + 1
         local canonicalMethod = canonicalRemoteMethod(method)
         if not canonicalMethod then
             return
@@ -2706,6 +2715,7 @@ function Window:CreateUniversalCategory(options)
             if typeof(originalFunction) ~= "function" then
                 return nil
             end
+            simpleSpy.InterceptCount = (simpleSpy.InterceptCount or 0) + 1
 
             local selfRef = ...
             if typeof(selfRef) ~= "Instance" then
@@ -2787,6 +2797,42 @@ function Window:CreateUniversalCategory(options)
                 markInstalled("hookfunction(raw __namecall)")
             else
                 markFailed("hookfunction(raw __namecall)", rawErr)
+            end
+        end
+
+        do
+            local getRawMt = getrawmetatable or (debug and debug.getmetatable)
+            local setReadOnly = setreadonly
+            if not setReadOnly and typeof(make_writeable) == "function" and typeof(make_readonly) == "function" then
+                setReadOnly = function(mt, state)
+                    if state then
+                        make_readonly(mt)
+                    else
+                        make_writeable(mt)
+                    end
+                end
+            end
+
+            if typeof(getRawMt) == "function" and typeof(setReadOnly) == "function" then
+                local okRawSet, rawSetErr = pcall(function()
+                    local mt = getRawMt(game)
+                    if not mt or typeof(mt.__namecall) ~= "function" then
+                        error("missing settable __namecall")
+                    end
+                    local oldNamecall = mt.__namecall
+                    setReadOnly(mt, false)
+                    mt.__namecall = cloneFn(newNamecall)
+                    setReadOnly(mt, true)
+                    if not originalNamecall then
+                        originalNamecall = oldNamecall
+                    end
+                end)
+                if okRawSet then
+                    namecallInstalled = true
+                    markInstalled("raw metatable __namecall")
+                else
+                    markFailed("raw metatable __namecall", rawSetErr)
+                end
             end
         end
 
@@ -2885,6 +2931,10 @@ function Window:CreateUniversalCategory(options)
 
         local hookStatusLabel = callsSection:CreateLabel("Hook: Checking...")
         local statsLabel = callsSection:CreateLabel("Captured: 0 | Excluded: 0 | Blocked: 0")
+        callsSection:CreateToggle("Log checkcaller", function(v)
+            simpleSpy.LogCheckCaller = v == true
+            notify("Remotes", "Log checkcaller: " .. (simpleSpy.LogCheckCaller and "ON" or "OFF"), 1.8)
+        end, simpleSpy.LogCheckCaller)
 
         local listShell = mk("Frame", {
             Parent = callsSection.Content,
@@ -2985,6 +3035,8 @@ function Window:CreateUniversalCategory(options)
                 "Captured: " .. tostring(#simpleSpy.Logs)
                     .. " | Excluded: " .. tostring(excludedCount())
                     .. " | Blocked: " .. tostring(blockedCount())
+                    .. " | Hits: " .. tostring(simpleSpy.InterceptCount or 0)
+                    .. "/" .. tostring(simpleSpy.QueueCount or 0)
             )
         end
 
