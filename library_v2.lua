@@ -4,7 +4,6 @@ local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Debris = game:GetService("Debris")
 
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "LimboLibrary"
@@ -21,6 +20,14 @@ local BUILTIN_ICON_ALIASES = {
     ["universal"] = {
         Image = "rbxasset://textures/ui/Settings/MenuBarIcons/HomeTab.png",
         Fallback = "U",
+    },
+    ["remotes"] = {
+        Image = "rbxasset://textures/DeveloperFramework/RemoteEvent.png",
+        Fallback = "R",
+    },
+    ["scripts"] = {
+        Image = "rbxasset://textures/ui/TopBar/coloredlogo.png",
+        Fallback = "S",
     },
 }
 
@@ -256,6 +263,18 @@ end
 
 function UILibrary:SetSelectedPlayer(player)
     self._selectedPlayer = player
+end
+
+function UILibrary:SuspendFlingProtect(seconds)
+    local untilAt = os.clock() + math.max(0, tonumber(seconds) or 0)
+    if untilAt > (self._suspendFlingProtectUntil or 0) then
+        self._suspendFlingProtectUntil = untilAt
+    end
+    return self._suspendFlingProtectUntil
+end
+
+function UILibrary:IsFlingProtectSuspended()
+    return os.clock() < (self._suspendFlingProtectUntil or 0)
 end
 
 function UILibrary:RegisterIcon(name, iconSpec)
@@ -746,13 +765,6 @@ function Window:CreatePlayersCategory(options)
     local clickFlingEnabled = false
     local clickFlingConnection = nil
     local clickFlingCooldownUntil = 0
-    local spamSoundEnabled = false
-    local spamSoundConnection = nil
-    local spamSoundTick = 0
-    local spamSoundId = tostring(options.SpamSoundId or "rbxassetid://138186576")
-    local spamSoundVolume = math.clamp(tonumber(options.SpamSoundVolume) or 9, 0, 25)
-    local slaveEnabled = false
-    local slaveConnection = nil
 
     local selectedName = optionsSection:CreateLabel("Selected: None")
     local selectedUser = optionsSection:CreateLabel("@none")
@@ -1180,6 +1192,7 @@ function Window:CreatePlayersCategory(options)
             and flingOptions.AngularVelocity
             or Vector3.new(4200, 6000, 4200)
 
+        UILibrary:SuspendFlingProtect(duration + 0.9)
         stopFlingAndRestore()
 
         local startCFrame = localRoot.CFrame
@@ -1372,119 +1385,6 @@ function Window:CreatePlayersCategory(options)
 
         if not silent then
             notify("Fling Click", clickFlingEnabled and "Enabled." or "Disabled.", 1.9)
-        end
-    end
-
-    local function resolveSoundId(soundIdText)
-        local raw = tostring(soundIdText or "")
-        if raw == "" then
-            return "rbxassetid://138186576"
-        end
-        if string.find(raw, "rbxassetid://", 1, true) then
-            return raw
-        end
-        local numeric = tonumber(raw)
-        if numeric then
-            return "rbxassetid://" .. tostring(numeric)
-        end
-        return raw
-    end
-
-    local function setSpamSoundEnabled(state, silent)
-        state = state == true
-        if spamSoundEnabled == state then
-            return
-        end
-
-        spamSoundEnabled = state
-        if spamSoundConnection then
-            spamSoundConnection:Disconnect()
-            spamSoundConnection = nil
-        end
-
-        if spamSoundEnabled then
-            spamSoundTick = 0
-            local resolvedId = resolveSoundId(spamSoundId)
-            spamSoundConnection = RunService.Heartbeat:Connect(function()
-                local now = os.clock()
-                if now - spamSoundTick < 0.22 then
-                    return
-                end
-                local root = getLocalRoot()
-                if not root then
-                    return
-                end
-                spamSoundTick = now
-
-                local s = Instance.new("Sound")
-                s.SoundId = resolvedId
-                s.Volume = spamSoundVolume
-                s.RollOffMaxDistance = 120
-                s.PlaybackSpeed = 0.94 + (math.random() * 0.16)
-                s.Parent = root
-                s:Play()
-                Debris:AddItem(s, 2.2)
-            end)
-        end
-
-        if not silent then
-            notify("FE Spam Sound", spamSoundEnabled and "Enabled." or "Disabled.", 1.9)
-        end
-    end
-
-    local function setSlaveEnabled(state, silent)
-        state = state == true
-        if slaveEnabled == state then
-            return
-        end
-
-        slaveEnabled = state
-        if slaveConnection then
-            slaveConnection:Disconnect()
-            slaveConnection = nil
-        end
-
-        if slaveEnabled then
-            stopTrollLoop()
-            stopFlingAndRestore()
-
-            local target = selectedPlayer
-            if not target or target == localPlayer or target.Parent ~= Players or not getTargetRoot(target) then
-                slaveEnabled = false
-                if not silent then
-                    notify("Slave", "Select a valid player first.", 2.3)
-                end
-                return
-            end
-
-            slaveConnection = RunService.Heartbeat:Connect(function()
-                if not slaveEnabled then
-                    return
-                end
-                local targetPlayer = selectedPlayer
-                local localRoot = getLocalRoot()
-                local targetRoot = getTargetRoot(targetPlayer)
-                if not targetPlayer or targetPlayer == localPlayer or targetPlayer.Parent ~= Players then
-                    return
-                end
-                if not localRoot or not targetRoot then
-                    return
-                end
-
-                local desired = localRoot.Position - (localRoot.CFrame.LookVector * 3.2)
-                local toDesired = desired - targetRoot.Position
-                if toDesired.Magnitude < 1 then
-                    return
-                end
-                local dir = toDesired.Unit
-                local pushPos = targetRoot.Position - (dir * 1.8) + Vector3.new(0, 1.35, 0)
-                localRoot.CFrame = CFrame.lookAt(pushPos, targetRoot.Position)
-                localRoot.AssemblyLinearVelocity = (dir * 175) + Vector3.new(0, 44, 0)
-            end)
-        end
-
-        if not silent then
-            notify("Slave", slaveEnabled and "Enabled on selected player." or "Disabled.", 2)
         end
     end
 
@@ -1746,14 +1646,6 @@ function Window:CreatePlayersCategory(options)
         end
     end)
 
-    optionsSection:CreateToggle("FE Spam Sound", function(v)
-        setSpamSoundEnabled(v, false)
-    end, false)
-
-    optionsSection:CreateToggle("slave (selected player)", function(v)
-        setSlaveEnabled(v, false)
-    end, false)
-
     headsitButton = optionsSection:CreateButton("Headsit: OFF", function()
         local target = getTrollTarget()
         if not target then
@@ -1816,9 +1708,6 @@ function Window:CreatePlayersCategory(options)
             if targetMode == "Selected" then
                 stopTrollLoop()
             end
-            if slaveEnabled then
-                setSlaveEnabled(false, true)
-            end
         end
         if spectateTarget and leavingPlayer == spectateTarget then
             stopSpectate()
@@ -1829,8 +1718,6 @@ function Window:CreatePlayersCategory(options)
 
     self:OnClose(function()
         setClickFlingEnabled(false, true)
-        setSpamSoundEnabled(false, true)
-        setSlaveEnabled(false, true)
         stopSpectate()
         stopTrollLoop()
         stopFlingAndRestore()
@@ -2138,6 +2025,15 @@ function Window:CreateLocalCategory(options)
         if flyEnabled then
             return
         end
+        if UILibrary:IsFlingProtectSuspended() then
+            local root = getLocalRoot()
+            if root then
+                flingProtectSafeCFrame = root.CFrame
+            end
+            flingProtectViolation = 0
+            flingProtectStunUntil = 0
+            return
+        end
 
         local root = getLocalRoot()
         local humanoid = getLocalHumanoid()
@@ -2285,7 +2181,10 @@ function Window:CreateUniversalCategory(options)
     end
 
     local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
-    local developerSection = universalTab:CreateSection({ Name = "Developer", Side = "Right" })
+    local infoSection = universalTab:CreateSection({ Name = "Info", Side = "Right" })
+    local remotesTab = nil
+    local scriptsTab = nil
+    local developerEnabled = false
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -2295,57 +2194,123 @@ function Window:CreateUniversalCategory(options)
         })
     end
 
-    local function runRemoteDevTool(toolName, url, useAsync)
-        if typeof(loadstring) ~= "function" then
-            notify(toolName, "loadstring is not available in this executor.", 3.1)
-            return false
+    local function removeTab(tabRef)
+        if not tabRef then
+            return
         end
 
-        local okFetch, source = pcall(function()
-            if useAsync then
-                return game:HttpGetAsync(url)
+        if self.ActiveTab == tabRef then
+            self:SelectTab(universalTab)
+        end
+
+        for i = #self.Tabs, 1, -1 do
+            if self.Tabs[i] == tabRef then
+                table.remove(self.Tabs, i)
+                break
             end
-            return game:HttpGet(url)
-        end)
-        if not okFetch or type(source) ~= "string" or source == "" then
-            notify(toolName, "Failed to download script.", 3)
-            return false
         end
 
-        local okCompile, chunkOrErr = pcall(loadstring, source)
-        if not okCompile or type(chunkOrErr) ~= "function" then
-            notify(toolName, "Failed to compile script.", 3)
-            return false
+        if tabRef.Button and tabRef.Button.Parent then
+            tabRef.Button:Destroy()
+        end
+        if tabRef.Page and tabRef.Page.Parent then
+            tabRef.Page:Destroy()
         end
 
-        local okRun, runErr = pcall(chunkOrErr)
-        if not okRun then
-            notify(toolName, "Runtime error: " .. tostring(runErr), 3.2)
-            return false
+        if self.SectionsLabel then
+            local hasCustom = false
+            for _, t in ipairs(self.Tabs) do
+                local nameLower = string.lower(tostring(t.Name or ""))
+                if nameLower ~= "local" and nameLower ~= "players" and nameLower ~= "universal" then
+                    hasCustom = true
+                    break
+                end
+            end
+            self.SectionsLabel.Visible = hasCustom
         end
-
-        notify(toolName, "Loaded successfully.", 2.2)
-        return true
     end
 
-    developerSection:CreateButton("Load Remotespy", function()
-        runRemoteDevTool("Remotespy", "https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Limbo-and-Solara-32578", false)
-    end)
-    developerSection:CreateButton("Load SimpleSpy", function()
-        runRemoteDevTool("SimpleSpy", "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua", true)
-    end)
-    developerSection:CreateButton("Load DevEx", function()
-        runRemoteDevTool("DevEx", "https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265", false)
-    end)
+    local function ensureRemotesTab()
+        if remotesTab and remotesTab.Button and remotesTab.Button.Parent then
+            return remotesTab
+        end
+        remotesTab = self:CreateTab({
+            Name = "Remotes",
+            Icon = options.RemotesTabIcon or options.RemotesIcon or "remotes",
+        })
+        local remotesMain = remotesTab:CreateSection({ Name = "Remotes", Side = "Left" })
+        remotesMain:CreateParagraph("Remotes", "SimpleSpy will be implemented here later.")
+        remotesMain:CreateLabel("Master toggle will be added here.")
+        return remotesTab
+    end
+
+    local function ensureScriptsTab()
+        if scriptsTab and scriptsTab.Button and scriptsTab.Button.Parent then
+            return scriptsTab
+        end
+        scriptsTab = self:CreateTab({
+            Name = "Scripts",
+            Icon = options.ScriptsTabIcon or options.ScriptsIcon or "scripts",
+        })
+        local scriptsMain = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
+        scriptsMain:CreateParagraph("Scripts", "DevEx will be implemented here later.")
+        scriptsMain:CreateLabel("Script copy/dump tools will be added here.")
+        return scriptsTab
+    end
+
+    local function setDeveloperEnabled(state, silent)
+        state = state == true
+        if developerEnabled == state then
+            return
+        end
+        developerEnabled = state
+
+        if developerEnabled then
+            ensureRemotesTab()
+            ensureScriptsTab()
+        else
+            removeTab(remotesTab)
+            removeTab(scriptsTab)
+            remotesTab = nil
+            scriptsTab = nil
+        end
+
+        if not silent then
+            notify("Developer", developerEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local developerToggle = otherSection:CreateToggle("Developer", function(v)
+        setDeveloperEnabled(v, false)
+    end, options.DeveloperEnabled == true)
 
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
-    otherSection:CreateLabel("Developer tools are loaded client-side.")
+    otherSection:CreateLabel("Enable Developer to unlock Remotes/Scripts tabs.")
+    infoSection:CreateParagraph("Developer Tabs", "Remotes and Scripts are placeholders for upcoming tools.")
+    infoSection:CreateLabel("Remotes: SimpleSpy + master toggle (later)")
+    infoSection:CreateLabel("Scripts: DevEx copy/dump tools (later)")
+
+    setDeveloperEnabled(options.DeveloperEnabled == true, true)
 
     self.UniversalCategory = {
         Tab = universalTab,
-        DeveloperSection = developerSection,
+        InfoSection = infoSection,
+        DeveloperSection = infoSection,
         UniversalSection = otherSection,
         OtherSection = otherSection,
+        DeveloperToggle = developerToggle,
+        SetDeveloperEnabled = function(_, state)
+            if developerToggle and developerToggle.Set then
+                developerToggle:Set(state == true, true)
+            end
+            setDeveloperEnabled(state == true, true)
+        end,
+        GetDeveloperEnabled = function()
+            return developerEnabled
+        end,
+        GetDeveloperTabs = function()
+            return remotesTab, scriptsTab
+        end,
         Options = options,
     }
 
