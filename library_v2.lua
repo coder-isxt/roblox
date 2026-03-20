@@ -2214,6 +2214,9 @@ function Window:CreateUniversalCategory(options)
     local cloneRef = (typeof(cloneref) == "function") and cloneref or function(v)
         return v
     end
+    local packArgs = table.pack or function(...)
+        return { n = select("#", ...), ... }
+    end
     local unpackArgs = table.unpack or unpack
     local getNamecallMethodFn = getnamecallmethod or getNamecallMethod
     local getCallingScriptFn = getcallingscript or getCallingScript
@@ -2609,39 +2612,77 @@ function Window:CreateUniversalCategory(options)
             return f
         end
         local checkCallerFn = checkcaller or checkCaller
+        local getRawMetaFn = getrawmetatable or (debug and debug.getmetatable)
 
         local installed = {}
         local errors = {}
 
+        local rawNamecall = nil
+        if typeof(getRawMetaFn) == "function" then
+            local okRaw, rawMt = pcall(function()
+                return getRawMetaFn(game)
+            end)
+            if okRaw and type(rawMt) == "table" and typeof(rawMt.__namecall) == "function" then
+                rawNamecall = rawMt.__namecall
+            end
+        end
+
         local oldNamecall = nil
+        local inNamecall = false
         if typeof(hookMeta) == "function" then
             local okName, errName = pcall(function()
                 oldNamecall = hookMeta(game, "__namecall", cloneFn(newClosure(function(...)
-                    local argc = select("#", ...)
-                    local instance = select(1, ...)
-                    if typeof(instance) ~= "Instance" then
+                    local function callOriginal(...)
+                        if rawNamecall and rawNamecall ~= oldNamecall then
+                            return rawNamecall(...)
+                        end
+                        if typeof(oldNamecall) ~= "function" then
+                            return
+                        end
                         return oldNamecall(...)
                     end
-                    if not spyState.LogExecutorCalls and typeof(checkCallerFn) == "function" and checkCallerFn() then
-                        return oldNamecall(...)
-                    end
-                    local method = canonicalMethod((typeof(getNamecallMethodFn) == "function") and getNamecallMethodFn() or nil)
-                    if not method or instance == spyState.Event then
-                        return oldNamecall(...)
-                    end
-                    local argsPack = { n = math.max(0, argc - 1) }
-                    for i = 2, argc do
-                        argsPack[i - 1] = select(i, ...)
-                    end
-                    local blocked = false
-                    local okCap, capRes = pcall(captureRemote, instance, method, argsPack, "__namecall")
-                    if okCap and capRes == true then
-                        blocked = true
-                    end
-                    if blocked then
+
+                    if inNamecall then
+                        if rawNamecall and rawNamecall ~= oldNamecall then
+                            return rawNamecall(...)
+                        end
                         return
                     end
-                    return oldNamecall(...)
+                    inNamecall = true
+
+                    local resultPack = packArgs(pcall(function(...)
+                        local argc = select("#", ...)
+                        local instance = select(1, ...)
+                        if typeof(instance) ~= "Instance" then
+                            return callOriginal(...)
+                        end
+                        if not spyState.LogExecutorCalls and typeof(checkCallerFn) == "function" and checkCallerFn() then
+                            return callOriginal(...)
+                        end
+                        local method = canonicalMethod((typeof(getNamecallMethodFn) == "function") and getNamecallMethodFn() or nil)
+                        if not method or instance == spyState.Event then
+                            return callOriginal(...)
+                        end
+                        local argsPack = { n = math.max(0, argc - 1) }
+                        for i = 2, argc do
+                            argsPack[i - 1] = select(i, ...)
+                        end
+                        local blocked = false
+                        local okCap, capRes = pcall(captureRemote, instance, method, argsPack, "__namecall")
+                        if okCap and capRes == true then
+                            blocked = true
+                        end
+                        if blocked then
+                            return
+                        end
+                        return callOriginal(...)
+                    end, ...))
+
+                    inNamecall = false
+                    if not resultPack[1] then
+                        error(resultPack[2])
+                    end
+                    return unpackArgs(resultPack, 2, resultPack.n)
                 end)))
             end)
             if okName then
