@@ -3462,7 +3462,7 @@ local UILibrary = (function()
         CreateSettingsSection("Developer", "External tools and debugging utilities.")
         CreateSettingsGroup("Tools", true)
         CreateSettingsButton("Load Remotespy", function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578"))() end)
-        CreateSettingsButton("Load SimpleSpy", function() loadstring(game:HttpGet("https://github.com/exxtremestuffs/SimpleSpySource/raw/master/SimpleSpy.lua"))() end)
+        CreateSettingsButton("Load SimpleSpy", function() loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))() end)
         CreateSettingsButton("Load DevEx", function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))() end)
 
         local function ToggleSettings()
