@@ -47,28 +47,28 @@ local UILibrary = (function()
     -- // CONFIGURATION & THEMES // --
     local Options = {
         Theme = "Clean",
-        ToggleStyle = "Switch",
-        CornerStyle = "Slight",
+        ToggleStyle = "Checkbox",
+        CornerStyle = "Blocky",
         StrokeStyle = "SoftFade",
         SliderStyle = "Line",
         ComboStyle = "Compact",
-        Font = "Gotham",
+        Font = "SourceSans",
         MenuStyle = "Sidebar",
         AutoScale = true,
-        UserScale = 0.96
+        UserScale = 0.94
     }
 
     local Themes = {
         Clean = {
-            MainBg = Color3.fromRGB(14, 16, 21),
-            SecBg = Color3.fromRGB(19, 22, 28),
-            TerBg = Color3.fromRGB(24, 28, 35),
-            QuarBg = Color3.fromRGB(31, 36, 45),
-            Hover = Color3.fromRGB(40, 47, 58),
-            Accent = Color3.fromRGB(92, 163, 255),
-            Text = Color3.fromRGB(236, 241, 249),
-            SubText = Color3.fromRGB(151, 164, 188),
-            Stroke = Color3.fromRGB(52, 60, 74)
+            MainBg = Color3.fromRGB(8, 13, 20),
+            SecBg = Color3.fromRGB(11, 18, 29),
+            TerBg = Color3.fromRGB(16, 25, 38),
+            QuarBg = Color3.fromRGB(22, 35, 53),
+            Hover = Color3.fromRGB(31, 47, 70),
+            Accent = Color3.fromRGB(72, 174, 255),
+            Text = Color3.fromRGB(222, 234, 247),
+            SubText = Color3.fromRGB(130, 155, 182),
+            Stroke = Color3.fromRGB(30, 50, 74)
         }
     }
 
@@ -197,15 +197,15 @@ local UILibrary = (function()
     local SliderStyleSet = { Line = true, Pill = true, Block = true }
     local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
     local VisualTokens = {
-        WindowCorner = 10,
-        SurfaceCorner = 8,
-        ControlCorner = 6,
-        TopBarHeight = 46,
-        SidebarWidth = 160,
-        SearchWidth = 186,
-        SearchHeight = 30,
-        ControlHeight = 38,
-        SectionGap = 8,
+        WindowCorner = 4,
+        SurfaceCorner = 3,
+        ControlCorner = 2,
+        TopBarHeight = 34,
+        SidebarWidth = 138,
+        SearchWidth = 150,
+        SearchHeight = 22,
+        ControlHeight = 32,
+        SectionGap = 6,
         CardStroke = 1
     }
 
@@ -1380,16 +1380,16 @@ local UILibrary = (function()
         local TitleDot = CreateElement("Frame", {
             Parent = TopBar,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 16, 0.5, 0),
-            Size = UDim2.new(0, 6, 0, 6),
+            Position = UDim2.new(0, 12, 0.5, 0),
+            Size = UDim2.new(0, 4, 0, 4),
             BorderSizePixel = 0
         }, {
             BackgroundColor3 = "Accent"
         })
         CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = TitleDot})
 
-        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 30, 0, 0), Size = UDim2.new(0.28, 0, 1, 0), Font = Enum.Font.GothamBold, Text = windowTitle, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
-        local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 10, 0.5, -11), Size = UDim2.new(0, 28, 0, 22), Font = Enum.Font.GothamBold, Text = "<", TextSize = 14, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local TitleLabel = CreateElement("TextLabel", { Parent = TopBar, BackgroundTransparency = 1, Position = UDim2.new(0, 20, 0, 0), Size = UDim2.new(0.26, 0, 1, 0), Font = Enum.Font.SourceSansBold, Text = windowTitle, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, }, {TextColor3 = "Text"})
+        local TabletBackButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, Position = UDim2.new(0, 8, 0.5, -10), Size = UDim2.new(0, 22, 0, 20), Font = Enum.Font.SourceSansBold, Text = "<", TextSize = 14, Visible = false, ZIndex = 4 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = TabletBackButton})
         
         -- // SEARCH BAR (TOPBAR) // --
@@ -1424,14 +1424,14 @@ local UILibrary = (function()
 
         local SearchBox = CreateElement("TextBox", {
             Parent = TopBar,
-            PlaceholderText = "Search...",
+            PlaceholderText = "Search option...",
             Text = "",
             ClearTextOnFocus = false,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
             Size = UDim2.new(0, VisualTokens.SearchWidth, 0, VisualTokens.SearchHeight),
-            Font = Enum.Font.Gotham,
-            TextSize = 10
+            Font = Enum.Font.SourceSans,
+            TextSize = 13
         }, {
             BackgroundColor3 = "TerBg",
             TextColor3 = "Text",
@@ -1457,11 +1457,11 @@ local UILibrary = (function()
 
 
 
-        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "X", TextSize = 11 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local CloseButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Font = Enum.Font.SourceSansBold, Text = "X", TextSize = 11 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = CloseButton})
-        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -40, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "-", TextSize = 14 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local MinimizeButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -34, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Font = Enum.Font.SourceSansBold, Text = "-", TextSize = 14 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = MinimizeButton})
-        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -68, 0.5, 0), Size = UDim2.new(0, 24, 0, 24), Font = Enum.Font.GothamBold, Text = "S", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+        local SettingsButton = CreateElement("TextButton", { Parent = TopBar, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -58, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Font = Enum.Font.SourceSansBold, Text = "S", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = SettingsButton})
 
         -- Sidebar Navigation Components
@@ -1478,21 +1478,21 @@ local UILibrary = (function()
             Name = "SidebarHeader",
             Parent = TabContainer,
             BorderSizePixel = 0,
-            Position = UDim2.new(0, 8, 0, 8),
-            Size = UDim2.new(1, -16, 0, 32)
+            Position = UDim2.new(0, 6, 0, 6),
+            Size = UDim2.new(1, -12, 0, 24)
         }, {
             BackgroundColor3 = "TerBg"
         })
-        SidebarHeader.BackgroundTransparency = 0.14
+        SidebarHeader.BackgroundTransparency = 0.08
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = SidebarHeader})
         CreateElement("TextLabel", {
             Parent = SidebarHeader,
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 10, 0, 0),
-            Size = UDim2.new(1, -10, 1, 0),
-            Font = Enum.Font.GothamBold,
-            Text = "SECTIONS",
-            TextSize = 10,
+            Position = UDim2.new(0, 8, 0, 0),
+            Size = UDim2.new(1, -8, 1, 0),
+            Font = Enum.Font.SourceSansSemibold,
+            Text = "MENU",
+            TextSize = 12,
             TextXAlignment = Enum.TextXAlignment.Left
         }, {
             TextColor3 = "SubText"
@@ -1509,6 +1509,7 @@ local UILibrary = (function()
             BackgroundColor3 = "TerBg"
         })
         SidebarFooter.BackgroundTransparency = 0.14
+        SidebarFooter.Visible = false
         CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = SidebarFooter})
         local FooterAvatar = CreateElement("Frame", {
             Parent = SidebarFooter,
@@ -1579,19 +1580,20 @@ local UILibrary = (function()
         local detachSidebarThemeSync = RegisterThemeSync(function(colors)
             TabContainer.BackgroundTransparency = 0
             TabContainerGradient.Enabled = false
-            SidebarHeader.BackgroundTransparency = 0.14
+            SidebarHeader.BackgroundTransparency = 0.08
             SidebarFooter.BackgroundTransparency = 0.14
+            SidebarFooter.Visible = false
         end)
         table.insert(window.cleanupFunctions, detachSidebarThemeSync)
 
-        local TabHolder = CreateElement("ScrollingFrame", { Name = "TabHolder", Parent = TabContainer, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 40), Size = UDim2.new(1, 0, 1, -92), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y })
-        local TabListLayout = CreateElement("UIListLayout", { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top, FillDirection = Enum.FillDirection.Vertical })
-        local TabPadding = CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 8)})
+        local TabHolder = CreateElement("ScrollingFrame", { Name = "TabHolder", Parent = TabContainer, BackgroundTransparency = 1, Position = UDim2.new(0, 0, 0, 34), Size = UDim2.new(1, 0, 1, -38), CanvasSize = UDim2.new(0, 0, 0, 0), ScrollBarThickness = 0, BorderSizePixel = 0, AutomaticCanvasSize = Enum.AutomaticSize.Y })
+        local TabListLayout = CreateElement("UIListLayout", { Parent = TabHolder, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3), HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Top, FillDirection = Enum.FillDirection.Vertical })
+        local TabPadding = CreateElement("UIPadding", {Parent = TabHolder, PaddingTop = UDim.new(0, 6)})
 
         local Separator = CreateElement("Frame", { Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, sidebarWidth, 0, topBarHeight), Size = UDim2.new(0, 1, 1, -topBarHeight), ZIndex = 5 }, {BackgroundColor3 = "Stroke"})
         local ContentFrame = CreateElement("Frame", { Name = "ContentFrame", Parent = MainFrame, BorderSizePixel = 0, Position = UDim2.new(0, sidebarWidth + 10, 0, topBarHeight + 8), Size = UDim2.new(1, -(sidebarWidth + 22), 1, -(topBarHeight + 20)), ClipsDescendants = true }, {BackgroundColor3 = "SecBg"})
-        ContentFrame.BackgroundTransparency = 0.04
-        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner + 2), Parent = ContentFrame})
+        ContentFrame.BackgroundTransparency = 0
+        CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = ContentFrame})
         CreateElement("UIStroke", {Thickness = 1.2, Parent = ContentFrame}, {Color = "Stroke"})
         local TabletHomeFrame = CreateElement("ScrollingFrame", { Name = "TabletHomeFrame", Parent = ContentFrame, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0), ScrollBarThickness = 2, Visible = false, AutomaticCanvasSize = Enum.AutomaticSize.Y }, {ScrollBarImageColor3 = "Stroke"})
         local TabletGridPadding = CreateElement("UIPadding", { Parent = TabletHomeFrame, PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4) })
@@ -1611,6 +1613,9 @@ local UILibrary = (function()
         local SpectateTargetPlayer = nil
         local SpectatePreviousSubject = nil
         local SpectateHeartbeatConnection = nil
+        local TrollLoopHeartbeatConnection = nil
+        local TrollLoopMode = nil
+        local TrollLoopJumpTick = 0
 
         local function PlayerAdminNotify(title, content, duration)
             pcall(function()
@@ -1707,6 +1712,111 @@ local UILibrary = (function()
                 end
                 RunService.Heartbeat:Wait()
             end
+            return true
+        end
+
+        local function GetTrollTarget()
+            if not SelectedAdminPlayer or SelectedAdminPlayer == localPlayer then
+                return nil
+            end
+            if SelectedAdminPlayer.Parent ~= PlayersService then
+                return nil
+            end
+            return SelectedAdminPlayer
+        end
+
+        local function StopTrollLoop()
+            TrollLoopMode = nil
+            if TrollLoopHeartbeatConnection then
+                TrollLoopHeartbeatConnection:Disconnect()
+                TrollLoopHeartbeatConnection = nil
+            end
+        end
+
+        local function SetTrollLoopMode(modeName)
+            if TrollLoopMode == modeName then
+                StopTrollLoop()
+                return false
+            end
+
+            TrollLoopMode = modeName
+            if TrollLoopHeartbeatConnection then
+                TrollLoopHeartbeatConnection:Disconnect()
+                TrollLoopHeartbeatConnection = nil
+            end
+
+            TrollLoopHeartbeatConnection = RunService.Heartbeat:Connect(function()
+                local targetPlayer = GetTrollTarget()
+                local localRoot = GetLocalRootPart()
+                local localCharacter = localPlayer and localPlayer.Character
+                local localHumanoid = localCharacter and localCharacter:FindFirstChildOfClass("Humanoid")
+                local targetRoot = GetTargetRootPart(targetPlayer)
+                if not TrollLoopMode or not targetPlayer or not localRoot or not targetRoot or not localHumanoid then
+                    return
+                end
+
+                local now = os.clock()
+                if TrollLoopMode == "Headsit" then
+                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 2.8, 0)
+                elseif TrollLoopMode == "Bang" then
+                    local sway = math.sin(now * 10) * 0.32
+                    localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0.15, 1.05 + sway) * CFrame.Angles(0, math.rad(180), 0)
+                elseif TrollLoopMode == "Spin" then
+                    local radius = 3.4
+                    local spinSpeed = 4.6
+                    local theta = now * spinSpeed
+                    local offset = Vector3.new(math.cos(theta) * radius, 1.9, math.sin(theta) * radius)
+                    local spinPos = targetRoot.Position + offset
+                    localRoot.CFrame = CFrame.lookAt(spinPos, targetRoot.Position)
+                    localRoot.AssemblyLinearVelocity = Vector3.zero
+                elseif TrollLoopMode == "Annoy" then
+                    local jitter = Vector3.new(
+                        math.sin(now * 17) * 2.1,
+                        2 + math.abs(math.cos(now * 11)) * 1.7,
+                        math.cos(now * 19) * 2.1
+                    )
+                    local annoyPos = targetRoot.Position + jitter
+                    localRoot.CFrame = CFrame.lookAt(annoyPos, targetRoot.Position)
+                    localRoot.AssemblyLinearVelocity = Vector3.new(
+                        math.sin(now * 21) * 35,
+                        localRoot.AssemblyLinearVelocity.Y,
+                        math.cos(now * 23) * 35
+                    )
+                    if now - TrollLoopJumpTick > 0.55 then
+                        TrollLoopJumpTick = now
+                        pcall(function()
+                            localHumanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                        end)
+                    end
+                end
+            end)
+
+            return true
+        end
+
+        local function FlingPlayer(targetPlayer)
+            local localRoot = GetLocalRootPart()
+            local targetRoot = GetTargetRootPart(targetPlayer)
+            if not localRoot or not targetRoot then
+                return false
+            end
+
+            local oldCFrame = localRoot.CFrame
+            local oldLinear = localRoot.AssemblyLinearVelocity
+            local oldAngular = localRoot.AssemblyAngularVelocity
+
+            localRoot.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 1.4)
+            localRoot.AssemblyAngularVelocity = Vector3.new(0, 210, 0)
+            localRoot.AssemblyLinearVelocity = targetRoot.CFrame.LookVector * 220 + Vector3.new(0, 85, 0)
+
+            task.delay(0.22, function()
+                if localRoot and localRoot.Parent then
+                    localRoot.AssemblyAngularVelocity = oldAngular
+                    localRoot.AssemblyLinearVelocity = oldLinear
+                    localRoot.CFrame = oldCFrame
+                end
+            end)
+
             return true
         end
 
@@ -2076,6 +2186,10 @@ local UILibrary = (function()
 
         local SpectateActionButton = nil
         local TargetModeActionButton = nil
+        local HeadsitActionButton = nil
+        local BangActionButton = nil
+        local SpinActionButton = nil
+        local AnnoyActionButton = nil
 
         local function RefreshSpectateButtonText()
             if not SpectateActionButton then
@@ -2088,6 +2202,21 @@ local UILibrary = (function()
         local function RefreshTargetModeButtonText()
             if TargetModeActionButton then
                 TargetModeActionButton.Text = "Target Mode: " .. PlayerTargetMode
+            end
+        end
+
+        local function RefreshTrollButtonTexts()
+            if HeadsitActionButton then
+                HeadsitActionButton.Text = (TrollLoopMode == "Headsit") and "Headsit: ON" or "Headsit: OFF"
+            end
+            if BangActionButton then
+                BangActionButton.Text = (TrollLoopMode == "Bang") and "Bang: ON" or "Bang: OFF"
+            end
+            if SpinActionButton then
+                SpinActionButton.Text = (TrollLoopMode == "Spin") and "Spin on Target: ON" or "Spin on Target: OFF"
+            end
+            if AnnoyActionButton then
+                AnnoyActionButton.Text = (TrollLoopMode == "Annoy") and "Annoy Loop: ON" or "Annoy Loop: OFF"
             end
         end
 
@@ -2116,6 +2245,7 @@ local UILibrary = (function()
             end
             RefreshSpectateButtonText()
             RefreshTargetModeButtonText()
+            RefreshTrollButtonTexts()
             PlayerAdminOverlay.Visible = true
             PlayerAdminOverlay.BackgroundTransparency = 1
             PlayerAdminFrame.Position = UDim2.new(0.5, 0, 0.5, 12)
@@ -2185,6 +2315,60 @@ local UILibrary = (function()
                 return RunAnimationAction(targetPlayer, "Push Lock")
             end)
         end)
+        CreatePlayerActionButton("Fling Target", function()
+            local targetPlayer = GetTrollTarget()
+            if not targetPlayer then
+                PlayerAdminNotify("Fling", "Select a valid player first.", 2.4)
+                return
+            end
+            local ok = FlingPlayer(targetPlayer)
+            if ok then
+                PlayerAdminNotify("Fling", "Attempted fling on " .. tostring(targetPlayer.Name) .. ".", 2.3)
+            else
+                PlayerAdminNotify("Fling", "Could not fling target right now.", 2.8)
+            end
+        end)
+        HeadsitActionButton = CreatePlayerActionButton("Headsit: OFF", function()
+            local targetPlayer = GetTrollTarget()
+            if not targetPlayer then
+                PlayerAdminNotify("Headsit", "Select a valid player first.", 2.4)
+                return
+            end
+            local enabled = SetTrollLoopMode("Headsit")
+            RefreshTrollButtonTexts()
+            PlayerAdminNotify("Headsit", enabled and ("Now headsitting " .. tostring(targetPlayer.Name) .. ".") or "Headsit stopped.", 2.2)
+        end)
+        BangActionButton = CreatePlayerActionButton("Bang: OFF", function()
+            local targetPlayer = GetTrollTarget()
+            if not targetPlayer then
+                PlayerAdminNotify("Bang", "Select a valid player first.", 2.4)
+                return
+            end
+            local enabled = SetTrollLoopMode("Bang")
+            RefreshTrollButtonTexts()
+            PlayerAdminNotify("Bang", enabled and ("Now banging " .. tostring(targetPlayer.Name) .. ".") or "Bang stopped.", 2.2)
+        end)
+        SpinActionButton = CreatePlayerActionButton("Spin on Target: OFF", function()
+            local targetPlayer = GetTrollTarget()
+            if not targetPlayer then
+                PlayerAdminNotify("Spin", "Select a valid player first.", 2.4)
+                return
+            end
+            local enabled = SetTrollLoopMode("Spin")
+            RefreshTrollButtonTexts()
+            PlayerAdminNotify("Spin", enabled and ("Now spinning on " .. tostring(targetPlayer.Name) .. ".") or "Spin stopped.", 2.2)
+        end)
+        AnnoyActionButton = CreatePlayerActionButton("Annoy Loop: OFF", function()
+            local targetPlayer = GetTrollTarget()
+            if not targetPlayer then
+                PlayerAdminNotify("Annoy", "Select a valid player first.", 2.4)
+                return
+            end
+            local enabled = SetTrollLoopMode("Annoy")
+            RefreshTrollButtonTexts()
+            PlayerAdminNotify("Annoy", enabled and ("Now annoying " .. tostring(targetPlayer.Name) .. ".") or "Annoy loop stopped.", 2.2)
+        end)
+        RefreshTrollButtonTexts()
         PlayerAdminCloseButton.MouseButton1Click:Connect(ClosePlayerAdminMenu)
         PlayerAdminOverlay.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -2397,6 +2581,9 @@ local UILibrary = (function()
             StopSpectate()
         end)
         table.insert(window.cleanupFunctions, function()
+            StopTrollLoop()
+        end)
+        table.insert(window.cleanupFunctions, function()
             ClosePlayerAdminMenu()
         end)
         if EnablePlayerPanel then
@@ -2407,6 +2594,8 @@ local UILibrary = (function()
                 if SelectedAdminPlayer and leavingPlayer == SelectedAdminPlayer then
                     ClosePlayerAdminMenu()
                     SelectedAdminPlayer = nil
+                    StopTrollLoop()
+                    RefreshTrollButtonTexts()
                 end
                 if SpectateTargetPlayer and leavingPlayer == SpectateTargetPlayer then
                     StopSpectate()
@@ -2454,11 +2643,11 @@ local UILibrary = (function()
             TabletBackButton.Visible = visible
             TitleDot.Visible = not visible
             if visible then
-                TitleLabel.Position = UDim2.new(0, 46, 0, 0)
+                TitleLabel.Position = UDim2.new(0, 34, 0, 0)
                 TitleLabel.Size = UDim2.new(0.24, 0, 1, 0)
             else
-                TitleLabel.Position = UDim2.new(0, 30, 0, 0)
-                TitleLabel.Size = UDim2.new(0.28, 0, 1, 0)
+                TitleLabel.Position = UDim2.new(0, 20, 0, 0)
+                TitleLabel.Size = UDim2.new(0.26, 0, 1, 0)
             end
         end
 
@@ -2492,7 +2681,7 @@ local UILibrary = (function()
             if CurrentTabButtonMode == "Top" then
                 return BlendColor(Themes[Options.Theme].TerBg, Themes[Options.Theme].MainBg, 0.15), BlendColor(Themes[Options.Theme].QuarBg, Themes[Options.Theme].Accent, 0.2)
             end
-            return BlendColor(Themes[Options.Theme].SecBg, Themes[Options.Theme].MainBg, 0.2), BlendColor(Themes[Options.Theme].TerBg, Themes[Options.Theme].Accent, 0.24)
+            return BlendColor(Themes[Options.Theme].SecBg, Themes[Options.Theme].MainBg, 0.08), BlendColor(Themes[Options.Theme].TerBg, Themes[Options.Theme].Accent, 0.1)
         end
 
         local function ApplyTabHolderMode(mode)
@@ -2515,17 +2704,17 @@ local UILibrary = (function()
                 TabPadding.PaddingRight = UDim.new(0, 0)
             else
                 SidebarHeader.Visible = true
-                SidebarFooter.Visible = true
-                TabHolder.Position = UDim2.new(0, 0, 0, 40)
-                TabHolder.Size = UDim2.new(1, 0, 1, -92)
+                SidebarFooter.Visible = false
+                TabHolder.Position = UDim2.new(0, 0, 0, 34)
+                TabHolder.Size = UDim2.new(1, 0, 1, -38)
                 TabHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
                 TabHolder.ScrollingDirection = Enum.ScrollingDirection.Y
                 TabHolder.ScrollBarThickness = 0
                 TabListLayout.FillDirection = Enum.FillDirection.Vertical
                 TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
                 TabListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-                TabListLayout.Padding = UDim.new(0, 6)
-                TabPadding.PaddingTop = UDim.new(0, 8)
+                TabListLayout.Padding = UDim.new(0, 3)
+                TabPadding.PaddingTop = UDim.new(0, 6)
                 TabPadding.PaddingBottom = UDim.new(0, 0)
                 TabPadding.PaddingLeft = UDim.new(0, 0)
                 TabPadding.PaddingRight = UDim.new(0, 0)
@@ -2554,16 +2743,16 @@ local UILibrary = (function()
                 activeRail.Position = UDim2.new(0, 10, 1, -4)
                 activeRail.Size = UDim2.new(1, -20, 0, 2)
             else
-                tabButton.Size = UDim2.new(1, -16, 0, 36)
+                tabButton.Size = UDim2.new(1, -10, 0, 30)
                 tabButton.TextXAlignment = Enum.TextXAlignment.Left
-                tabButton.TextSize = 12
+                tabButton.TextSize = 13
                 if buttonPadding then
-                    buttonPadding.PaddingLeft = UDim.new(0, 14)
+                    buttonPadding.PaddingLeft = UDim.new(0, 10)
                     buttonPadding.PaddingRight = UDim.new(0, 0)
                 end
-                activeRail.AnchorPoint = Vector2.new(1, 0.5)
-                activeRail.Position = UDim2.new(1, -4, 0.5, 0)
-                activeRail.Size = UDim2.new(0, 2, 0, 18)
+                activeRail.AnchorPoint = Vector2.new(0, 0.5)
+                activeRail.Position = UDim2.new(0, 0, 0.5, 0)
+                activeRail.Size = UDim2.new(0, 2, 1, -4)
             end
 
             if CurrentTab ~= tabEntry then
@@ -2613,7 +2802,7 @@ local UILibrary = (function()
         table.insert(Registries.MenuLayout, function(style)
             local preset = nil
             local sidebarDefault = sidebarWidth
-            local contentTop = topBarHeight + 8
+            local contentTop = topBarHeight + 6
             if style == "Sidebar" then
                 preset = {
                     ShowSidebar = true,
@@ -2623,8 +2812,8 @@ local UILibrary = (function()
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
-                    ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 12)),
+                    ContentPos = UDim2.new(0, sidebarDefault + 6, 0, contentTop),
+                    ContentSize = UDim2.new(1, -(sidebarDefault + 12), 1, -(contentTop + 6)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
                     NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
@@ -2689,8 +2878,8 @@ local UILibrary = (function()
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
-                    ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 12)),
+                    ContentPos = UDim2.new(0, sidebarDefault + 6, 0, contentTop),
+                    ContentSize = UDim2.new(1, -(sidebarDefault + 12), 1, -(contentTop + 6)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
                     NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
@@ -3693,14 +3882,31 @@ local UILibrary = (function()
             return false
         end
 
+        local function BuildTabLabel(tabName)
+            local name = tostring(tabName or "")
+            local lower = string.lower(name)
+            if string.find(lower, "aim") or string.find(lower, "combat") then
+                return "[A]  " .. name
+            elseif string.find(lower, "play") then
+                return "[P]  " .. name
+            elseif string.find(lower, "visual") or string.find(lower, "view") then
+                return "[V]  " .. name
+            elseif string.find(lower, "misc") or string.find(lower, "config") then
+                return "[M]  " .. name
+            elseif string.find(lower, "move") then
+                return "[X]  " .. name
+            end
+            return "[+]  " .. name
+        end
+
         function window:CreateTab(name)
 
 
             local tab = { Name = name, Elements = {} }
-            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.1, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -16, 0, 38), Font = Enum.Font.GothamBold, Text = name, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
+            local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.02, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -10, 0, 30), Font = Enum.Font.SourceSansSemibold, Text = BuildTabLabel(name), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = tabButton})
-            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 13)})
-            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.new(0, 2, 0, 20), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
+            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 10)})
+            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), Size = UDim2.new(0, 2, 1, -4), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
             
             local page = CreateElement("ScrollingFrame", {
@@ -3768,10 +3974,10 @@ local UILibrary = (function()
             end
 
             function tab:CreateButton(text, callback)
-                local button = CreateElement("TextButton", { Parent = page, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
-                button.BackgroundTransparency = 0.05
+                local button = CreateElement("TextButton", { Parent = page, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), Font = Enum.Font.SourceSansSemibold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg", TextColor3 = "Text"})
+                button.BackgroundTransparency = 0.02
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = button})
-                CreateElement("UIPadding", {Parent = button, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)})
+                CreateElement("UIPadding", {Parent = button, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
                 local buttonStroke = CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = button}, {Color = "Stroke"})
                 
                 button.MouseEnter:Connect(function() PlayTween(button, TweenInfo.new(0.2), {BackgroundColor3 = Themes[Options.Theme].Hover}):Play(); PlayTween(buttonStroke, TweenInfo.new(0.2), {Color = Themes[Options.Theme].Accent}):Play() end)
@@ -3783,23 +3989,23 @@ local UILibrary = (function()
 
             function tab:CreateToggle(text, callback, defaultState, saveKey)
                 local toggleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                toggleFrame.BackgroundTransparency = 0.05
+                toggleFrame.BackgroundTransparency = 0.02
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = toggleFrame})
                 CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = toggleFrame}, {Color = "Stroke"})
                 
-                CreateElement("TextLabel", { Parent = toggleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.7, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-                local toggleButton = CreateElement("TextButton", { Parent = toggleFrame, BackgroundTransparency = 1, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 40, 0, 20), Text = "" })
+                CreateElement("TextLabel", { Parent = toggleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 44, 0, 0), Size = UDim2.new(1, -50, 1, 0), Font = Enum.Font.SourceSansSemibold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+                local toggleButton = CreateElement("TextButton", { Parent = toggleFrame, BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Text = "" })
                 
                 local switchBg = CreateElement("Frame", { Parent = toggleButton, BorderSizePixel = 0, Size = UDim2.new(1, 0, 1, 0) }, {BackgroundColor3 = "QuarBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = switchBg})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 2), Parent = switchBg})
                 local switchIndicator = CreateElement("Frame", { Parent = switchBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 16, 0, 16) }, {BackgroundColor3 = "SubText"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = switchIndicator})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 1), Parent = switchIndicator})
                 
-                local checkBg = CreateElement("Frame", { Parent = toggleButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Visible = false }, {BackgroundColor3 = "QuarBg"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = checkBg})
+                local checkBg = CreateElement("Frame", { Parent = toggleButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 18, 0, 18), Visible = false }, {BackgroundColor3 = "QuarBg"})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 2), Parent = checkBg})
                 local checkInner = CreateElement("Frame", { Parent = checkBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 3), Parent = checkInner})
-                local dotBg = CreateElement("Frame", { Parent = toggleButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), Size = UDim2.new(0, 20, 0, 20), Visible = false }, {BackgroundColor3 = "QuarBg"})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 1), Parent = checkInner})
+                local dotBg = CreateElement("Frame", { Parent = toggleButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 18, 0, 18), Visible = false }, {BackgroundColor3 = "QuarBg"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = dotBg})
                 local dotIndicator = CreateElement("Frame", { Parent = dotBg, BorderSizePixel = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 0, 0, 0) }, {BackgroundColor3 = "Accent"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = dotIndicator})
@@ -3812,22 +4018,22 @@ local UILibrary = (function()
                     if Options.ToggleStyle == "Switch" or Options.ToggleStyle == "Pill" then
                         switchBg.Visible = true; checkBg.Visible = false; dotBg.Visible = false
                         if Options.ToggleStyle == "Pill" then
-                            toggleButton.Size = UDim2.new(0, 46, 0, 22)
-                            switchIndicator.Size = UDim2.new(0, 18, 0, 18)
+                            toggleButton.Size = UDim2.new(0, 36, 0, 20)
+                            switchIndicator.Size = UDim2.new(0, 14, 0, 14)
                         else
-                            toggleButton.Size = UDim2.new(0, 40, 0, 20)
-                            switchIndicator.Size = UDim2.new(0, 16, 0, 16)
+                            toggleButton.Size = UDim2.new(0, 32, 0, 18)
+                            switchIndicator.Size = UDim2.new(0, 12, 0, 12)
                         end
                         PlayTween(switchBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
                         PlayTween(switchIndicator, TweenInfo.new(duration), {Position = toggled and UDim2.new(1, -(switchIndicator.Size.X.Offset + 2), 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = toggled and Themes[Options.Theme].Text or Themes[Options.Theme].SubText}):Play()
                     elseif Options.ToggleStyle == "Checkbox" then
                         switchBg.Visible = false; checkBg.Visible = true; dotBg.Visible = false
-                        toggleButton.Size = UDim2.new(0, 40, 0, 20)
+                        toggleButton.Size = UDim2.new(0, 20, 0, 20)
                         PlayTween(checkBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
                         PlayTween(checkInner, TweenInfo.new(duration), {Size = toggled and UDim2.new(1, -6, 1, -6) or UDim2.new(0, 0, 0, 0)}):Play()
                     else
                         switchBg.Visible = false; checkBg.Visible = false; dotBg.Visible = true
-                        toggleButton.Size = UDim2.new(0, 40, 0, 20)
+                        toggleButton.Size = UDim2.new(0, 20, 0, 20)
                         PlayTween(dotBg, TweenInfo.new(duration), {BackgroundColor3 = toggled and Themes[Options.Theme].Accent or Themes[Options.Theme].QuarBg}):Play()
                         PlayTween(dotIndicator, TweenInfo.new(duration), {Size = toggled and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 0, 0, 0)}):Play()
                     end
@@ -3855,12 +4061,12 @@ local UILibrary = (function()
 
             function tab:CreateKeybind(text, callback, defaultKey, saveKey)
                 local keybindFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                keybindFrame.BackgroundTransparency = 0.05
+                keybindFrame.BackgroundTransparency = 0.02
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = keybindFrame})
                 CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = keybindFrame}, {Color = "Stroke"})
                 
-                CreateElement("TextLabel", { Parent = keybindFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.6, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-                local keybindButton = CreateElement("TextButton", { Parent = keybindFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 84, 0, 22), Font = Enum.Font.GothamBold, Text = "None", TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+                CreateElement("TextLabel", { Parent = keybindFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.6, 0, 1, 0), Font = Enum.Font.SourceSansSemibold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+                local keybindButton = CreateElement("TextButton", { Parent = keybindFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 74, 0, 20), Font = Enum.Font.SourceSansSemibold, Text = "None", TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = keybindButton})
                 local keybindStroke = CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = keybindButton}, {Color = "Stroke"})
                 
@@ -3909,8 +4115,8 @@ local UILibrary = (function()
             end
 
             function tab:CreateSlider(text, min, max, default, callback, saveKey)
-                local sliderFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 58), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                sliderFrame.BackgroundTransparency = 0.05
+                local sliderFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 52), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
+                sliderFrame.BackgroundTransparency = 0.02
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = sliderFrame})
                 CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = sliderFrame}, {Color = "Stroke"})
                 local fallbackValue = tonumber(default) or min
@@ -3919,9 +4125,9 @@ local UILibrary = (function()
                 local currentValue = tonumber(loadedValue) or fallbackValue
                 currentValue = math.clamp(currentValue, min, max)
 
-                CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 6), Size = UDim2.new(0.5, 0, 0.4, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-                local valueLabel = CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 6), Size = UDim2.new(0.5, -12, 0.4, 0), Font = Enum.Font.Gotham, Text = tostring(currentValue), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right }, {TextColor3 = "SubText"})
-                local sliderBar = CreateElement("TextButton", { Parent = sliderFrame, BorderSizePixel = 0, Position = UDim2.new(0.03, 0, 0.68, 0), Size = UDim2.new(0.94, 0, 0.14, 0), Text = "" }, {BackgroundColor3 = "QuarBg"})
+                CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(0.5, 0, 0.4, 0), Font = Enum.Font.SourceSansSemibold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+                local valueLabel = CreateElement("TextLabel", { Parent = sliderFrame, BackgroundTransparency = 1, Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(0.5, -10, 0.4, 0), Font = Enum.Font.SourceSans, Text = tostring(currentValue), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right }, {TextColor3 = "SubText"})
+                local sliderBar = CreateElement("TextButton", { Parent = sliderFrame, BorderSizePixel = 0, Position = UDim2.new(0.025, 0, 0.7, 0), Size = UDim2.new(0.95, 0, 0.12, 0), Text = "" }, {BackgroundColor3 = "QuarBg"})
                 local sliderBarCorner = CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = sliderBar})
 
                 local initialRatio = (max == min) and 0 or ((currentValue - min) / (max - min))
@@ -3948,8 +4154,8 @@ local UILibrary = (function()
                         knob.Visible = true
                         PlayTween(knob, TweenInfo.new(duration), {Size = UDim2.new(0, 12, 0, 12), BackgroundColor3 = Themes[Options.Theme].Accent}):Play()
                     else
-                        sliderBar.Position = UDim2.new(0.025, 0, 0.65, 0)
-                        sliderBar.Size = UDim2.new(0.95, 0, 0.15, 0)
+                        sliderBar.Position = UDim2.new(0.025, 0, 0.72, 0)
+                        sliderBar.Size = UDim2.new(0.95, 0, 0.1, 0)
                         sliderBarCorner.CornerRadius = UDim.new(1, 0)
                         fillCorner.CornerRadius = UDim.new(1, 0)
                         PlayTween(knob, TweenInfo.new(duration), {Size = UDim2.new(0, 0, 0, 0)}):Play()
@@ -4003,15 +4209,15 @@ local UILibrary = (function()
 
             function tab:CreateCycleButton(text, values, default, callback, saveKey)
                 local cycleFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, VisualTokens.ControlHeight), LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                cycleFrame.BackgroundTransparency = 0.05
+                cycleFrame.BackgroundTransparency = 0.02
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = cycleFrame})
                 CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = cycleFrame}, {Color = "Stroke"})
                 local fallbackValue = default or values[1]
                 local loadedValue, cycleStore = ResolvePersistedValue(saveKey, fallbackValue)
 
-                CreateElement("TextLabel", { Parent = cycleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.6, 0, 1, 0), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
-                local cycleButton = CreateElement("TextButton", { Parent = cycleFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 104, 0, 22), Font = Enum.Font.GothamBold, Text = tostring(loadedValue or fallbackValue or "None"), TextSize = 12 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 4), Parent = cycleButton})
+                CreateElement("TextLabel", { Parent = cycleFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.6, 0, 1, 0), Font = Enum.Font.SourceSansSemibold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+                local cycleButton = CreateElement("TextButton", { Parent = cycleFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 96, 0, 20), Font = Enum.Font.SourceSansSemibold, Text = tostring(loadedValue or fallbackValue or "None"), TextSize = 13 }, {BackgroundColor3 = "QuarBg", TextColor3 = "Text"})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 2), Parent = cycleButton})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = cycleButton}, {Color = "Stroke"})
                 
                 local idx = 1
@@ -4038,8 +4244,8 @@ local UILibrary = (function()
                     if #values == 0 then return end
                     idx = idx + 1; if idx > #values then idx = 1 end
                     update(false)
-                    PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 90, 0, 18)}):Play()
-                    task.wait(0.1); PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 100, 0, 22)}):Play()
+                    PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 88, 0, 18)}):Play()
+                    task.wait(0.1); PlayTween(cycleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 96, 0, 20)}):Play()
                 end)
                 if cycleStore and #values > 0 then
                     update(true)
@@ -4070,10 +4276,10 @@ local UILibrary = (function()
 
             function tab:CreateDropdown(text, options, default, callback, saveKey)
                 local dropdownFrame = CreateElement("Frame", { Parent = page, BorderSizePixel = 0, Size = UDim2.new(1, 0, 0, 48), ClipsDescendants = true, LayoutOrder = #page:GetChildren() }, {BackgroundColor3 = "TerBg"})
-                dropdownFrame.BackgroundTransparency = 0.05
+                dropdownFrame.BackgroundTransparency = 0.02
                 CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.ControlCorner), Parent = dropdownFrame})
                 CreateElement("UIStroke", {Thickness = VisualTokens.CardStroke, Transparency = 0, Parent = dropdownFrame}, {Color = "Stroke"})
-                local titleLabel = CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 12, 0, 0), Size = UDim2.new(0.5, 0, 0, 48), Font = Enum.Font.GothamBold, Text = text, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
+                local titleLabel = CreateElement("TextLabel", { Parent = dropdownFrame, BackgroundTransparency = 1, Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0.5, 0, 0, 48), Font = Enum.Font.SourceSansSemibold, Text = text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left }, {TextColor3 = "Text"})
 
                 local fallbackValue = default or options[1]
                 local loadedValue, dropdownStore = ResolvePersistedValue(saveKey, fallbackValue)
@@ -4089,8 +4295,8 @@ local UILibrary = (function()
                     currentValue = fallbackValue
                 end
 
-                local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 124, 0, 30), Font = Enum.Font.GothamBold, Text = currentValue or "None", TextSize = 12, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
-                CreateElement("UICorner", {CornerRadius = UDim.new(0, 6), Parent = dropdownButton})
+                local dropdownButton = CreateElement("TextButton", { Parent = dropdownFrame, BorderSizePixel = 0, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.new(0, 110, 0, 22), Font = Enum.Font.SourceSansSemibold, Text = currentValue or "None", TextSize = 13, AutoButtonColor = false }, {BackgroundColor3 = "QuarBg", TextColor3 = "SubText"})
+                CreateElement("UICorner", {CornerRadius = UDim.new(0, 2), Parent = dropdownButton})
                 CreateElement("UIStroke", {Thickness = 1, Transparency = 0, Parent = dropdownButton}, {Color = "Stroke"})
                 local headerHeight, rowHeight = 46, 30
                 local function resolveComboMetrics()
