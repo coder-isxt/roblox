@@ -1,4 +1,3 @@
-
 local UILibrary = {}
 
 local TweenService = game:GetService("TweenService")
@@ -130,11 +129,63 @@ local Section = {}
 Section.__index = Section
 
 function Window:IsVisible()
-    return self.Main.Visible
+    return self.VisibleState == true
 end
 
 function Window:SetVisible(v)
-    self.Main.Visible = v == true
+    local shouldShow = v == true
+    if self.VisibleState == shouldShow and (self.Main.Visible == shouldShow or shouldShow) then
+        return
+    end
+
+    self.VisibleState = shouldShow
+    self.Animating = true
+
+    if self.AnimScaleTween then
+        self.AnimScaleTween:Cancel()
+    end
+    if self.AnimFadeTween then
+        self.AnimFadeTween:Cancel()
+    end
+    if self.AnimStrokeTween then
+        self.AnimStrokeTween:Cancel()
+    end
+
+    if shouldShow then
+        self.Main.Visible = true
+        if self.MainScale then
+            self.MainScale.Scale = 0.94
+        end
+        self.Main.BackgroundTransparency = 1
+        if self.MainStroke then
+            self.MainStroke.Transparency = 1
+        end
+
+        self.AnimScaleTween = tw(self.MainScale, 0.16, { Scale = 1 })
+        self.AnimFadeTween = tw(self.Main, 0.16, { BackgroundTransparency = 0 })
+        self.AnimStrokeTween = tw(self.MainStroke, 0.16, { Transparency = 0.2 })
+        self.AnimScaleTween:Play()
+        self.AnimFadeTween:Play()
+        self.AnimStrokeTween:Play()
+        task.delay(0.17, function()
+            if self and self.Main and self.VisibleState then
+                self.Animating = false
+            end
+        end)
+    else
+        self.AnimScaleTween = tw(self.MainScale, 0.14, { Scale = 0.94 })
+        self.AnimFadeTween = tw(self.Main, 0.14, { BackgroundTransparency = 1 })
+        self.AnimStrokeTween = tw(self.MainStroke, 0.14, { Transparency = 1 })
+        self.AnimScaleTween:Play()
+        self.AnimFadeTween:Play()
+        self.AnimStrokeTween:Play()
+        task.delay(0.15, function()
+            if self and self.Main and not self.VisibleState then
+                self.Main.Visible = false
+                self.Animating = false
+            end
+        end)
+    end
 end
 
 function Window:Toggle()
@@ -1253,7 +1304,7 @@ function UILibrary:CreateWindow(arg)
     local title = tostring(o.Title or o.Name or "UI Library")
     local subtitle = tostring(o.Subtitle or o.SubTitle or "")
     local size = (typeof(o.Size) == "UDim2") and o.Size or UDim2.fromOffset(780, 440)
-    local toggleKey = keycode(o.ToggleKey) or Enum.KeyCode.RightShift
+    local toggleKey = Enum.KeyCode.Insert
     local parent = (typeof(o.Parent) == "Instance") and o.Parent or guiParent()
     if not parent then
         error("[library_v2] no ScreenGui parent")
@@ -1283,9 +1334,14 @@ function UILibrary:CreateWindow(arg)
         BackgroundColor3 = C.Main,
         BorderSizePixel = 0,
         Active = true,
+        Visible = false,
     })
     corner(main, 8)
-    stroke(main, C.Stroke, 0.2)
+    local mainStroke = stroke(main, C.Stroke, 0.2)
+    local mainScale = mk("UIScale", {
+        Parent = main,
+        Scale = 1,
+    })
     mk("UISizeConstraint", {
         Parent = main,
         MinSize = Vector2.new(610, 360),
@@ -1416,6 +1472,8 @@ function UILibrary:CreateWindow(arg)
     local w = setmetatable({
         ScreenGui = sg,
         Main = main,
+        MainStroke = mainStroke,
+        MainScale = mainScale,
         TitleLabel = titleLbl,
         TabList = tabList,
         PageHolder = pageHolder,
@@ -1424,6 +1482,8 @@ function UILibrary:CreateWindow(arg)
         Connections = {},
         CloseCallbacks = {},
         ToggleKey = toggleKey,
+        VisibleState = false,
+        Animating = false,
         Destroyed = false,
     }, Window)
 
@@ -1466,6 +1526,7 @@ function UILibrary:CreateWindow(arg)
         end
     end))
 
+    w:SetVisible(true)
     return w
 end
 
@@ -1503,6 +1564,8 @@ function UILibrary:Notify(args)
         return
     end
 
+    duration = math.max(duration, 0.2)
+
     local toast = mk("Frame", {
         Parent = host,
         BackgroundColor3 = C.Top,
@@ -1510,9 +1573,14 @@ function UILibrary:Notify(args)
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         LayoutOrder = -os.clock(),
+        ClipsDescendants = true,
+    })
+    local toastStroke = stroke(toast, C.Stroke, 0.25)
+    local pop = mk("UIScale", {
+        Parent = toast,
+        Scale = 0.92,
     })
     corner(toast, 6)
-    stroke(toast, C.Stroke, 0.25)
     mk("UIPadding", {
         Parent = toast,
         PaddingTop = UDim.new(0, 8),
@@ -1520,6 +1588,13 @@ function UILibrary:Notify(args)
         PaddingLeft = UDim.new(0, 10),
         PaddingRight = UDim.new(0, 10),
     })
+    mk("UIListLayout", {
+        Parent = toast,
+        FillDirection = Enum.FillDirection.Vertical,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 6),
+    })
+
     local t = mk("TextLabel", {
         Parent = toast,
         BackgroundTransparency = 1,
@@ -1529,11 +1604,11 @@ function UILibrary:Notify(args)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
         Text = title,
+        LayoutOrder = 1,
     })
     local c = mk("TextLabel", {
         Parent = toast,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 17),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Font = FONT,
@@ -1543,21 +1618,55 @@ function UILibrary:Notify(args)
         TextYAlignment = Enum.TextYAlignment.Top,
         TextColor3 = C.SubText,
         Text = content,
+        LayoutOrder = 2,
     })
+
+    local timerTrack = mk("Frame", {
+        Parent = toast,
+        BackgroundColor3 = Color3.fromRGB(17, 25, 38),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 3),
+        LayoutOrder = 3,
+    })
+    corner(timerTrack, 99)
+    local timerFill = mk("Frame", {
+        Parent = timerTrack,
+        BackgroundColor3 = C.Accent,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 1, 0),
+    })
+    corner(timerFill, 99)
+
     toast.BackgroundTransparency = 1
+    toastStroke.Transparency = 1
     t.TextTransparency = 1
     c.TextTransparency = 1
-    tw(toast, 0.15, { BackgroundTransparency = 0 }):Play()
-    tw(t, 0.15, { TextTransparency = 0 }):Play()
-    tw(c, 0.15, { TextTransparency = 0 }):Play()
+    timerTrack.BackgroundTransparency = 1
+    timerFill.BackgroundTransparency = 1
+
+    tw(pop, 0.16, { Scale = 1 }):Play()
+    tw(toast, 0.16, { BackgroundTransparency = 0 }):Play()
+    tw(toastStroke, 0.16, { Transparency = 0.25 }):Play()
+    tw(t, 0.16, { TextTransparency = 0 }):Play()
+    tw(c, 0.16, { TextTransparency = 0 }):Play()
+    tw(timerTrack, 0.16, { BackgroundTransparency = 0 }):Play()
+    tw(timerFill, 0.16, { BackgroundTransparency = 0 }):Play()
+    TweenService:Create(timerFill, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 0, 1, 0),
+    }):Play()
+
     task.delay(duration, function()
         if not toast.Parent then
             return
         end
-        tw(toast, 0.15, { BackgroundTransparency = 1 }):Play()
-        tw(t, 0.15, { TextTransparency = 1 }):Play()
-        tw(c, 0.15, { TextTransparency = 1 }):Play()
-        task.delay(0.16, function()
+        tw(pop, 0.14, { Scale = 0.9 }):Play()
+        tw(toast, 0.14, { BackgroundTransparency = 1 }):Play()
+        tw(toastStroke, 0.14, { Transparency = 1 }):Play()
+        tw(t, 0.14, { TextTransparency = 1 }):Play()
+        tw(c, 0.14, { TextTransparency = 1 }):Play()
+        tw(timerTrack, 0.14, { BackgroundTransparency = 1 }):Play()
+        tw(timerFill, 0.14, { BackgroundTransparency = 1 }):Play()
+        task.delay(0.15, function()
             if toast.Parent then
                 toast:Destroy()
             end
