@@ -2853,12 +2853,12 @@ local UILibrary = (function()
                 tabButton.TextXAlignment = Enum.TextXAlignment.Left
                 tabButton.TextSize = 12
                 if buttonPadding then
-                    buttonPadding.PaddingLeft = UDim.new(0, 12)
+                    buttonPadding.PaddingLeft = UDim.new(0, 14)
                     buttonPadding.PaddingRight = UDim.new(0, 0)
                 end
                 activeRail.AnchorPoint = Vector2.new(0, 0.5)
-                activeRail.Position = UDim2.new(0, 1, 0.5, 0)
-                activeRail.Size = UDim2.new(0, 3, 1, -8)
+                activeRail.Position = UDim2.new(0, 2, 0.5, 0)
+                activeRail.Size = UDim2.new(0, 2, 1, -10)
             end
 
             if CurrentTab ~= tabEntry then
@@ -2918,8 +2918,8 @@ local UILibrary = (function()
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, sidebarDefault + 6, 0, contentTop),
-                    ContentSize = UDim2.new(1, -(sidebarDefault + 12), 1, -(contentTop + 6)),
+                    ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
+                    ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 6)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
                     NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
@@ -2984,8 +2984,8 @@ local UILibrary = (function()
                     SidebarSize = UDim2.new(0, sidebarDefault, 1, -topBarHeight),
                     SidebarPos = UDim2.new(0, 0, 0, topBarHeight),
                     SeparatorPos = UDim2.new(0, sidebarDefault, 0, topBarHeight),
-                    ContentPos = UDim2.new(0, sidebarDefault + 6, 0, contentTop),
-                    ContentSize = UDim2.new(1, -(sidebarDefault + 12), 1, -(contentTop + 6)),
+                    ContentPos = UDim2.new(0, sidebarDefault + 10, 0, contentTop),
+                    ContentSize = UDim2.new(1, -(sidebarDefault + 22), 1, -(contentTop + 6)),
                     NavPos = UDim2.new(0, 10, 0, contentTop),
                     NavSize = UDim2.new(1, -20, 0, 38),
                     NavAnchor = Vector2.new(0, 0),
@@ -4004,8 +4004,8 @@ local UILibrary = (function()
             local tab = { Name = name, Elements = {} }
             local tabButton = CreateElement("TextButton", { Name = name .. "Tab", Parent = TabHolder, BackgroundTransparency = 0.04, BorderSizePixel = 0, AutoButtonColor = false, Size = UDim2.new(1, -12, 0, 32), Font = Enum.Font.GothamBold, Text = BuildTabLabel(name), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left }, {BackgroundColor3 = "SecBg", TextColor3 = "SubText"})
             CreateElement("UICorner", {CornerRadius = UDim.new(0, VisualTokens.SurfaceCorner), Parent = tabButton})
-            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 12)})
-            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 1, 0.5, 0), Size = UDim2.new(0, 3, 1, -8), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
+            CreateElement("UIPadding", {Parent = tabButton, PaddingLeft = UDim.new(0, 14)})
+            local activeRail = CreateElement("Frame", { Parent = tabButton, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 2, 1, -10), BackgroundTransparency = 1 }, {BackgroundColor3 = "Accent"})
             CreateElement("UICorner", {CornerRadius = UDim.new(1, 0), Parent = activeRail})
             
             local page = CreateElement("ScrollingFrame", {
