@@ -2252,112 +2252,12 @@ function Window:CreateUniversalCategory(options)
         }
         UILibrary._simpleSpyState = simpleSpy
     end
-    local simpleSpyOfficial = UILibrary._simpleSpyOfficialState
-    if not simpleSpyOfficial then
-        simpleSpyOfficial = {
-            Url = "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua",
-            LastError = nil,
-            LastStartAt = 0,
-            Running = false,
-        }
-        UILibrary._simpleSpyOfficialState = simpleSpyOfficial
-    end
-
-    local function getExecutorEnv()
-        if typeof(getgenv) == "function" then
-            local ok, env = pcall(getgenv)
-            if ok and type(env) == "table" then
-                return env
-            end
-        end
-        return _G
-    end
-
-    local function fetchSimpleSpyOfficialSource()
-        local primaryUrl = tostring(simpleSpyOfficial.Url or "")
-        if primaryUrl ~= "" then
-            local okHttp, body = pcall(function()
-                return game:HttpGet(primaryUrl .. "?t=" .. tostring(os.time()))
-            end)
-            if okHttp and type(body) == "string" and body ~= "" and not string.find(body, "404: Not Found", 1, true) then
-                return body, nil
-            end
-        end
-
-        if typeof(readfile) == "function" then
-            local localPaths = {
-                "copy/SimpleSpyBeta.lua",
-                "SimpleSpyBeta.lua",
-            }
-            for _, path in ipairs(localPaths) do
-                local okRead, body = pcall(readfile, path)
-                if okRead and type(body) == "string" and body ~= "" then
-                    return body, nil
-                end
-            end
-        end
-
-        return nil, "failed to fetch SimpleSpyBeta source (HttpGet/readfile unavailable or failed)"
-    end
-
-    local function startSimpleSpyOfficial(forceRestart)
-        local env = getExecutorEnv()
-        forceRestart = forceRestart == true
-
-        if env.SimpleSpyExecuted == true and not forceRestart then
-            simpleSpyOfficial.Running = true
-            simpleSpyOfficial.LastError = nil
-            return true, "already running"
-        end
-
-        if forceRestart and type(env.SimpleSpyShutdown) == "function" then
-            pcall(env.SimpleSpyShutdown)
-        end
-
-        local source, fetchErr = fetchSimpleSpyOfficialSource()
-        if not source then
-            simpleSpyOfficial.Running = false
-            simpleSpyOfficial.LastError = fetchErr
-            return false, fetchErr
-        end
-
-        if typeof(loadstring) ~= "function" then
-            simpleSpyOfficial.Running = false
-            simpleSpyOfficial.LastError = "loadstring unavailable"
-            return false, "loadstring unavailable"
-        end
-
-        local chunk, loadErr = loadstring(source)
-        if not chunk then
-            simpleSpyOfficial.Running = false
-            simpleSpyOfficial.LastError = "compile failed: " .. tostring(loadErr)
-            return false, simpleSpyOfficial.LastError
-        end
-
-        local okRun, runErr = pcall(chunk)
-        if not okRun then
-            simpleSpyOfficial.Running = false
-            simpleSpyOfficial.LastError = "runtime failed: " .. tostring(runErr)
-            return false, simpleSpyOfficial.LastError
-        end
-
-        simpleSpyOfficial.Running = env.SimpleSpyExecuted == true or okRun
-        simpleSpyOfficial.LastStartAt = os.time()
-        simpleSpyOfficial.LastError = nil
-        return true, "started"
-    end
-
-    local function stopSimpleSpyOfficial()
-        local env = getExecutorEnv()
-        if type(env.SimpleSpyShutdown) == "function" then
-            local ok, err = pcall(env.SimpleSpyShutdown)
-            simpleSpyOfficial.Running = false
-            simpleSpyOfficial.LastError = ok and nil or tostring(err)
-            return ok, err
-        end
-        simpleSpyOfficial.Running = false
-        return false, "SimpleSpyShutdown unavailable"
-    end
+    simpleSpy.Blacklist = simpleSpy.Blacklist or simpleSpy.Excluded or {}
+    simpleSpy.Excluded = simpleSpy.Blacklist
+    simpleSpy.Blocklist = simpleSpy.Blocklist or {}
+    simpleSpy.LogCheckCaller = simpleSpy.LogCheckCaller == true
+    simpleSpy.Scheduled = simpleSpy.Scheduled or {}
+    simpleSpy.SchedulerConnection = simpleSpy.SchedulerConnection or nil
 
     local luaKeywords = {
         ["and"] = true, ["break"] = true, ["do"] = true, ["else"] = true, ["elseif"] = true, ["end"] = true,
@@ -2368,8 +2268,95 @@ function Window:CreateUniversalCategory(options)
     local packArgs = table.pack or function(...)
         return { n = select("#", ...), ... }
     end
+    local unpackArgs = table.unpack or unpack
     local cloneRef = (typeof(cloneref) == "function") and cloneref or function(v)
         return v
+    end
+    local deepCloneArg
+    local instanceToCode
+
+    local function isCyclicTable(tbl, seen)
+        if type(tbl) ~= "table" then
+            return false
+        end
+        seen = seen or {}
+        if seen[tbl] then
+            return true
+        end
+        seen[tbl] = true
+        for k, v in pairs(tbl) do
+            if type(k) == "table" and isCyclicTable(k, seen) then
+                return true
+            end
+            if type(v) == "table" and isCyclicTable(v, seen) then
+                return true
+            end
+        end
+        seen[tbl] = nil
+        return false
+    end
+
+    local function isCyclicPack(argsPack)
+        for i = 1, (argsPack and argsPack.n or 0) do
+            if type(argsPack[i]) == "table" and isCyclicTable(argsPack[i]) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function cloneArgsPack(argsPack)
+        local out = { n = argsPack.n or 0 }
+        for i = 1, out.n do
+            out[i] = deepCloneArg(argsPack[i], 0, {})
+        end
+        return out
+    end
+
+    local function getRemoteDebugId(remote)
+        local okId, id = pcall(function()
+            return remote:GetDebugId(0)
+        end)
+        if okId and type(id) == "string" and id ~= "" then
+            return id
+        end
+        return instanceToCode(remote)
+    end
+
+    local function tablecheck(t, remote, remoteId)
+        return t[remoteId] or t[tostring(remote.Name or "")]
+    end
+
+    local function ensureSimpleSpyScheduler()
+        if simpleSpy.SchedulerConnection and simpleSpy.SchedulerConnection.Connected then
+            return
+        end
+        simpleSpy.SchedulerConnection = RunService.Heartbeat:Connect(function()
+            local job = table.remove(simpleSpy.Scheduled, 1)
+            if not job then
+                return
+            end
+            local callback = job.Callback
+            local argsPack = job.Args
+            if typeof(callback) == "function" and type(argsPack) == "table" then
+                local okCall, callErr = pcall(callback, unpackArgs(argsPack, 1, argsPack.n or 0))
+                if not okCall then
+                    simpleSpy.CaptureErrorCount = (simpleSpy.CaptureErrorCount or 0) + 1
+                    local n = simpleSpy.CaptureErrorCount
+                    if n <= 3 or (n % 50) == 0 then
+                        warn("[library_v2] remotes capture error:", tostring(callErr or "unknown"))
+                    end
+                end
+            end
+        end)
+    end
+
+    local function scheduleSimpleSpy(callback, ...)
+        ensureSimpleSpyScheduler()
+        table.insert(simpleSpy.Scheduled, {
+            Callback = callback,
+            Args = packArgs(...),
+        })
     end
 
     local function isRemoteInstance(remote)
@@ -2395,7 +2382,7 @@ function Window:CreateUniversalCategory(options)
         return nil
     end
 
-    local function deepCloneArg(value, depth, seen)
+    deepCloneArg = function(value, depth, seen)
         local valueType = typeof(value)
         if valueType == "table" then
             depth = depth or 0
@@ -2439,7 +2426,7 @@ function Window:CreateUniversalCategory(options)
         return tostring(n)
     end
 
-    local function instanceToCode(inst)
+    instanceToCode = function(inst)
         if typeof(inst) ~= "Instance" then
             return "nil"
         end
@@ -2613,7 +2600,7 @@ function Window:CreateUniversalCategory(options)
         end
     end
 
-    local function captureRemote(remote, method, argsPack, recorderType)
+    local function captureRemote(remote, method, argsPack, recorderType, remoteId, blocked)
         local canonicalMethod = canonicalRemoteMethod(method)
         if not canonicalMethod then
             return
@@ -2621,22 +2608,27 @@ function Window:CreateUniversalCategory(options)
         if not isRemoteInstance(remote) then
             return
         end
-
-        local remoteRef = cloneRef(remote)
-        local remotePath = instanceToCode(remoteRef)
-        if simpleSpy.Excluded[remotePath] then
+        if type(argsPack) ~= "table" then
+            return
+        end
+        if isCyclicPack(argsPack) then
             return
         end
 
-        local packedArgs = { n = argsPack.n or 0 }
-        for i = 1, packedArgs.n do
-            packedArgs[i] = deepCloneArg(argsPack[i], 0, {})
+        local remoteRef = cloneRef(remote)
+        remoteId = tostring(remoteId or getRemoteDebugId(remoteRef))
+        if tablecheck(simpleSpy.Blacklist, remoteRef, remoteId) then
+            return
         end
 
+        local remotePath = instanceToCode(remoteRef)
+        local packedArgs = cloneArgsPack(argsPack)
+
         local dedupeKey = table.concat({
-            remotePath,
+            remoteId,
             canonicalMethod,
             tostring(packedArgs.n or 0),
+            tostring(blocked == true),
         }, "|")
         local nowClock = os.clock()
         if simpleSpy.LastCaptureKey == dedupeKey and (nowClock - (simpleSpy.LastCaptureTime or 0)) < 0.001 then
@@ -2653,9 +2645,11 @@ function Window:CreateUniversalCategory(options)
             Method = canonicalMethod,
             Recorder = tostring(recorderType or "?"),
             Remote = remoteRef,
+            RemoteId = remoteId,
             RemotePath = remotePath,
             RemoteName = remoteRef.Name,
             TimeUnix = os.time(),
+            Blocked = blocked == true,
             Args = packedArgs,
             ArgCount = packedArgs.n,
             Code = buildRemoteCode(remoteRef, canonicalMethod, packedArgs, entryId),
@@ -2676,23 +2670,7 @@ function Window:CreateUniversalCategory(options)
         simpleSpy.HookError = nil
         simpleSpy.HookDetails = {}
         simpleSpy.HookType = nil
-
-        local function process(remote, method, recorderType, ...)
-            if simpleSpyOfficial and simpleSpyOfficial.Running then
-                return
-            end
-            local packed = packArgs(...)
-            local ok, err = pcall(function()
-                captureRemote(remote, method, packed, recorderType)
-            end)
-            if not ok then
-                simpleSpy.CaptureErrorCount = (simpleSpy.CaptureErrorCount or 0) + 1
-                local n = simpleSpy.CaptureErrorCount
-                if n <= 3 or (n % 50) == 0 then
-                    warn("[library_v2] remotes capture error:", tostring(err or "unknown"))
-                end
-            end
-        end
+        ensureSimpleSpyScheduler()
 
         local newClosure = (typeof(newcclosure) == "function") and newcclosure or function(f)
             return f
@@ -2724,21 +2702,65 @@ function Window:CreateUniversalCategory(options)
             hookFunc = syn.oth.hook
         end
 
+        local function intercept(method, originalFunction, recorderType, ...)
+            if typeof(originalFunction) ~= "function" then
+                return nil
+            end
+
+            local selfRef = ...
+            if typeof(selfRef) ~= "Instance" then
+                return originalFunction(...)
+            end
+
+            local remote = cloneRef(selfRef)
+            if not isRemoteInstance(remote) then
+                return originalFunction(...)
+            end
+
+            local canonicalMethod = canonicalRemoteMethod(method)
+            if not canonicalMethod then
+                return originalFunction(...)
+            end
+            if not simpleSpy.LogCheckCaller and typeof(checkcaller) == "function" and checkcaller() then
+                return originalFunction(...)
+            end
+
+            local remoteId = getRemoteDebugId(remote)
+            local blockcheck = tablecheck(simpleSpy.Blocklist, remote, remoteId) == true
+            local rawArgs = packArgs(select(2, ...))
+
+            if not tablecheck(simpleSpy.Blacklist, remote, remoteId) and not isCyclicPack(rawArgs) then
+                scheduleSimpleSpy(
+                    captureRemote,
+                    remote,
+                    canonicalMethod,
+                    cloneArgsPack(rawArgs),
+                    recorderType,
+                    remoteId,
+                    blockcheck
+                )
+            end
+
+            if blockcheck then
+                return
+            end
+            return originalFunction(...)
+        end
+
+        local originalNamecall = nil
+        local newNamecall = newClosure(function(...)
+            local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
+            if canonicalRemoteMethod(method) then
+                return intercept(method, originalNamecall, "__namecall", ...)
+            end
+            return originalNamecall(...)
+        end)
+
         if typeof(hookMeta) == "function" then
             local okHook, hookErr = pcall(function()
-                local oldNamecall
-                local newNamecall = newClosure(function(...)
-                    local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
-                    local remote = ...
-                    local canonicalMethod = canonicalRemoteMethod(method)
-                    if canonicalMethod and isRemoteInstance(remote) then
-                        process(remote, canonicalMethod, "__namecall", select(2, ...))
-                    end
-                    return oldNamecall(...)
-                end)
-                oldNamecall = hookMeta(game, "__namecall", cloneFn(newNamecall))
-                if typeof(oldNamecall) ~= "function" then
-                    error("hookmetamethod returned invalid __namecall function")
+                originalNamecall = hookMeta(game, "__namecall", cloneFn(newNamecall))
+                if typeof(originalNamecall) ~= "function" then
+                    error("invalid __namecall hook return")
                 end
             end)
             if okHook then
@@ -2747,84 +2769,51 @@ function Window:CreateUniversalCategory(options)
             else
                 markFailed("hookmetamethod(__namecall)", hookErr)
             end
-        else
-            markFailed("hookmetamethod(__namecall)", "not available")
         end
 
-        local getRawMt = getrawmetatable or (debug and debug.getmetatable)
-        local setReadOnly = setreadonly
-        if not setReadOnly and typeof(make_writeable) == "function" and typeof(make_readonly) == "function" then
-            setReadOnly = function(mt, state)
-                if state then
-                    make_readonly(mt)
-                else
-                    make_writeable(mt)
-                end
-            end
-        end
-        if not namecallInstalled and typeof(getRawMt) == "function" and typeof(setReadOnly) == "function" then
-            local okMeta, metaErr = pcall(function()
-                local mt = getRawMt(game)
+        if not namecallInstalled and typeof(hookFunc) == "function" then
+            local okRaw, rawErr = pcall(function()
+                local mt = (getrawmetatable or (debug and debug.getmetatable))(game)
                 if not mt or typeof(mt.__namecall) ~= "function" then
-                    error("missing __namecall metatable")
+                    error("missing raw __namecall")
                 end
-                local oldNamecall = mt.__namecall
-                local newNamecall = newClosure(function(...)
-                    local method = (typeof(getnamecallmethod) == "function") and getnamecallmethod() or nil
-                    local remote = ...
-                    local canonicalMethod = canonicalRemoteMethod(method)
-                    if canonicalMethod and isRemoteInstance(remote) then
-                        process(remote, canonicalMethod, "__namecall(raw)", select(2, ...))
-                    end
-                    return oldNamecall(...)
-                end)
-                setReadOnly(mt, false)
-                mt.__namecall = cloneFn(newNamecall)
-                setReadOnly(mt, true)
+                originalNamecall = hookFunc(mt.__namecall, cloneFn(newNamecall))
+                if typeof(originalNamecall) ~= "function" then
+                    error("invalid raw __namecall hook return")
+                end
             end)
-            if okMeta then
+            if okRaw then
                 namecallInstalled = true
-                markInstalled("raw metatable __namecall")
+                markInstalled("hookfunction(raw __namecall)")
             else
-                markFailed("raw metatable __namecall", metaErr)
+                markFailed("hookfunction(raw __namecall)", rawErr)
             end
         end
 
         if typeof(hookFunc) == "function" then
             local originalEvent = Instance.new("RemoteEvent").FireServer
             local originalFunction = Instance.new("RemoteFunction").InvokeServer
-
             local originalUnreliableEvent = nil
-            do
-                local okUnreliable, unreliableInstance = pcall(function()
-                    return Instance.new("UnreliableRemoteEvent")
-                end)
-                if okUnreliable and unreliableInstance then
-                    originalUnreliableEvent = unreliableInstance.FireServer
-                    unreliableInstance:Destroy()
-                end
+
+            local okUnreliableCreate, unreliableInstance = pcall(function()
+                return Instance.new("UnreliableRemoteEvent")
+            end)
+            if okUnreliableCreate and unreliableInstance then
+                originalUnreliableEvent = unreliableInstance.FireServer
+                unreliableInstance:Destroy()
             end
 
             local newFireServer = newClosure(function(...)
-                local remote = ...
-                if isRemoteInstance(remote) then
-                    process(remote, "FireServer", "hookfunction(RemoteEvent.FireServer)", select(2, ...))
-                end
-                return originalEvent(...)
+                return intercept("FireServer", originalEvent, "__index", ...)
             end)
-
             local newInvokeServer = newClosure(function(...)
-                local remote = ...
-                if isRemoteInstance(remote) then
-                    process(remote, "InvokeServer", "hookfunction(RemoteFunction.InvokeServer)", select(2, ...))
-                end
-                return originalFunction(...)
+                return intercept("InvokeServer", originalFunction, "__index", ...)
             end)
 
             local okFire, errFire = pcall(function()
                 originalEvent = hookFunc(Instance.new("RemoteEvent").FireServer, cloneFn(newFireServer))
                 if typeof(originalEvent) ~= "function" then
-                    error("hookfunction returned invalid RemoteEvent function")
+                    error("invalid RemoteEvent.FireServer hook return")
                 end
             end)
             if okFire then
@@ -2836,7 +2825,7 @@ function Window:CreateUniversalCategory(options)
             local okInvoke, errInvoke = pcall(function()
                 originalFunction = hookFunc(Instance.new("RemoteFunction").InvokeServer, cloneFn(newInvokeServer))
                 if typeof(originalFunction) ~= "function" then
-                    error("hookfunction returned invalid RemoteFunction function")
+                    error("invalid RemoteFunction.InvokeServer hook return")
                 end
             end)
             if okInvoke then
@@ -2847,19 +2836,15 @@ function Window:CreateUniversalCategory(options)
 
             if originalUnreliableEvent then
                 local newUnreliableFireServer = newClosure(function(...)
-                    local remote = ...
-                    if isRemoteInstance(remote) then
-                        process(remote, "FireServer", "hookfunction(UnreliableRemoteEvent.FireServer)", select(2, ...))
-                    end
-                    return originalUnreliableEvent(...)
+                    return intercept("FireServer", originalUnreliableEvent, "__index", ...)
                 end)
-
                 local okUnreliable, errUnreliable = pcall(function()
-                    local unreliable = Instance.new("UnreliableRemoteEvent")
-                    originalUnreliableEvent = hookFunc(unreliable.FireServer, cloneFn(newUnreliableFireServer))
-                    unreliable:Destroy()
+                    originalUnreliableEvent = hookFunc(
+                        Instance.new("UnreliableRemoteEvent").FireServer,
+                        cloneFn(newUnreliableFireServer)
+                    )
                     if typeof(originalUnreliableEvent) ~= "function" then
-                        error("hookfunction returned invalid UnreliableRemoteEvent function")
+                        error("invalid UnreliableRemoteEvent.FireServer hook return")
                     end
                 end)
                 if okUnreliable then
@@ -2868,8 +2853,6 @@ function Window:CreateUniversalCategory(options)
                     markFailed("hookfunction(UnreliableRemoteEvent.FireServer)", errUnreliable)
                 end
             end
-        else
-            markFailed("hookfunction", "not available")
         end
 
         if installedCount > 0 then
@@ -2901,49 +2884,7 @@ function Window:CreateUniversalCategory(options)
         local refreshQueued = false
 
         local hookStatusLabel = callsSection:CreateLabel("Hook: Checking...")
-        local officialStatusLabel = callsSection:CreateLabel("Official: Idle")
-        local statsLabel = callsSection:CreateLabel("Captured: 0 | Excluded: 0")
-
-        local function refreshOfficialStatus()
-            if simpleSpyOfficial.Running then
-                local startedAt = tonumber(simpleSpyOfficial.LastStartAt or 0)
-                if startedAt > 0 then
-                    officialStatusLabel:Set("Official: Running (" .. os.date("%H:%M:%S", startedAt) .. ")")
-                else
-                    officialStatusLabel:Set("Official: Running")
-                end
-            else
-                officialStatusLabel:Set("Official: Idle")
-            end
-        end
-
-        callsSection:CreateButton("Launch Official SimpleSpyBeta", function()
-            local okStart, msg = startSimpleSpyOfficial(false)
-            refreshOfficialStatus()
-            if okStart then
-                notify("Remotes", "Official SimpleSpyBeta launched.", 2.4)
-            else
-                notify("Remotes", "Official launch failed: " .. tostring(msg), 3.6)
-            end
-        end)
-        callsSection:CreateButton("Restart Official SimpleSpyBeta", function()
-            local okStart, msg = startSimpleSpyOfficial(true)
-            refreshOfficialStatus()
-            if okStart then
-                notify("Remotes", "Official SimpleSpyBeta restarted.", 2.4)
-            else
-                notify("Remotes", "Official restart failed: " .. tostring(msg), 3.6)
-            end
-        end)
-        callsSection:CreateButton("Shutdown Official SimpleSpyBeta", function()
-            local okStop, stopErr = stopSimpleSpyOfficial()
-            refreshOfficialStatus()
-            if okStop then
-                notify("Remotes", "Official SimpleSpyBeta stopped.", 2.2)
-            else
-                notify("Remotes", "Official stop failed: " .. tostring(stopErr), 3.2)
-            end
-        end)
+        local statsLabel = callsSection:CreateLabel("Captured: 0 | Excluded: 0 | Blocked: 0")
 
         local listShell = mk("Frame", {
             Parent = callsSection.Content,
@@ -2977,7 +2918,7 @@ function Window:CreateUniversalCategory(options)
         })
 
         local selectedLabel = inspectorSection:CreateLabel("Selected: None")
-        local selectedMeta = inspectorSection:CreateLabel("Method: - | Args: -")
+        local selectedMeta = inspectorSection:CreateLabel("Method: - | Args: - | Via: -")
 
         local codeShell = mk("Frame", {
             Parent = inspectorSection.Content,
@@ -3031,11 +2972,19 @@ function Window:CreateUniversalCategory(options)
             end
             return n
         end
+        local function blockedCount()
+            local n = 0
+            for _ in pairs(simpleSpy.Blocklist) do
+                n = n + 1
+            end
+            return n
+        end
 
         local function refreshStats()
             statsLabel:Set(
                 "Captured: " .. tostring(#simpleSpy.Logs)
                     .. " | Excluded: " .. tostring(excludedCount())
+                    .. " | Blocked: " .. tostring(blockedCount())
             )
         end
 
@@ -3053,6 +3002,7 @@ function Window:CreateUniversalCategory(options)
                 "Method: " .. tostring(entry.Method)
                     .. " | Args: " .. tostring(entry.ArgCount or 0)
                     .. " | Via: " .. tostring(entry.Recorder or "?")
+                    .. " | Blocked: " .. tostring(entry.Blocked == true)
             )
             codeBox.Text = entry.Code or "-- No code."
         end
@@ -3083,14 +3033,16 @@ function Window:CreateUniversalCategory(options)
                 local entry = simpleSpy.Logs[i]
                 local timeText = os.date("%H:%M:%S", entry.TimeUnix or os.time())
                 local remoteName = tostring(entry.RemoteName or "Remote")
+                local blockedSuffix = (entry.Blocked == true) and " [BLOCKED]" or ""
                 local rowText = string.format(
-                    "[%d] %s  %s  (%d args)  %s  [%s]",
+                    "[%d] %s  %s  (%d args)  %s  [%s]%s",
                     tonumber(entry.Id or 0),
                     tostring(entry.Method or "?"),
                     remoteName,
                     tonumber(entry.ArgCount or 0),
                     timeText,
-                    tostring(entry.Recorder or "?")
+                    tostring(entry.Recorder or "?"),
+                    blockedSuffix
                 )
                 local row = mk("TextButton", {
                     Parent = listScroll,
@@ -3162,6 +3114,12 @@ function Window:CreateUniversalCategory(options)
             queueRefresh()
             notify("Remotes", "Exclude list cleared.", 2)
         end)
+        callsSection:CreateButton("Clear Block List", function()
+            table.clear(simpleSpy.Blocklist)
+            emitSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Block list cleared.", 2)
+        end)
 
         inspectorSection:CreateButton("Run Code", function()
             local entry = getSelectedEntry()
@@ -3218,16 +3176,16 @@ function Window:CreateUniversalCategory(options)
                 return
             end
 
-            local remotePath = tostring(entry.RemotePath or "")
-            if remotePath == "" then
-                notify("Remotes", "Selected entry has no valid remote path.", 2.5)
+            local remoteId = tostring(entry.RemoteId or "")
+            if remoteId == "" then
+                notify("Remotes", "Selected entry has no valid remote id.", 2.5)
                 return
             end
 
-            simpleSpy.Excluded[remotePath] = true
+            simpleSpy.Excluded[remoteId] = true
             local filtered = {}
             for _, item in ipairs(simpleSpy.Logs) do
-                if item.RemotePath ~= remotePath then
+                if tostring(item.RemoteId or "") ~= remoteId then
                     filtered[#filtered + 1] = item
                 end
             end
@@ -3235,29 +3193,36 @@ function Window:CreateUniversalCategory(options)
             selectedEntryId = nil
             emitSpyUpdate(nil)
             queueRefresh()
-            notify("Remotes", "Excluded: " .. remotePath, 2.4)
+            notify("Remotes", "Excluded: " .. tostring(entry.RemoteName or remoteId), 2.4)
         end)
 
-        local officialOk, officialErr = startSimpleSpyOfficial(false)
-        refreshOfficialStatus()
-        if officialOk then
-            hookStatusLabel:Set("Hook: Official SimpleSpyBeta")
-        else
-            local hookOk = installSimpleSpyHook()
-            if hookOk then
-                hookStatusLabel:Set("Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ")")
-            else
-                local reason = tostring(simpleSpy.HookError or "unknown")
-                hookStatusLabel:Set("Hook: Failed - " .. reason)
-                notify(
-                    "Remotes",
-                    "Official SimpleSpyBeta failed: " .. tostring(officialErr)
-                        .. " | Internal hook failed: " .. reason,
-                    4.8
-                )
+        inspectorSection:CreateButton("Block From Firing", function()
+            local entry = getSelectedEntry()
+            if not entry then
+                notify("Remotes", "Select a remote call first.", 2.2)
+                return
             end
+
+            local remoteId = tostring(entry.RemoteId or "")
+            if remoteId == "" then
+                notify("Remotes", "Selected entry has no valid remote id.", 2.5)
+                return
+            end
+
+            simpleSpy.Blocklist[remoteId] = true
+            emitSpyUpdate(nil)
+            queueRefresh()
+            notify("Remotes", "Blocked from firing: " .. tostring(entry.RemoteName or remoteId), 2.6)
+        end)
+
+        local hookOk = installSimpleSpyHook()
+        if hookOk then
+            hookStatusLabel:Set("Hook: Active (" .. tostring(simpleSpy.HookType or "unknown") .. ")")
+        else
+            local reason = tostring(simpleSpy.HookError or "unknown")
+            hookStatusLabel:Set("Hook: Failed - " .. reason)
+            notify("Remotes", "SimpleSpy hook failed: " .. reason, 4.2)
         end
-        refreshOfficialStatus()
 
         local listenerToken = {}
         simpleSpy.Listeners[listenerToken] = function()
@@ -3314,7 +3279,7 @@ function Window:CreateUniversalCategory(options)
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
     otherSection:CreateLabel("Enable Developer to unlock Remotes/Scripts tabs.")
     infoSection:CreateParagraph("Developer Tabs", "Remotes has an integrated simple-spy style logger.")
-    infoSection:CreateLabel("Remotes: Run/copy code, exclude remotes, clear lists")
+    infoSection:CreateLabel("Remotes: Run/copy code, exclude/block remotes, clear lists")
     infoSection:CreateLabel("Scripts: DevEx copy/dump tools (later)")
 
     setDeveloperEnabled(options.DeveloperEnabled == true, true)
