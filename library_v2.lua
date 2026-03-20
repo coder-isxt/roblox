@@ -8,6 +8,20 @@ local RunService = game:GetService("RunService")
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
+local BUILTIN_ICON_ALIASES = {
+    ["local"] = {
+        Image = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png",
+        Fallback = "L",
+    },
+    ["players"] = {
+        Image = "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTab.png",
+        Fallback = "P",
+    },
+    ["universal"] = {
+        Image = "rbxasset://textures/ui/Settings/MenuBarIcons/HomeTab.png",
+        Fallback = "U",
+    },
+}
 
 local C = {
     Main = Color3.fromRGB(10, 14, 21),
@@ -74,6 +88,104 @@ local function roundStep(v, s)
     return math.floor((v / s) + 0.5) * s
 end
 
+local function normalizeIconKey(v)
+    if type(v) ~= "string" then
+        return nil
+    end
+    local key = string.lower(v)
+    key = string.gsub(key, "%s+", "")
+    key = string.gsub(key, "[_%-./]", "")
+    return key
+end
+
+local function resolveIconSpec(iconSpec, depth)
+    depth = (depth or 0) + 1
+    if depth > 5 then
+        return nil, nil
+    end
+
+    local iconType = typeof(iconSpec)
+    if iconType == "number" then
+        return "rbxassetid://" .. tostring(iconSpec), nil
+    end
+
+    if iconType == "string" then
+        local raw = tostring(iconSpec)
+        if raw == "" then
+            return nil, nil
+        end
+
+        if string.find(raw, "rbxassetid://", 1, true) or string.find(raw, "rbxasset://", 1, true)
+            or string.find(raw, "http://", 1, true) or string.find(raw, "https://", 1, true) then
+            return raw, nil
+        end
+
+        local numeric = tonumber(raw)
+        if numeric then
+            return "rbxassetid://" .. tostring(numeric), nil
+        end
+
+        local key = normalizeIconKey(raw)
+        local iconAliases = UILibrary.Icons or {}
+        local aliasSpec = iconAliases[raw] or iconAliases[key] or BUILTIN_ICON_ALIASES[key]
+        if aliasSpec ~= nil then
+            return resolveIconSpec(aliasSpec, depth)
+        end
+
+        if #raw <= 3 then
+            return nil, string.upper(raw)
+        end
+        return nil, nil
+    end
+
+    if iconType == "table" then
+        local directImage = iconSpec.Image or iconSpec.Url or iconSpec.Source
+        local directId = iconSpec.Id or iconSpec.AssetId or iconSpec.ImageId
+        local fallbackText = iconSpec.Text or iconSpec.Fallback or iconSpec.Glyph
+        local aliasName = iconSpec.Alias or iconSpec.Name or iconSpec.IconName
+
+        local imageFromAlias, textFromAlias = nil, nil
+        if aliasName then
+            imageFromAlias, textFromAlias = resolveIconSpec(aliasName, depth)
+        end
+
+        if typeof(directImage) == "string" and directImage ~= "" then
+            local raw = directImage
+            if string.find(raw, "rbxassetid://", 1, true) or string.find(raw, "rbxasset://", 1, true)
+                or string.find(raw, "http://", 1, true) or string.find(raw, "https://", 1, true) then
+                return raw, fallbackText or textFromAlias
+            end
+            local asNumber = tonumber(raw)
+            if asNumber then
+                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias
+            end
+        end
+
+        if typeof(directId) == "number" then
+            return "rbxassetid://" .. tostring(directId), fallbackText or textFromAlias
+        end
+        if typeof(directId) == "string" and directId ~= "" then
+            local asNumber = tonumber(directId)
+            if asNumber then
+                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias
+            end
+            if string.find(directId, "rbxassetid://", 1, true) or string.find(directId, "rbxasset://", 1, true) then
+                return directId, fallbackText or textFromAlias
+            end
+        end
+
+        if imageFromAlias then
+            return imageFromAlias, fallbackText or textFromAlias
+        end
+        if typeof(fallbackText) == "string" and fallbackText ~= "" then
+            return nil, string.sub(fallbackText, 1, 3)
+        end
+        return nil, textFromAlias
+    end
+
+    return nil, nil
+end
+
 local function closeDropdowns(except)
     for d in pairs(OPEN_DROPDOWNS) do
         if d ~= except and d.SetOpen then
@@ -135,6 +247,29 @@ end
 
 function UILibrary:SetSelectedPlayer(player)
     self._selectedPlayer = player
+end
+
+function UILibrary:RegisterIcon(name, iconSpec)
+    if type(name) ~= "string" or name == "" then
+        return false
+    end
+    local key = normalizeIconKey(name)
+    if not key or key == "" then
+        return false
+    end
+    self.Icons = self.Icons or {}
+    self.Icons[key] = iconSpec
+    self.Icons[name] = iconSpec
+    return true
+end
+
+function UILibrary:GetIcon(name)
+    if type(name) ~= "string" or name == "" then
+        return nil
+    end
+    local key = normalizeIconKey(name)
+    local iconAliases = self.Icons or {}
+    return iconAliases[name] or iconAliases[key] or BUILTIN_ICON_ALIASES[key]
 end
 
 function Window:IsVisible()
@@ -268,7 +403,7 @@ function Window:PlayInitializeAnimation()
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
-        Text = "Xeno Interface",
+        Text = "Limbo Interface",
         TextTransparency = 1,
         ZIndex = 53,
     })
@@ -468,6 +603,16 @@ function Window:SelectTab(tabOrName)
         t.Indicator.BackgroundTransparency = active and 0 or 1
         t.ButtonBack.BackgroundTransparency = active and 0.2 or 1
         t.Label.TextColor3 = active and C.Text or C.SubText
+        local iconColor = active and C.Text or C.SubText
+        if t.IconImageLabel then
+            t.IconImageLabel.ImageColor3 = iconColor
+        end
+        if t.IconTextLabel then
+            t.IconTextLabel.TextColor3 = iconColor
+        end
+        if t.IconDot then
+            t.IconDot.BackgroundColor3 = iconColor
+        end
     end
     return picked
 end
@@ -490,6 +635,7 @@ function Window:CreatePlayersCategory(options)
     if not localPlayer then
         return nil
     end
+    local playersTabIcon = options.TabIcon or options.Icon or "players"
 
     local playersTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -499,7 +645,9 @@ function Window:CreatePlayersCategory(options)
         end
     end
     if not playersTab then
-        playersTab = self:CreateTab("Players")
+        playersTab = self:CreateTab({ Name = "Players", Icon = playersTabIcon })
+    elseif playersTab.SetIcon then
+        playersTab:SetIcon(playersTabIcon)
     end
 
     local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
@@ -1258,6 +1406,7 @@ function Window:CreateLocalCategory(options)
     if not localPlayer then
         return nil
     end
+    local localTabIcon = options.TabIcon or options.Icon or "local"
 
     local localTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -1267,7 +1416,9 @@ function Window:CreateLocalCategory(options)
         end
     end
     if not localTab then
-        localTab = self:CreateTab("Local")
+        localTab = self:CreateTab({ Name = "Local", Icon = localTabIcon })
+    elseif localTab.SetIcon then
+        localTab:SetIcon(localTabIcon)
     end
 
     local flySection = localTab:CreateSection({ Name = "Fly", Side = "Left" })
@@ -1653,6 +1804,7 @@ function Window:CreateUniversalCategory(options)
     end
 
     options = options or {}
+    local universalTabIcon = options.TabIcon or options.Icon or "universal"
 
     local universalTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -1662,11 +1814,13 @@ function Window:CreateUniversalCategory(options)
         end
     end
     if not universalTab then
-        universalTab = self:CreateTab("Universal")
+        universalTab = self:CreateTab({ Name = "Universal", Icon = universalTabIcon })
+    elseif universalTab.SetIcon then
+        universalTab:SetIcon(universalTabIcon)
     end
 
+    local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
     local developerSection = universalTab:CreateSection({ Name = "Developer", Side = "Left" })
-    local infoSection = universalTab:CreateSection({ Name = "Universal", Side = "Right" })
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -1719,14 +1873,14 @@ function Window:CreateUniversalCategory(options)
         runRemoteDevTool("DevEx", "https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265", false)
     end)
 
-    infoSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
-    infoSection:CreateLabel("Developer tools are loaded client-side.")
+    otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
+    otherSection:CreateLabel("Developer tools are loaded client-side.")
 
     self.UniversalCategory = {
         Tab = universalTab,
         DeveloperSection = developerSection,
-        UniversalSection = infoSection,
-        OtherSection = infoSection,
+        UniversalSection = otherSection,
+        OtherSection = otherSection,
         Options = options,
     }
 
@@ -2605,6 +2759,19 @@ end
 function Tab:CreateKeybind(...)
     return self:_def():CreateKeybind(...)
 end
+
+function Tab:SetIcon(iconSpec)
+    self.Icon = iconSpec
+    if self._ApplyIcon then
+        self:_ApplyIcon(iconSpec)
+    end
+    return self
+end
+
+function Tab:GetIcon()
+    return self.Icon
+end
+
 function Window:CreateTab(a, iconMaybe)
     local name, icon = "Tab", nil
     if typeof(a) == "table" then
@@ -2664,34 +2831,50 @@ function Window:CreateTab(a, iconMaybe)
         Size = UDim2.new(0, 14, 0, 14),
         Position = UDim2.new(0, 10, 0.5, -7),
     })
-    local iconImage
-    if typeof(icon) == "number" then
-        iconImage = "rbxassetid://" .. tostring(icon)
-    elseif typeof(icon) == "string" then
-        if string.find(icon, "rbxassetid://", 1, true) then
-            iconImage = icon
-        elseif tonumber(icon) then
-            iconImage = "rbxassetid://" .. tostring(icon)
+    local iconImageLabel = mk("ImageLabel", {
+        Parent = iconHolder,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        ImageColor3 = C.SubText,
+        Visible = false,
+    })
+    local iconTextLabel = mk("TextLabel", {
+        Parent = iconHolder,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Font = FONT,
+        TextSize = 11,
+        TextColor3 = C.SubText,
+        Text = "",
+        Visible = false,
+    })
+    local iconDot = mk("Frame", {
+        Parent = iconHolder,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(0, 6, 0, 6),
+        BackgroundColor3 = C.SubText,
+        BorderSizePixel = 0,
+        Visible = false,
+    })
+    corner(iconDot, 99)
+
+    local function applyIcon(iconSpec)
+        local resolvedImage, resolvedFallback = resolveIconSpec(iconSpec)
+
+        iconImageLabel.Visible = false
+        iconTextLabel.Visible = false
+        iconDot.Visible = false
+
+        if resolvedImage then
+            iconImageLabel.Image = resolvedImage
+            iconImageLabel.Visible = true
+        elseif typeof(resolvedFallback) == "string" and resolvedFallback ~= "" then
+            iconTextLabel.Text = string.sub(string.upper(resolvedFallback), 1, 3)
+            iconTextLabel.Visible = true
+        else
+            iconDot.Visible = true
         end
-    end
-    if iconImage then
-        mk("ImageLabel", {
-            Parent = iconHolder,
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 1, 0),
-            ImageColor3 = C.SubText,
-            Image = iconImage,
-        })
-    else
-        local dot = mk("Frame", {
-            Parent = iconHolder,
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            Size = UDim2.new(0, 6, 0, 6),
-            BackgroundColor3 = C.SubText,
-            BorderSizePixel = 0,
-        })
-        corner(dot, 99)
     end
 
     local lbl = mk("TextLabel", {
@@ -2748,17 +2931,24 @@ function Window:CreateTab(a, iconMaybe)
 
     local tab = setmetatable({
         Name = name,
+        Icon = nil,
         Window = self,
         Button = btn,
         ButtonBack = back,
         Indicator = ind,
         Label = lbl,
+        IconHolder = iconHolder,
+        IconImageLabel = iconImageLabel,
+        IconTextLabel = iconTextLabel,
+        IconDot = iconDot,
         Page = page,
         Left = left,
         Right = right,
         Sections = {},
         DefaultSection = nil,
+        _ApplyIcon = applyIcon,
     }, Tab)
+    tab:SetIcon(icon)
 
     table.insert(self.Tabs, tab)
     track(self.Connections, btn.MouseButton1Click:Connect(function()
