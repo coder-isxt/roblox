@@ -46,17 +46,31 @@ local UILibrary = (function()
     
     -- // CONFIGURATION & THEMES // --
     local Options = {
-        Theme = "Clean",
-        ToggleStyle = "Switch", -- "Switch", "Checkbox", "Pill", "Dot"
-        CornerStyle = "Rounded", -- "Rounded", "Slight", "Blocky"
-        StrokeStyle = "Outline", -- "None", "Outline", "Glow", "TwoCornerFade", "SoftFade"
-        SliderStyle = "Line", -- "Line", "Pill", "Block"
-        ComboStyle = "Classic", -- "Classic", "Compact", "Soft"
-        Font = "Gotham", -- FontMap keys
-        MenuStyle = "Sidebar", -- fixed for now
-        AutoScale = true,
-        UserScale = 1
+    Theme = "Clean",
+    ToggleStyle = "Switch",
+    CornerStyle = "Slight",        -- much cleaner, matches image
+    StrokeStyle = "SoftFade",      -- subtle professional edge
+    SliderStyle = "Line",
+    ComboStyle = "Soft",
+    Font = "Gotham",
+    MenuStyle = "Sidebar",
+    AutoScale = true,
+    UserScale = 1
+}
+
+local Themes = {
+    Clean = {
+        MainBg = Color3.fromRGB(10, 12, 18),
+        SecBg = Color3.fromRGB(15, 18, 26),
+        TerBg = Color3.fromRGB(20, 24, 34),
+        QuarBg = Color3.fromRGB(25, 30, 42),
+        Hover = Color3.fromRGB(35, 45, 65),
+        Accent = Color3.fromRGB(0, 175, 255),   -- vibrant blue from image
+        Text = Color3.fromRGB(245, 248, 255),
+        SubText = Color3.fromRGB(165, 180, 210),
+        Stroke = Color3.fromRGB(42, 52, 70)
     }
+}
 
     local MenuStyleSet = {
         Sidebar = true,
@@ -65,19 +79,6 @@ local UILibrary = (function()
         Tablet = true
     }
 
-    local Themes = {
-        Clean = {
-            MainBg = Color3.fromRGB(14, 17, 23),
-            SecBg = Color3.fromRGB(20, 24, 33),
-            TerBg = Color3.fromRGB(26, 31, 42),
-            QuarBg = Color3.fromRGB(34, 40, 54),
-            Hover = Color3.fromRGB(43, 51, 69),
-            Accent = Color3.fromRGB(108, 182, 255),
-            Text = Color3.fromRGB(236, 242, 252),
-            SubText = Color3.fromRGB(159, 173, 196),
-            Stroke = Color3.fromRGB(70, 83, 106)
-        }
-    }
 
     local ThemeAliases = {
         Default = "Clean",
@@ -196,17 +197,17 @@ local UILibrary = (function()
     local SliderStyleSet = { Line = true, Pill = true, Block = true }
     local ComboStyleSet = { Classic = true, Compact = true, Soft = true }
     local VisualTokens = {
-        WindowCorner = 14,
-        SurfaceCorner = 10,
-        ControlCorner = 8,
-        TopBarHeight = 46,
-        SidebarWidth = 168,
-        SearchWidth = 210,
-        SearchHeight = 32,
-        ControlHeight = 40,
-        SectionGap = 8,
-        CardStroke = 1
-    }
+    WindowCorner = 12,
+    SurfaceCorner = 10,
+    ControlCorner = 8,
+    TopBarHeight = 52,
+    SidebarWidth = 172,
+    SearchWidth = 210,
+    SearchHeight = 34,
+    ControlHeight = 42,
+    SectionGap = 10,
+    CardStroke = 1
+}
 
     local PersistConfig = {
         SchemaVersion = 3,
