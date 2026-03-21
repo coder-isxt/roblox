@@ -2464,14 +2464,25 @@ function Window:CreateLocalCategory(options)
         rocketFlyBV.Velocity = move
 
         local forward = (move.Magnitude > 0.001) and move.Unit or cam.CFrame.LookVector
-        local upRef = cam.CFrame.UpVector
-        if math.abs(forward:Dot(upRef)) > 0.98 then
+
+        -- "Diving" feel: bias look direction slightly downward while flying.
+        local diveForward = (forward + Vector3.new(0, -0.38, 0))
+        if diveForward.Magnitude > 0.001 then
+            diveForward = diveForward.Unit
+        else
+            diveForward = forward
+        end
+
+        local upRef = Vector3.new(0, 1, 0)
+        if math.abs(diveForward:Dot(upRef)) > 0.98 then
             upRef = cam.CFrame.RightVector
         end
 
+        -- Dolphin-style spin: rotate around local right axis (somersault/front-flip),
+        -- not around the forward axis (barrel roll).
         rocketFlyRoll = (rocketFlyRoll + math.rad(rocketFlySpinSpeed) * dt) % (math.pi * 2)
-        local lookCf = CFrame.lookAt(rootPart.Position, rootPart.Position + forward, upRef)
-        rocketFlyBG.CFrame = lookCf * CFrame.fromAxisAngle(forward, rocketFlyRoll)
+        local lookCf = CFrame.lookAt(rootPart.Position, rootPart.Position + diveForward, upRef)
+        rocketFlyBG.CFrame = lookCf * CFrame.Angles(rocketFlyRoll, 0, 0)
     end
 
     local setRocketFlyEnabled
