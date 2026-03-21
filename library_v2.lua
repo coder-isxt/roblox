@@ -2561,9 +2561,13 @@ function Window:CreateUniversalCategory(options)
         local pageSize = 80
         local currentPage = 1
         local totalPages = 1
+        local totalScriptCount = 0
         local hasLoadedScripts = false
         local loadInProgress = false
+        local classFilter = "All"
+        local nameFilter = ""
         local pageLabel = statusSection:CreateLabel("Page: 1/1")
+        local filterLabel = statusSection:CreateLabel("Filter: All")
 
         local function bindScriptConnection(conn)
             table.insert(scriptConnections, conn)
@@ -2607,6 +2611,20 @@ function Window:CreateUniversalCategory(options)
 
         local function getScriptSortKey(obj)
             return string.lower(tostring(obj.Name))
+        end
+
+        local function scriptMatchesFilters(obj)
+            if classFilter ~= "All" and obj.ClassName ~= classFilter then
+                return false
+            end
+            if nameFilter ~= "" then
+                local lname = string.lower(tostring(obj.Name or ""))
+                local lfilter = string.lower(nameFilter)
+                if not string.find(lname, lfilter, 1, true) then
+                    return false
+                end
+            end
+            return true
         end
 
         local function buildRowText(row, isSelected)
@@ -2729,7 +2747,7 @@ function Window:CreateUniversalCategory(options)
                 end
             end
 
-            countLabel:Set("Scripts: " .. tostring(#scriptEntries))
+            countLabel:Set(string.format("Scripts: %d / %d", #scriptEntries, totalScriptCount))
             pageLabel:Set(string.format("Page: %d/%d", currentPage, totalPages))
 
             if selectedScript then
@@ -2750,10 +2768,23 @@ function Window:CreateUniversalCategory(options)
         end
 
         local function rebuildScriptList()
-            scriptEntries = collectScripts()
+            local allEntries = collectScripts()
+            local filtered = {}
+            for _, obj in ipairs(allEntries) do
+                if scriptMatchesFilters(obj) then
+                    filtered[#filtered + 1] = obj
+                end
+            end
+            totalScriptCount = #allEntries
+            scriptEntries = filtered
             totalPages = math.max(1, math.ceil(#scriptEntries / pageSize))
             currentPage = math.clamp(currentPage, 1, totalPages)
             renderCurrentPage()
+            if nameFilter ~= "" then
+                filterLabel:Set(string.format("Filter: %s + \"%s\"", classFilter, nameFilter))
+            else
+                filterLabel:Set("Filter: " .. classFilter)
+            end
         end
 
         local function loadScriptsAsync(force)
@@ -2798,6 +2829,28 @@ function Window:CreateUniversalCategory(options)
         actionsSection:CreateButton("Refresh List", function()
             loadScriptsAsync(true)
         end)
+        statusSection:CreateDropdown({
+            Name = "Type",
+            Options = {"All", "Script", "LocalScript", "ModuleScript"},
+            CurrentOption = "All",
+            Callback = function(v)
+                classFilter = tostring(v or "All")
+                if hasLoadedScripts then
+                    loadScriptsAsync(true)
+                end
+            end,
+        })
+        statusSection:CreateInput({
+            Name = "Name",
+            PlaceholderText = "contains...",
+            CurrentValue = "",
+            Callback = function(v)
+                nameFilter = tostring(v or "")
+                if hasLoadedScripts then
+                    loadScriptsAsync(true)
+                end
+            end,
+        })
         local clipboardFn = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
 
         local function requireSelectedScript()
@@ -2853,12 +2906,37 @@ function Window:CreateUniversalCategory(options)
             end
             return nil
         end
+        local function getRawScriptSource(scriptObj)
+            if type(getscriptsource) == "function" then
+                local ok, source = pcall(getscriptsource, scriptObj)
+                if ok and type(source) == "string" and source ~= "" then
+                    return source
+                end
+            end
+            local okSource, sourceProp = pcall(function()
+                return scriptObj.Source
+            end)
+            if okSource and type(sourceProp) == "string" and sourceProp ~= "" then
+                return sourceProp
+            end
+            return nil
+        end
+
         actionsSection:CreateButton("Copy", function()
             local scriptObj = requireSelectedScript()
             if not scriptObj then
                 return
             end
-            copyToClipboard(scriptObj:GetFullName(), "Copied script name.")
+            local raw = getRawScriptSource(scriptObj)
+            if not raw then
+                UILibrary:NotifyError({
+                    Title = "Scripts",
+                    Content = "Raw source unavailable for this script.",
+                    Duration = 2.4,
+                })
+                return
+            end
+            copyToClipboard(raw, "Raw script source copied.")
         end)
         actionsSection:CreateButton("Dump", function()
             local scriptObj = requireSelectedScript()
@@ -2890,6 +2968,7 @@ function Window:CreateUniversalCategory(options)
             selectedRow = nil
             selectedScript = nil
             scriptEntries = {}
+            totalScriptCount = 0
             hasLoadedScripts = false
             loadInProgress = false
         end
