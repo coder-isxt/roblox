@@ -304,6 +304,11 @@ local libraryMenuAttempted = false
 local libraryMenuError
 local menuOwnedBySimpleSpy = false
 local menuSetSelection
+local menuSetSelectionInfo
+local RemoteTypeIcon = {
+    event = "[E]",
+    ["function"] = "[F]"
+}
 local AllowedLibraryButtons = {
     ["Copy Code"] = true,
     ["Run Code"] = true,
@@ -875,21 +880,52 @@ function getPlayerFromInstance(instance)
 end
 
 local function updateSelectionStatus()
-    if not menuSetSelection then
+    if not menuSetSelection and not menuSetSelectionInfo then
         return
     end
 
-    local text = "None"
+    local info = {
+        Name = "None",
+        Method = "-",
+        Time = "-",
+        Type = "-"
+    }
+
     if selected and selected.Remote then
         local remote = selected.Remote
         local method = (remote:IsA("RemoteFunction") and "InvokeServer") or "FireServer"
-        text = string.format("%s (%s)", tostring(remote.Name), method)
+        info.Name = tostring(remote.Name)
+        info.Method = method
+        info.Time = tostring(selected.Timestamp or "-")
+        info.Type = tostring(selected.Type or "-")
     end
 
+    if menuSetSelectionInfo then
+        local okInfo = pcall(menuSetSelectionInfo, simpleSpyHost, info)
+        if not okInfo then
+            pcall(menuSetSelectionInfo, info)
+        end
+        return
+    end
+
+    local text = string.format("%s (%s)", info.Name, info.Method)
     local ok = pcall(menuSetSelection, simpleSpyHost, text)
     if not ok then
         pcall(menuSetSelection, text)
     end
+end
+
+local function updateLogSelectionVisual(logEntry, isSelected)
+    if not libraryMenuEnabled then
+        return
+    end
+    if not logEntry or not logEntry.Control or not logEntry.DisplayText then
+        return
+    end
+    local label = (isSelected and "> " or "  ") .. logEntry.DisplayText
+    pcall(function()
+        logEntry.Control:SetText(label)
+    end)
 end
 
 --- Runs on MouseButton1Click of an event frame
@@ -901,6 +937,7 @@ function eventSelect(frame)
                 TweenService:Create(selected.Button, TweenInfo.new(0.5), {BackgroundColor3 = deselectColor}):Play()
             end)
         end
+        updateLogSelectionVisual(selected, false)
         selected = nil
     end
     for _, v in next, logs do
@@ -913,6 +950,7 @@ function eventSelect(frame)
             local selectColor = libraryMenuEnabled and Color3.fromRGB(30, 43, 60) or Color3.fromRGB(92, 126, 229)
             TweenService:Create(selected.Button, TweenInfo.new(0.5), {BackgroundColor3 = selectColor}):Play()
         end)
+        updateLogSelectionVisual(selected, true)
         codebox:setRaw(selected.GenScript)
     end
     updateSelectionStatus()
@@ -1041,6 +1079,7 @@ local function ensureLibraryMenu()
             menuActionSection = simpleSpyHost.ActionSection
             menuSettingsSection = simpleSpyHost.SettingsSection
             menuSetSelection = simpleSpyHost.SetSelection
+            menuSetSelectionInfo = simpleSpyHost.SetSelectionInfo
             libraryMenuEnabled = true
             menuOwnedBySimpleSpy = false
             ScrollingFrame.Visible = false
@@ -1084,6 +1123,7 @@ local function ensureLibraryMenu()
     menuActionSection = spyTab:CreateSection("Actions", "Right")
     menuSettingsSection = spyTab:CreateSection("Settings", "Right")
     menuSetSelection = nil
+    menuSetSelectionInfo = nil
     libraryMenuEnabled = true
     menuOwnedBySimpleSpy = true
 
@@ -1142,13 +1182,17 @@ function newRemote(type, data)
     if layoutOrderNum < 1 then layoutOrderNum = 999999999 end
     local remote = data.remote
     local callingscript = data.callingscript
+    local timestamp = os.date("%H:%M:%S")
+    local typeIcon = RemoteTypeIcon[type] or "[?]"
+    local displayText = string.format("%s %s %s", typeIcon, timestamp, tostring(remote.Name))
     local RemoteTemplate
     local Button
     local connect
     local log
+    local logControl
 
     if libraryMenuEnabled and menuLogSection then
-        local logControl = menuLogSection:CreateButton(("[%s] %s"):format(type == "event" and "E" or "F", remote.Name), function()
+        logControl = menuLogSection:CreateButton("  " .. displayText, function()
             if not log then
                 return
             end
@@ -1164,12 +1208,16 @@ function newRemote(type, data)
     else
         RemoteTemplate = Create("Frame",{LayoutOrder = layoutOrderNum,Name = "RemoteTemplate",Parent = LogList,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Size = UDim2.new(0, 117, 0, 27)})
         local ColorBar = Create("Frame",{Name = "ColorBar",Parent = RemoteTemplate,BackgroundColor3 = (type == "event" and Color3.fromRGB(255, 242, 0)) or Color3.fromRGB(99, 86, 245),BorderSizePixel = 0,Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 7, 0, 18),ZIndex = 2})
-        local Text = Create("TextLabel",{TextTruncate = Enum.TextTruncate.AtEnd,Name = "Text",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 12, 0, 1),Size = UDim2.new(0, 105, 0, 18),ZIndex = 2,Font = Enum.Font.SourceSans,Text = remote.Name,TextColor3 = Color3.new(1, 1, 1),TextSize = 14,TextXAlignment = Enum.TextXAlignment.Left})
+        local Text = Create("TextLabel",{TextTruncate = Enum.TextTruncate.AtEnd,Name = "Text",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(1, 1, 1),BackgroundTransparency = 1,Position = UDim2.new(0, 12, 0, 1),Size = UDim2.new(0, 105, 0, 18),ZIndex = 2,Font = Enum.Font.SourceSans,Text = displayText,TextColor3 = Color3.new(1, 1, 1),TextSize = 14,TextXAlignment = Enum.TextXAlignment.Left})
         Button = Create("TextButton",{Name = "Button",Parent = RemoteTemplate,BackgroundColor3 = Color3.new(0, 0, 0),BackgroundTransparency = 0.75,BorderColor3 = Color3.new(1, 1, 1),Position = UDim2.new(0, 0, 0, 1),Size = UDim2.new(0, 117, 0, 18),AutoButtonColor = false,Font = Enum.Font.SourceSans,Text = "",TextColor3 = Color3.new(0, 0, 0),TextSize = 14})
     end
 
     log = {
         Name = remote.Name,
+        Type = type,
+        Timestamp = timestamp,
+        DisplayText = displayText,
+        Control = logControl,
         Function = data.infofunc or "--Function Info is disabled",
         Remote = remote,
         DebugId = data.id,
