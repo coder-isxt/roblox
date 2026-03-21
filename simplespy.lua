@@ -303,6 +303,23 @@ local libraryMenuEnabled = false
 local libraryMenuAttempted = false
 local libraryMenuError
 local menuOwnedBySimpleSpy = false
+local menuSetSelection
+local AllowedLibraryButtons = {
+    ["Copy Code"] = true,
+    ["Run Code"] = true,
+    ["Exclude (i)"] = true,
+    ["Clr Logs"] = true,
+    ["Clr Blacklist"] = true,
+    ["Get Script"] = true
+}
+local LibraryButtonLabel = {
+    ["Copy Code"] = "Copy",
+    ["Run Code"] = "Run",
+    ["Exclude (i)"] = "Exclude (i)",
+    ["Clr Logs"] = "Clear",
+    ["Clr Blacklist"] = "Clear Exclude",
+    ["Get Script"] = "Get Script"
+}
 
 -- autoblock variables
 local history = {}
@@ -857,6 +874,24 @@ function getPlayerFromInstance(instance)
     end
 end
 
+local function updateSelectionStatus()
+    if not menuSetSelection then
+        return
+    end
+
+    local text = "None"
+    if selected and selected.Remote then
+        local remote = selected.Remote
+        local method = (remote:IsA("RemoteFunction") and "InvokeServer") or "FireServer"
+        text = string.format("%s (%s)", tostring(remote.Name), method)
+    end
+
+    local ok = pcall(menuSetSelection, simpleSpyHost, text)
+    if not ok then
+        pcall(menuSetSelection, text)
+    end
+end
+
 --- Runs on MouseButton1Click of an event frame
 function eventSelect(frame)
     if selected and selected.Log  then
@@ -880,6 +915,7 @@ function eventSelect(frame)
         end)
         codebox:setRaw(selected.GenScript)
     end
+    updateSelectionStatus()
     if sideClosed and not libraryMenuEnabled then
         toggleSideTray()
     end
@@ -1004,6 +1040,7 @@ local function ensureLibraryMenu()
             menuLogSection = simpleSpyHost.LogSection
             menuActionSection = simpleSpyHost.ActionSection
             menuSettingsSection = simpleSpyHost.SettingsSection
+            menuSetSelection = simpleSpyHost.SetSelection
             libraryMenuEnabled = true
             menuOwnedBySimpleSpy = false
             ScrollingFrame.Visible = false
@@ -1046,6 +1083,7 @@ local function ensureLibraryMenu()
     menuLogSection = spyTab:CreateSection("Logs", "Left")
     menuActionSection = spyTab:CreateSection("Actions", "Right")
     menuSettingsSection = spyTab:CreateSection("Settings", "Right")
+    menuSetSelection = nil
     libraryMenuEnabled = true
     menuOwnedBySimpleSpy = true
 
@@ -1064,16 +1102,20 @@ function newButton(name, description, onClick)
         return
     end
 
-    local lowerName = string.lower(tostring(name))
-    local section = ((lowerName:find("toggle", 1, true) or lowerName:find("advanced", 1, true) or lowerName:find("autoblock", 1, true) or lowerName:find("logcheckcaller", 1, true)) and menuSettingsSection) or menuActionSection
-    section:CreateButton(name, function(...)
+    if not AllowedLibraryButtons[name] then
+        return
+    end
+
+    local buttonLabel = LibraryButtonLabel[name] or tostring(name)
+    local section = menuActionSection or menuSettingsSection
+    section:CreateButton(buttonLabel, function(...)
         logthread(running())
         onClick(nil, ...)
         if description and menuLibrary and menuLibrary.Notify then
             local ok, text = pcall(description)
             if ok and type(text) == "string" and text ~= "" then
                 menuLibrary:Notify({
-                    Title = name,
+                    Title = buttonLabel,
                     Content = text,
                     Duration = 2
                 })
@@ -2089,6 +2131,7 @@ if not getgenv().SimpleSpyExecuted then
         else
             codebox = Highlight.new(CodeBox)
         end
+        updateSelectionStatus()
         logthread(spawn(function()
             local suc,err = pcall(game.HttpGet,game,"https://raw.githubusercontent.com/78n/SimpleSpy/main/UpdateLog.lua")
             codebox:setRaw((suc and err) or "")
@@ -2322,6 +2365,7 @@ newButton(
         end
         codebox:setRaw("")
         selected = nil
+        updateSelectionStatus()
         TextLabel.Text = "Logs cleared!"
     end
 )
