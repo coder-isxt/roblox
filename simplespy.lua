@@ -2420,7 +2420,7 @@ newButton(
 
 --- Excludes the selected.Log Remote from the RemoteSpy
 newButton(
-    "Exclude (i)",
+    "Exclude",
     function() return "Click to exclude this Remote.\nExcluding a remote makes SimpleSpy ignore it, but it will continue to be usable." end,
     function()
         if selected then
