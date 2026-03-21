@@ -2420,7 +2420,7 @@ function Window:CreateRemotesCategory(options)
     if loaded then
         UILibrary:NotifyInfo({
             Title = "Remotes",
-            Content = "SimpleSpy attached to library Remotes tab.",
+            Content = "Remotes loaded, spy them in Remotes.",
             Duration = 2.2,
         })
     else
