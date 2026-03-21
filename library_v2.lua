@@ -1260,6 +1260,8 @@ function Window:CreatePlayersCategory(options)
             and flingOptions.AngularVelocity
             or Vector3.new(4200, 6000, 4200)
         local restoreCFrame = (typeof(flingOptions.RestoreCFrame) == "CFrame" and flingOptions.RestoreCFrame) or localRoot.CFrame
+        local targetStartPos = targetRoot.Position
+        local targetMoveStopDistance = math.max(0, tonumber(flingOptions.TargetMoveStopDistance) or 20)
 
         UILibrary:SuspendFlingProtect(duration + 0.9)
         stopFlingAndRestore()
@@ -1312,6 +1314,14 @@ function Window:CreatePlayersCategory(options)
             if os.clock() >= endAt or not currentRoot or not currentTargetRoot or not targetCharacter or not targetCharacter:FindFirstChild("Head") then
                 restore()
                 return
+            end
+
+            if targetMoveStopDistance > 0 then
+                local movedDistance = (currentTargetRoot.Position - targetStartPos).Magnitude
+                if movedDistance >= targetMoveStopDistance then
+                    restore()
+                    return
+                end
             end
 
             local now = os.clock()
@@ -1921,6 +1931,22 @@ function Window:CreatePlayersCategory(options)
         else
             notify("Fling", "Could not fling target right now.", 2.8)
         end
+    end)
+
+    optionsSection:CreateButton("Run Fling", function()
+        local target = getTrollTarget()
+        if not target then
+            notify("Run Fling", "No valid target for mode: " .. targetMode, 2.4)
+            return
+        end
+        task.spawn(function()
+            local ok = runAnimationSpamFling(target)
+            if ok then
+                notify("Run Fling", "Run-spam flinging " .. tostring(target.Name) .. " (" .. targetMode .. ").", 2.2)
+            else
+                notify("Run Fling", "Could not run-fling target right now.", 2.8)
+            end
+        end)
     end)
 
     optionsSection:CreateButton("FE Bring Player", function()
