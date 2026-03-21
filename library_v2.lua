@@ -2191,92 +2191,25 @@ function Window:CreateRemotesCategory(options)
     end
 
     local logsSection = remotesTab:CreateSection({ Name = "Logs", Side = "Left" })
-    local codeSection = remotesTab:CreateSection({ Name = "Script", Side = "Left" })
     local actionsSection = remotesTab:CreateSection({ Name = "Controls", Side = "Right" })
-    local settingsSection = remotesTab:CreateSection({ Name = "Options", Side = "Right" })
-
-    local codeShell = mk("Frame", {
-        Parent = codeSection.Content,
-        BackgroundColor3 = Color3.fromRGB(8, 12, 20),
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 260),
-    })
-    corner(codeShell, 4)
-    stroke(codeShell, C.Stroke, 0.55)
-
-    local codeRenderHost = mk("Frame", {
-        Parent = codeShell,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 8, 0, 8),
-        Size = UDim2.new(1, -16, 1, -16),
-        BorderSizePixel = 0,
-    })
-
-    local fallbackCodeBox = mk("TextBox", {
-        Parent = codeRenderHost,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Font = Enum.Font.Code,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        TextWrapped = false,
-        MultiLine = true,
-        ClearTextOnFocus = false,
-        TextColor3 = C.Text,
-        PlaceholderColor3 = C.SubText,
-        PlaceholderText = "SimpleSpy output...",
-        TextEditable = false,
-        Text = "",
-    })
-
-    local highlightRenderer = nil
-    do
-        local highlightModule = nil
-        local okHighlight, highlightOrErr = pcall(function()
-            if typeof(isfile) == "function" and typeof(loadfile) == "function" and isfile("Highlight.lua") then
-                return loadfile("Highlight.lua")()
-            end
-            if typeof(loadstring) == "function" then
-                return loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/Highlight.lua"))()
-            end
-            return nil
-        end)
-        if okHighlight then
-            highlightModule = highlightOrErr
-        end
-
-        if type(highlightModule) == "table" and type(highlightModule.new) == "function" then
-            local okRenderer, renderer = pcall(highlightModule.new, codeRenderHost)
-            if okRenderer and renderer then
-                highlightRenderer = renderer
-                fallbackCodeBox.Visible = false
-            end
-        end
-    end
+    local settingsSection = remotesTab:CreateSection({ Name = "Status", Side = "Right" })
+    local selectedLabel = settingsSection:CreateLabel("Selected: None")
+    logsSection:CreateLabel("Select a log entry, then use Controls.")
 
     local cachedCode = ""
     local function setCode(text)
         cachedCode = tostring(text or "")
-        if highlightRenderer and type(highlightRenderer.setRaw) == "function" then
-            pcall(highlightRenderer.setRaw, highlightRenderer, cachedCode)
-        else
-            fallbackCodeBox.Text = cachedCode
-        end
     end
     local function getCode()
-        local current = nil
-        if highlightRenderer and type(highlightRenderer.getString) == "function" then
-            local okGet, result = pcall(highlightRenderer.getString, highlightRenderer)
-            if okGet and type(result) == "string" then
-                current = result
-            end
-        end
-        if current == nil then
-            current = tostring(fallbackCodeBox.Text or cachedCode or "")
-        end
+        local current = tostring(cachedCode or "")
         cachedCode = current
         return current
+    end
+    local function setSelectionText(text)
+        local value = tostring(text or "None")
+        if selectedLabel and selectedLabel.Set then
+            selectedLabel:Set("Selected: " .. value)
+        end
     end
 
     local genv = (typeof(getgenv) == "function" and getgenv()) or _G
@@ -2296,6 +2229,9 @@ function Window:CreateRemotesCategory(options)
         end,
         GetCode = function(_)
             return getCode()
+        end,
+        SetSelection = function(_, text)
+            setSelectionText(text)
         end,
     }
 
@@ -2378,11 +2314,11 @@ function Window:CreateRemotesCategory(options)
     self.RemotesCategory = {
         Tab = remotesTab,
         LogsSection = logsSection,
-        CodeSection = codeSection,
         ActionsSection = actionsSection,
         SettingsSection = settingsSection,
         SetCode = setCode,
         GetCode = getCode,
+        SetSelection = setSelectionText,
         SourceUrl = sourceUrl,
         SourcePath = sourcePath,
         Loaded = loaded,
