@@ -2191,17 +2191,15 @@ function Window:CreateRemotesCategory(options)
     end
 
     local logsSection = remotesTab:CreateSection({ Name = "Logs", Side = "Left" })
-    local codeSection = remotesTab:CreateSection({ Name = "Code Preview", Side = "Right" })
-    local actionsSection = remotesTab:CreateSection({ Name = "Actions", Side = "Right" })
-    local settingsSection = remotesTab:CreateSection({ Name = "Settings", Side = "Right" })
-    logsSection:CreateLabel("Select a log entry to generate and preview script.")
-    codeSection:CreateLabel("Generated script output (SimpleSpy style).")
+    local codeSection = remotesTab:CreateSection({ Name = "Script", Side = "Left" })
+    local actionsSection = remotesTab:CreateSection({ Name = "Controls", Side = "Right" })
+    local settingsSection = remotesTab:CreateSection({ Name = "Options", Side = "Right" })
 
     local codeShell = mk("Frame", {
         Parent = codeSection.Content,
         BackgroundColor3 = Color3.fromRGB(8, 12, 20),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 300),
+        Size = UDim2.new(1, 0, 0, 260),
     })
     corner(codeShell, 4)
     stroke(codeShell, C.Stroke, 0.55)
@@ -2280,18 +2278,6 @@ function Window:CreateRemotesCategory(options)
         cachedCode = current
         return current
     end
-
-    codeSection:CreateButton("Copy Code", function()
-        local text = getCode()
-        if text ~= "" and typeof(setclipboard) == "function" then
-            pcall(setclipboard, text)
-            UILibrary:NotifyInfo({
-                Title = "Remotes",
-                Content = "Copied code to clipboard.",
-                Duration = 1.8,
-            })
-        end
-    end)
 
     local genv = (typeof(getgenv) == "function" and getgenv()) or _G
 
