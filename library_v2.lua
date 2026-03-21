@@ -1640,10 +1640,6 @@ function Window:CreatePlayersCategory(options)
         end
     end)
 
-    optionsSection:CreateToggle("Fling Click on person you want (toggle)", function(v)
-        setClickFlingEnabled(v, false)
-    end, false)
-
     optionsSection:CreateButton("Super fling", function()
         local target = getTrollTarget()
         if not target then
@@ -1762,6 +1758,12 @@ function Window:CreatePlayersCategory(options)
         PlayerListSection = listSection,
         OptionsSection = optionsSection,
         RefreshPlayerList = refreshPlayerList,
+        SetClickFlingEnabled = function(_, state, silent)
+            setClickFlingEnabled(state == true, silent == true)
+        end,
+        GetClickFlingEnabled = function()
+            return clickFlingEnabled
+        end,
         GetSelectedPlayer = function()
             return selectedPlayer
         end,
@@ -1801,6 +1803,7 @@ function Window:CreateLocalCategory(options)
     end
 
     local flySection = localTab:CreateSection({ Name = "Fly", Side = "Left" })
+    local funSection = localTab:CreateSection({ Name = "Fun Features", Side = "Right" })
     local otherSection = localTab:CreateSection({ Name = "Other", Side = "Right" })
 
     local flyEnabled = false
@@ -2140,6 +2143,20 @@ function Window:CreateLocalCategory(options)
     end)
     flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
 
+    local clickFlingToggle = nil
+    clickFlingToggle = funSection:CreateToggle("Click Player to Fling", function(v)
+        local playersCategory = self.PlayerCategory or self:CreatePlayersCategory()
+        if not playersCategory or type(playersCategory.SetClickFlingEnabled) ~= "function" then
+            notify("Fun Features", "Players category is unavailable.", 2.2)
+            if clickFlingToggle and clickFlingToggle.Set then
+                clickFlingToggle:Set(false, true)
+            end
+            return
+        end
+        playersCategory:SetClickFlingEnabled(v, false)
+    end, false)
+    funSection:CreateLabel("Click a player's character to fling them.")
+
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
     end, false)
@@ -2159,6 +2176,7 @@ function Window:CreateLocalCategory(options)
     self.LocalCategory = {
         Tab = localTab,
         FlySection = flySection,
+        FunSection = funSection,
         OtherSection = otherSection,
         SetFlyEnabled = function(_, state)
             if flyToggleControl and flyToggleControl.Set then
