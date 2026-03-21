@@ -2928,15 +2928,18 @@ function Window:CreateUniversalCategory(options)
                 return
             end
             local raw = getRawScriptSource(scriptObj)
-            if not raw then
-                UILibrary:NotifyError({
-                    Title = "Scripts",
-                    Content = "Raw source unavailable for this script.",
-                    Duration = 2.4,
-                })
+            if raw then
+                copyToClipboard(raw, "Raw script source copied.")
                 return
             end
-            copyToClipboard(raw, "Raw script source copied.")
+
+            local fallback = dumpScript(scriptObj)
+            if fallback then
+                copyToClipboard(fallback, "Raw unavailable. Copied fallback source.")
+                return
+            end
+
+            copyToClipboard(getScriptPath(scriptObj), "Source unavailable. Copied script path.")
         end)
         actionsSection:CreateButton("Dump", function()
             local scriptObj = requireSelectedScript()
