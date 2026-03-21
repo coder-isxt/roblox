@@ -811,10 +811,11 @@ function Window:CreatePlayersCategory(options)
     local punchRange = tonumber(options.PunchRange) or 11
     local punchReachPadding = tonumber(options.PunchReachPadding) or 2
     local punchWindup = tonumber(options.PunchWindup) or 0.68
-    local punchLungeDuration = tonumber(options.PunchLungeDuration) or 0.22
-    local punchLungeSpeed = tonumber(options.PunchLungeSpeed) or 30
-    local punchApproachSpeed = tonumber(options.PunchApproachSpeed) or 24
-    local punchApproachTimeout = tonumber(options.PunchApproachTimeout) or 4.5
+    local punchJumpDuration = tonumber(options.PunchJumpDuration) or 0.34
+    local punchJumpHeight = tonumber(options.PunchJumpHeight) or 3.8
+    local punchImpactDelay = tonumber(options.PunchImpactDelay) or 0.08
+    local punchApproachSpeed = tonumber(options.PunchApproachSpeed) or 42
+    local punchApproachTimeout = tonumber(options.PunchApproachTimeout) or 3.2
     local punchStepTeleport = tonumber(options.PunchStepTeleport) or 3
     local punchAnimationSpeed = tonumber(options.PunchAnimationSpeed) or 0.9
     local punchAnimationVisibleTime = tonumber(options.PunchAnimationVisibleTime) or 1.35
@@ -1476,14 +1477,17 @@ function Window:CreatePlayersCategory(options)
         return true
     end
 
-    local function punchLungeAt(player)
+    local function punchJumpOnTopAt(player)
         local localRoot = getLocalRoot()
         local targetRoot = getTargetRoot(player)
         if not localRoot or not targetRoot then
             return false
         end
 
-        local finishAt = os.clock() + punchLungeDuration
+        local startPos = localRoot.Position
+        local startedAt = os.clock()
+        local finishAt = startedAt + punchJumpDuration
+
         while os.clock() < finishAt do
             localRoot = getLocalRoot()
             targetRoot = getTargetRoot(player)
@@ -1491,21 +1495,29 @@ function Window:CreatePlayersCategory(options)
                 break
             end
 
-            local currentPos = localRoot.Position
-            local targetPos = targetRoot.Position
-            local facePos = Vector3.new(targetPos.X, currentPos.Y, targetPos.Z)
-            local look = CFrame.lookAt(currentPos, facePos)
-            localRoot.CFrame = look
+            local alpha = math.clamp((os.clock() - startedAt) / math.max(punchJumpDuration, 0.001), 0, 1)
+            local targetTop = targetRoot.Position + Vector3.new(0, 2.6, 0)
+            local base = startPos:Lerp(targetTop, alpha)
+            local arc = math.sin(alpha * math.pi) * punchJumpHeight
+            local jumpPos = base + Vector3.new(0, arc, 0)
 
-            local velocity = look.LookVector * punchLungeSpeed
-            localRoot.AssemblyLinearVelocity = Vector3.new(
-                velocity.X,
-                localRoot.AssemblyLinearVelocity.Y,
-                velocity.Z
+            localRoot.CFrame = CFrame.lookAt(
+                jumpPos,
+                Vector3.new(targetRoot.Position.X, jumpPos.Y, targetRoot.Position.Z)
             )
+            localRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             RunService.Heartbeat:Wait()
         end
 
+        localRoot = getLocalRoot()
+        targetRoot = getTargetRoot(player)
+        if localRoot and targetRoot then
+            local landingPos = targetRoot.Position + Vector3.new(0, 2.6, 0)
+            localRoot.CFrame = CFrame.lookAt(
+                landingPos,
+                Vector3.new(targetRoot.Position.X, landingPos.Y, targetRoot.Position.Z)
+            )
+        end
         return true
     end
 
@@ -1665,7 +1677,7 @@ function Window:CreatePlayersCategory(options)
                 selectedUser:Set("@" .. tostring(clickedPlayer.Name))
 
                 task.spawn(function()
-                    UILibrary:SuspendFlingProtect(punchApproachTimeout + punchWindup + punchLungeDuration + punchFlingDuration + 1)
+                    UILibrary:SuspendFlingProtect(punchApproachTimeout + punchWindup + punchJumpDuration + punchFlingDuration + 1)
                     local reached = runToTargetForPunch(clickedPlayer)
                     if not reached then
                         notify("Punch Fling", "Couldn't reach target to punch.", 1.8)
@@ -1680,10 +1692,10 @@ function Window:CreatePlayersCategory(options)
                     end
                     playPunchAnimation()
                     task.wait(punchWindup)
-                    punchLungeAt(clickedPlayer)
-                    task.wait(0.1)
+                    punchJumpOnTopAt(clickedPlayer)
+                    task.wait(punchImpactDelay)
 
-                    if getDistanceToTarget(clickedPlayer) > punchRange then
+                    if getDistanceToTarget(clickedPlayer) > (punchRange + 4) then
                         return
                     end
 
@@ -2483,7 +2495,7 @@ function Window:CreateLocalCategory(options)
         end
         playersCategory:SetPunchFlingEnabled(v, false)
     end, false)
-    funSection:CreateLabel("Runs to target, plays visible punch, then flings on hit.")
+    funSection:CreateLabel("Runs fast, jumps on top smoothly, then flings on impact.")
 
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
