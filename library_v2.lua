@@ -794,7 +794,23 @@ function Window:CreatePlayersCategory(options)
     local punchFlingEnabled = false
     local punchFlingConnection = nil
     local punchFlingCooldownUntil = 0
-    local punchAnimationId = tostring(options.PunchAnimationId or "522635514")
+    local punchAnimationIds
+    if type(options.PunchAnimationIds) == "table" and #options.PunchAnimationIds > 0 then
+        punchAnimationIds = options.PunchAnimationIds
+    elseif options.PunchAnimationId then
+        punchAnimationIds = { tostring(options.PunchAnimationId) }
+    else
+        punchAnimationIds = {
+            "522635514",
+            "522638767",
+        }
+    end
+    local punchAnimationId = tostring(punchAnimationIds[1] or "522635514")
+    local punchAnimationIndex = 0
+    local punchRange = tonumber(options.PunchRange) or 10
+    local punchWindup = tonumber(options.PunchWindup) or 0.09
+    local punchLungeDuration = tonumber(options.PunchLungeDuration) or 0.12
+    local punchLungeSpeed = tonumber(options.PunchLungeSpeed) or 56
     local punchAnimationTrack = nil
 
     local selectedName = optionsSection:CreateLabel("Selected: None")
@@ -833,6 +849,15 @@ function Window:CreatePlayersCategory(options)
     local function getTargetHum(player)
         local character = player and player.Character
         return character and character:FindFirstChildOfClass("Humanoid")
+    end
+
+    local function getDistanceToTarget(player)
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(player)
+        if not localRoot or not targetRoot then
+            return math.huge
+        end
+        return (localRoot.Position - targetRoot.Position).Magnitude
     end
 
     local function getOtherPlayersSorted()
@@ -1401,9 +1426,20 @@ function Window:CreatePlayersCategory(options)
             animator.Parent = humanoid
         end
 
+        if type(punchAnimationIds) == "table" and #punchAnimationIds > 0 then
+            punchAnimationIndex += 1
+            if punchAnimationIndex > #punchAnimationIds then
+                punchAnimationIndex = 1
+            end
+            local nextId = punchAnimationIds[punchAnimationIndex]
+            if nextId then
+                punchAnimationId = tostring(nextId)
+            end
+        end
+
         local animation = Instance.new("Animation")
         if string.find(punchAnimationId, "rbxassetid://", 1, true) then
-            animation.AnimationId = punchAnimationId
+            animation.AnimationId = tostring(punchAnimationId)
         else
             animation.AnimationId = "rbxassetid://" .. tostring(punchAnimationId)
         end
@@ -1432,6 +1468,41 @@ function Window:CreatePlayersCategory(options)
         return true
     end
 
+    local function punchLungeAt(player)
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(player)
+        if not localRoot or not targetRoot then
+            return false
+        end
+
+        local finishAt = os.clock() + punchLungeDuration
+        while os.clock() < finishAt do
+            localRoot = getLocalRoot()
+            targetRoot = getTargetRoot(player)
+            if not localRoot or not targetRoot then
+                break
+            end
+
+            local currentPos = localRoot.Position
+            local targetPos = targetRoot.Position
+            local facePos = Vector3.new(targetPos.X, currentPos.Y, targetPos.Z)
+            local look = CFrame.lookAt(currentPos, facePos)
+            localRoot.CFrame = look
+
+            local velocity = look.LookVector * punchLungeSpeed
+            localRoot.AssemblyLinearVelocity = Vector3.new(
+                velocity.X,
+                localRoot.AssemblyLinearVelocity.Y,
+                velocity.Z
+            )
+            RunService.Heartbeat:Wait()
+        end
+
+        return true
+    end
+
+    local setPunchFlingEnabled
+
     local function setClickFlingEnabled(state, silent)
         state = state == true
         if clickFlingEnabled == state then
@@ -1442,6 +1513,9 @@ function Window:CreatePlayersCategory(options)
         if clickFlingConnection then
             clickFlingConnection:Disconnect()
             clickFlingConnection = nil
+        end
+        if clickFlingEnabled and punchFlingEnabled then
+            setPunchFlingEnabled(false, true)
         end
 
         if clickFlingEnabled then
@@ -1477,7 +1551,7 @@ function Window:CreatePlayersCategory(options)
         end
     end
 
-    local function setPunchFlingEnabled(state, silent)
+    setPunchFlingEnabled = function(state, silent)
         state = state == true
         if punchFlingEnabled == state then
             return
@@ -1487,6 +1561,9 @@ function Window:CreatePlayersCategory(options)
         if punchFlingConnection then
             punchFlingConnection:Disconnect()
             punchFlingConnection = nil
+        end
+        if punchFlingEnabled and clickFlingEnabled then
+            setClickFlingEnabled(false, true)
         end
         if not punchFlingEnabled then
             stopPunchAnimation()
@@ -1504,10 +1581,14 @@ function Window:CreatePlayersCategory(options)
                 if os.clock() < punchFlingCooldownUntil then
                     return
                 end
-                punchFlingCooldownUntil = os.clock() + 0.65
+                punchFlingCooldownUntil = os.clock() + 0.75
 
                 local clickedPlayer = getPlayerFromPart(mouse.Target)
                 if not clickedPlayer or clickedPlayer == localPlayer then
+                    return
+                end
+
+                if getDistanceToTarget(clickedPlayer) > (punchRange + 2) then
                     return
                 end
 
@@ -1516,10 +1597,25 @@ function Window:CreatePlayersCategory(options)
                 selectedName:Set("Selected: " .. tostring(clickedPlayer.DisplayName or clickedPlayer.Name))
                 selectedUser:Set("@" .. tostring(clickedPlayer.Name))
 
-                local ok = flingForFiveSeconds(clickedPlayer)
-                if ok then
-                    notify("Punch Fling", "Punched " .. tostring(clickedPlayer.Name) .. ".", 2.0)
-                end
+                task.spawn(function()
+                    punchLungeAt(clickedPlayer)
+                    task.wait(punchWindup)
+
+                    if not punchFlingEnabled then
+                        return
+                    end
+                    if clickedPlayer.Parent ~= Players then
+                        return
+                    end
+                    if getDistanceToTarget(clickedPlayer) > punchRange then
+                        return
+                    end
+
+                    local ok = flingForFiveSeconds(clickedPlayer)
+                    if ok then
+                        notify("Punch Fling", "Punched " .. tostring(clickedPlayer.Name) .. ".", 2.0)
+                    end
+                end)
             end)
         end
 
@@ -1887,6 +1983,11 @@ function Window:CreatePlayersCategory(options)
         end,
         SetPunchAnimationId = function(_, id)
             punchAnimationId = tostring(id or punchAnimationId)
+            punchAnimationIds = { punchAnimationId }
+            punchAnimationIndex = 0
+        end,
+        SetPunchRange = function(_, range)
+            punchRange = math.max(2, tonumber(range) or punchRange)
         end,
         GetSelectedPlayer = function()
             return selectedPlayer
@@ -2267,7 +2368,7 @@ function Window:CreateLocalCategory(options)
     end)
     flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
 
-    local clickFlingToggle = nil
+    local clickFlingToggle, punchFlingToggle = nil, nil
     clickFlingToggle = funSection:CreateToggle("Click Player to Fling", function(v)
         local playersCategory = self.PlayerCategory or self:CreatePlayersCategory()
         if not playersCategory or type(playersCategory.SetClickFlingEnabled) ~= "function" then
@@ -2277,11 +2378,13 @@ function Window:CreateLocalCategory(options)
             end
             return
         end
+        if v and punchFlingToggle and punchFlingToggle.Set and punchFlingToggle:Get() then
+            punchFlingToggle:Set(false, true)
+        end
         playersCategory:SetClickFlingEnabled(v, false)
     end, false)
     funSection:CreateLabel("Click a player's character to fling them.")
 
-    local punchFlingToggle = nil
     punchFlingToggle = funSection:CreateToggle("Punch Fling", function(v)
         local playersCategory = self.PlayerCategory or self:CreatePlayersCategory()
         if not playersCategory or type(playersCategory.SetPunchFlingEnabled) ~= "function" then
@@ -2291,9 +2394,12 @@ function Window:CreateLocalCategory(options)
             end
             return
         end
+        if v and clickFlingToggle and clickFlingToggle.Set and clickFlingToggle:Get() then
+            clickFlingToggle:Set(false, true)
+        end
         playersCategory:SetPunchFlingEnabled(v, false)
     end, false)
-    funSection:CreateLabel("Plays punch animation; punching a player flings them.")
+    funSection:CreateLabel("Punches with windup+lunge, then flings on close hit.")
 
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
