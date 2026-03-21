@@ -2545,12 +2545,194 @@ function Window:CreateUniversalCategory(options)
         statusSection.Frame.LayoutOrder = 10
         actionsSection.Frame.LayoutOrder = 20
 
-        scriptsListSection:CreateLabel("Script list setup (step 1).")
-        scriptsListSection:CreateLabel("Next step will populate all scripts with selection markers.")
-        statusSection:CreateLabel("Selected: None")
-        statusSection:CreateLabel("Class: -")
-        statusSection:CreateLabel("Path: -")
-        statusSection:CreateLabel("Scripts: 0")
+        local scriptsHintLabel = scriptsListSection:CreateLabel("All Script / LocalScript / ModuleScript instances in-game.")
+        scriptsHintLabel.Frame.LayoutOrder = -1000000
+
+        local selectedLabel = statusSection:CreateLabel("Selected: None")
+        local classLabel = statusSection:CreateLabel("Class: -")
+        local pathLabel = statusSection:CreateLabel("Path: -")
+        local countLabel = statusSection:CreateLabel("Scripts: 0")
+
+        local scriptRows = {}
+        local selectedRow = nil
+        local scriptConnections = {}
+        local refreshQueued = false
+
+        local function bindScriptConnection(conn)
+            table.insert(scriptConnections, conn)
+            return conn
+        end
+
+        local function disconnectScriptConnections()
+            for _, conn in ipairs(scriptConnections) do
+                if typeof(conn) == "RBXScriptConnection" then
+                    conn:Disconnect()
+                end
+            end
+            table.clear(scriptConnections)
+        end
+
+        local function isScriptInstance(obj)
+            if typeof(obj) ~= "Instance" then
+                return false
+            end
+            return obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript")
+        end
+
+        local function getScriptPath(obj)
+            if typeof(obj) ~= "Instance" then
+                return "-"
+            end
+            if not obj.Parent then
+                return string.format("getNil(%q, %q)", tostring(obj.Name), tostring(obj.ClassName))
+            end
+            local ok, fullName = pcall(function()
+                return obj:GetFullName()
+            end)
+            return ok and ("game." .. fullName) or tostring(obj.Name)
+        end
+
+        local function getScriptTypeTag(obj)
+            if obj:IsA("ModuleScript") then
+                return "M"
+            elseif obj:IsA("LocalScript") then
+                return "L"
+            end
+            return "S"
+        end
+
+        local function getScriptSortKey(obj)
+            local ok, fullName = pcall(function()
+                return obj:GetFullName()
+            end)
+            if ok and type(fullName) == "string" and fullName ~= "" then
+                return string.lower(fullName)
+            end
+            return string.lower(tostring(obj.Name))
+        end
+
+        local function buildRowText(row, isSelected)
+            local marker = isSelected and ">" or " "
+            return string.format("%s [%s] %s", marker, getScriptTypeTag(row.Script), tostring(row.Script.Name))
+        end
+
+        local function setStatusFromSelection()
+            if not selectedRow or not selectedRow.Script then
+                selectedLabel:Set("Selected: None")
+                classLabel:Set("Class: -")
+                pathLabel:Set("Path: -")
+                return
+            end
+            selectedLabel:Set("Selected: " .. tostring(selectedRow.Script.Name))
+            classLabel:Set("Class: " .. tostring(selectedRow.Script.ClassName))
+            pathLabel:Set("Path: " .. getScriptPath(selectedRow.Script))
+        end
+
+        local function setSelectedRow(row)
+            if selectedRow and selectedRow.Control then
+                selectedRow.Control:SetText(buildRowText(selectedRow, false))
+                if selectedRow.Control.Button then
+                    selectedRow.Control.Button.BackgroundColor3 = C.Control
+                end
+            end
+
+            selectedRow = row
+
+            if selectedRow and selectedRow.Control then
+                selectedRow.Control:SetText(buildRowText(selectedRow, true))
+                if selectedRow.Control.Button then
+                    selectedRow.Control.Button.BackgroundColor3 = C.ControlPress
+                end
+            end
+
+            setStatusFromSelection()
+        end
+
+        local function clearScriptRows()
+            for _, row in ipairs(scriptRows) do
+                if row.Control and row.Control.Frame and row.Control.Frame.Parent then
+                    row.Control.Frame:Destroy()
+                end
+            end
+            table.clear(scriptRows)
+        end
+
+        local function collectScripts()
+            local list = {}
+            local seen = {}
+
+            for _, obj in ipairs(game:GetDescendants()) do
+                if isScriptInstance(obj) then
+                    seen[obj] = true
+                    table.insert(list, obj)
+                end
+            end
+
+            if typeof(getnilinstances) == "function" then
+                pcall(function()
+                    for _, obj in ipairs(getnilinstances()) do
+                        if isScriptInstance(obj) and not seen[obj] then
+                            seen[obj] = true
+                            table.insert(list, obj)
+                        end
+                    end
+                end)
+            end
+
+            table.sort(list, function(a, b)
+                return getScriptSortKey(a) < getScriptSortKey(b)
+            end)
+
+            return list
+        end
+
+        local function rebuildScriptList()
+            local previousScript = selectedRow and selectedRow.Script or nil
+            local restoreRow = nil
+
+            clearScriptRows()
+
+            local scripts = collectScripts()
+            for i, obj in ipairs(scripts) do
+                local row = {
+                    Script = obj,
+                }
+                row.Control = scriptsListSection:CreateButton(" ", function()
+                    setSelectedRow(row)
+                end)
+                row.Control:SetText(buildRowText(row, false))
+                scriptRows[#scriptRows + 1] = row
+
+                if previousScript and obj == previousScript then
+                    restoreRow = row
+                end
+
+                if i % 120 == 0 then
+                    task.wait()
+                end
+            end
+
+            countLabel:Set("Scripts: " .. tostring(#scriptRows))
+            if restoreRow then
+                setSelectedRow(restoreRow)
+            else
+                setSelectedRow(nil)
+            end
+        end
+
+        local function queueScriptRefresh()
+            if refreshQueued then
+                return
+            end
+            refreshQueued = true
+            task.defer(function()
+                task.wait(0.1)
+                refreshQueued = false
+                if scriptsTab and scriptsTab.Button and scriptsTab.Button.Parent then
+                    rebuildScriptList()
+                end
+            end)
+        end
         actionsSection:CreateButton("Copy", function()
             UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
         end)
@@ -2560,7 +2742,25 @@ function Window:CreateUniversalCategory(options)
         actionsSection:CreateButton("Copy Path", function()
             UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
         end)
-        scriptsCleanup = nil
+
+        bindScriptConnection(game.DescendantAdded:Connect(function(obj)
+            if isScriptInstance(obj) then
+                queueScriptRefresh()
+            end
+        end))
+        bindScriptConnection(game.DescendantRemoving:Connect(function(obj)
+            if isScriptInstance(obj) then
+                queueScriptRefresh()
+            end
+        end))
+
+        scriptsCleanup = function()
+            disconnectScriptConnections()
+            clearScriptRows()
+            selectedRow = nil
+        end
+
+        rebuildScriptList()
         return scriptsTab
     end
 
