@@ -2207,15 +2207,9 @@ function Window:CreateLocalCategory(options)
     local spinFlingConnection = nil
     local spinFlingPartState = {}
     local spinFlingSpinRate = tonumber(options.SpinFlingSpinRate) or 3600
-    local spinFlingHitRadius = tonumber(options.SpinFlingHitRadius) or 9
-    local spinFlingPushSpeed = tonumber(options.SpinFlingPushSpeed) or 260
     local spinFlingWalkAssistSpeed = tonumber(options.SpinFlingWalkAssistSpeed) or 22
     local spinFlingYaw = 0
     local spinFlingLastStepAt = 0
-    local spinFlingLastImpactAt = 0
-    local spinFlingImpactInterval = tonumber(options.SpinFlingImpactInterval) or 0.08
-    local spinFlingImpulseUntil = 0
-    local spinFlingImpulseVector = Vector3.new(0, 0, 0)
     local spinFlingBodyVelocity = nil
     local spinFlingBodyGyro = nil
     local spinFlingAutoRotateLocked = false
@@ -2624,9 +2618,6 @@ function Window:CreateLocalCategory(options)
             destroySpinFlingMovers()
             spinFlingYaw = 0
             spinFlingLastStepAt = 0
-            spinFlingLastImpactAt = 0
-            spinFlingImpulseUntil = 0
-            spinFlingImpulseVector = Vector3.new(0, 0, 0)
             if not silent then
                 notify("Spin & Fling", "Disabled.", 1.9)
             end
@@ -2666,46 +2657,13 @@ function Window:CreateLocalCategory(options)
             local yawCf = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(spinFlingYaw), 0)
             bg.CFrame = yawCf
 
-            local closestRoot = nil
-            local closestDistance = spinFlingHitRadius
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= localPlayer then
-                    local targetCharacter = plr.Character
-                    local targetHum = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
-                    local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
-                    if targetRoot and targetHum and targetHum.Health > 0 then
-                        local distance = (root.Position - targetRoot.Position).Magnitude
-                        if distance <= closestDistance then
-                            closestDistance = distance
-                            closestRoot = targetRoot
-                        end
-                    end
-                end
-            end
-
             local moveDir = humanoid.MoveDirection
             local desiredPlanar = Vector3.new(0, 0, 0)
             if moveDir.Magnitude > 0.001 then
                 desiredPlanar = moveDir.Unit * spinFlingWalkAssistSpeed
             end
 
-            if closestRoot and closestDistance <= spinFlingHitRadius then
-                local toward = closestRoot.Position - root.Position
-                local planar = Vector3.new(toward.X, 0, toward.Z)
-                if planar.Magnitude > 0.001 and (now - spinFlingLastImpactAt) >= spinFlingImpactInterval then
-                    spinFlingLastImpactAt = now
-                    local dir = planar.Unit
-                    local pushScale = math.clamp(1 - (closestDistance / math.max(spinFlingHitRadius, 0.01)), 0.25, 1)
-                    spinFlingImpulseVector = dir * (spinFlingPushSpeed * pushScale)
-                    spinFlingImpulseUntil = now + 0.12
-                end
-            end
-
-            local impulsePlanar = Vector3.new(0, 0, 0)
-            if now < spinFlingImpulseUntil then
-                impulsePlanar = spinFlingImpulseVector
-            end
-            bv.Velocity = desiredPlanar + impulsePlanar
+            bv.Velocity = desiredPlanar
         end)
 
         if not silent then
