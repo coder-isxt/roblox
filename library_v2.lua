@@ -2210,6 +2210,10 @@ function Window:CreateLocalCategory(options)
     local spinFlingHitRadius = tonumber(options.SpinFlingHitRadius) or 9
     local spinFlingPushSpeed = tonumber(options.SpinFlingPushSpeed) or 260
     local spinFlingWalkAssistSpeed = tonumber(options.SpinFlingWalkAssistSpeed) or 22
+    local spinFlingYaw = 0
+    local spinFlingLastStepAt = 0
+    local spinFlingLastImpactAt = 0
+    local spinFlingImpactInterval = tonumber(options.SpinFlingImpactInterval) or 0.08
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -2566,6 +2570,9 @@ function Window:CreateLocalCategory(options)
             if root then
                 root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
             end
+            spinFlingYaw = 0
+            spinFlingLastStepAt = 0
+            spinFlingLastImpactAt = 0
             if not silent then
                 notify("Spin & Fling", "Disabled.", 1.9)
             end
@@ -2580,11 +2587,19 @@ function Window:CreateLocalCategory(options)
                 return
             end
 
+            UILibrary:SuspendFlingProtect(0.25)
             setSpinFlingCharacterCollision(true)
 
             local now = os.clock()
-            local spinVector = Vector3.new(spinFlingSpinRate * 0.26, spinFlingSpinRate, spinFlingSpinRate * 0.26)
-            root.AssemblyAngularVelocity = spinVector
+            if spinFlingLastStepAt <= 0 then
+                spinFlingLastStepAt = now
+            end
+            local dt = math.max(1 / 240, now - spinFlingLastStepAt)
+            spinFlingLastStepAt = now
+
+            spinFlingYaw = (spinFlingYaw + (spinFlingSpinRate * dt)) % 360
+            root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(spinFlingYaw), 0)
 
             local closestRoot = nil
             local closestDistance = spinFlingHitRadius
@@ -2609,14 +2624,15 @@ function Window:CreateLocalCategory(options)
             if closestRoot and closestDistance <= spinFlingHitRadius then
                 local toward = closestRoot.Position - root.Position
                 local planar = Vector3.new(toward.X, 0, toward.Z)
-                if planar.Magnitude > 0.001 then
+                if planar.Magnitude > 0.001 and (now - spinFlingLastImpactAt) >= spinFlingImpactInterval then
+                    spinFlingLastImpactAt = now
                     local dir = planar.Unit
                     local pushScale = math.clamp(1 - (closestDistance / math.max(spinFlingHitRadius, 0.01)), 0.25, 1)
-                    local boostY = 10 + math.abs(math.sin(now * 13)) * 8
+                    local boostY = 6 + math.abs(math.sin(now * 13)) * 4
                     local pushVector = dir * (spinFlingPushSpeed * pushScale)
                     root.AssemblyLinearVelocity = Vector3.new(
                         pushVector.X,
-                        math.clamp(currentVelocity.Y + boostY, -25, 45),
+                        math.clamp(currentVelocity.Y + boostY, -10, 22),
                         pushVector.Z
                     )
                 end
