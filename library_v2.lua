@@ -2557,6 +2557,12 @@ function Window:CreateUniversalCategory(options)
         local selectedRow = nil
         local scriptConnections = {}
         local refreshQueued = false
+        local scriptEntries = {}
+        local selectedScript = nil
+        local pageSize = 140
+        local currentPage = 1
+        local totalPages = 1
+        local pageLabel = statusSection:CreateLabel("Page: 1/1")
 
         local function bindScriptConnection(conn)
             table.insert(scriptConnections, conn)
@@ -2583,9 +2589,6 @@ function Window:CreateUniversalCategory(options)
             if typeof(obj) ~= "Instance" then
                 return "-"
             end
-            if not obj.Parent then
-                return string.format("getNil(%q, %q)", tostring(obj.Name), tostring(obj.ClassName))
-            end
             local ok, fullName = pcall(function()
                 return obj:GetFullName()
             end)
@@ -2602,12 +2605,6 @@ function Window:CreateUniversalCategory(options)
         end
 
         local function getScriptSortKey(obj)
-            local ok, fullName = pcall(function()
-                return obj:GetFullName()
-            end)
-            if ok and type(fullName) == "string" and fullName ~= "" then
-                return string.lower(fullName)
-            end
             return string.lower(tostring(obj.Name))
         end
 
@@ -2617,15 +2614,15 @@ function Window:CreateUniversalCategory(options)
         end
 
         local function setStatusFromSelection()
-            if not selectedRow or not selectedRow.Script then
+            if not selectedScript then
                 selectedLabel:Set("Selected: None")
                 classLabel:Set("Class: -")
                 pathLabel:Set("Path: -")
                 return
             end
-            selectedLabel:Set("Selected: " .. tostring(selectedRow.Script.Name))
-            classLabel:Set("Class: " .. tostring(selectedRow.Script.ClassName))
-            pathLabel:Set("Path: " .. getScriptPath(selectedRow.Script))
+            selectedLabel:Set("Selected: " .. tostring(selectedScript.Name))
+            classLabel:Set("Class: " .. tostring(selectedScript.ClassName))
+            pathLabel:Set("Path: " .. getScriptPath(selectedScript))
         end
 
         local function setSelectedRow(row)
@@ -2645,6 +2642,7 @@ function Window:CreateUniversalCategory(options)
                 end
             end
 
+            selectedScript = selectedRow and selectedRow.Script or nil
             setStatusFromSelection()
         end
 
@@ -2659,24 +2657,11 @@ function Window:CreateUniversalCategory(options)
 
         local function collectScripts()
             local list = {}
-            local seen = {}
 
             for _, obj in ipairs(game:GetDescendants()) do
                 if isScriptInstance(obj) then
-                    seen[obj] = true
                     table.insert(list, obj)
                 end
-            end
-
-            if typeof(getnilinstances) == "function" then
-                pcall(function()
-                    for _, obj in ipairs(getnilinstances()) do
-                        if isScriptInstance(obj) and not seen[obj] then
-                            seen[obj] = true
-                            table.insert(list, obj)
-                        end
-                    end
-                end)
             end
 
             table.sort(list, function(a, b)
@@ -2686,14 +2671,13 @@ function Window:CreateUniversalCategory(options)
             return list
         end
 
-        local function rebuildScriptList()
-            local previousScript = selectedRow and selectedRow.Script or nil
-            local restoreRow = nil
-
+        local function renderCurrentPage()
             clearScriptRows()
+            local startIndex = ((currentPage - 1) * pageSize) + 1
+            local endIndex = math.min(startIndex + pageSize - 1, #scriptEntries)
 
-            local scripts = collectScripts()
-            for i, obj in ipairs(scripts) do
+            for i = startIndex, endIndex do
+                local obj = scriptEntries[i]
                 local row = {
                     Script = obj,
                 }
@@ -2703,21 +2687,36 @@ function Window:CreateUniversalCategory(options)
                 row.Control:SetText(buildRowText(row, false))
                 scriptRows[#scriptRows + 1] = row
 
-                if previousScript and obj == previousScript then
-                    restoreRow = row
-                end
-
                 if i % 120 == 0 then
                     task.wait()
                 end
             end
 
-            countLabel:Set("Scripts: " .. tostring(#scriptRows))
-            if restoreRow then
-                setSelectedRow(restoreRow)
-            else
-                setSelectedRow(nil)
+            countLabel:Set("Scripts: " .. tostring(#scriptEntries))
+            pageLabel:Set(string.format("Page: %d/%d", currentPage, totalPages))
+
+            if selectedScript then
+                local restored = nil
+                for _, row in ipairs(scriptRows) do
+                    if row.Script == selectedScript then
+                        restored = row
+                        break
+                    end
+                end
+                if restored then
+                    setSelectedRow(restored)
+                else
+                    selectedRow = nil
+                    setStatusFromSelection()
+                end
             end
+        end
+
+        local function rebuildScriptList()
+            scriptEntries = collectScripts()
+            totalPages = math.max(1, math.ceil(#scriptEntries / pageSize))
+            currentPage = math.clamp(currentPage, 1, totalPages)
+            renderCurrentPage()
         end
 
         local function queueScriptRefresh()
@@ -2726,13 +2725,28 @@ function Window:CreateUniversalCategory(options)
             end
             refreshQueued = true
             task.defer(function()
-                task.wait(0.1)
+                task.wait(0.35)
                 refreshQueued = false
                 if scriptsTab and scriptsTab.Button and scriptsTab.Button.Parent then
                     rebuildScriptList()
                 end
             end)
         end
+        actionsSection:CreateButton("Prev Page", function()
+            if currentPage > 1 then
+                currentPage -= 1
+                renderCurrentPage()
+            end
+        end)
+        actionsSection:CreateButton("Next Page", function()
+            if currentPage < totalPages then
+                currentPage += 1
+                renderCurrentPage()
+            end
+        end)
+        actionsSection:CreateButton("Refresh List", function()
+            rebuildScriptList()
+        end)
         actionsSection:CreateButton("Copy", function()
             UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
         end)
@@ -2758,6 +2772,8 @@ function Window:CreateUniversalCategory(options)
             disconnectScriptConnections()
             clearScriptRows()
             selectedRow = nil
+            selectedScript = nil
+            scriptEntries = {}
         end
 
         rebuildScriptList()
@@ -4429,5 +4445,4 @@ function UILibrary:NotifyError(args)
 end
 
 return UILibrary
-
 
