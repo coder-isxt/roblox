@@ -2680,12 +2680,21 @@ function Window:CreateUniversalCategory(options)
                 end
             end
 
-            local lp = Players.LocalPlayer
+            local function serviceSafe(name)
+                local ok, svc = pcall(function()
+                    return game:GetService(name)
+                end)
+                return ok and svc or nil
+            end
+
             local roots = {
                 workspace,
-                game:GetService("ReplicatedStorage"),
-                game:GetService("ReplicatedFirst"),
-                lp,
+                serviceSafe("ReplicatedStorage"),
+                serviceSafe("ReplicatedFirst"),
+                serviceSafe("StarterPlayer"),
+                serviceSafe("StarterGui"),
+                serviceSafe("StarterPack"),
+                serviceSafe("ServerScriptService"),
             }
 
             for _, root in ipairs(roots) do
@@ -2789,14 +2798,90 @@ function Window:CreateUniversalCategory(options)
         actionsSection:CreateButton("Refresh List", function()
             loadScriptsAsync(true)
         end)
+        local clipboardFn = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
+
+        local function requireSelectedScript()
+            if not selectedScript then
+                UILibrary:NotifyWarning({
+                    Title = "Scripts",
+                    Content = "Select a script first.",
+                    Duration = 1.8,
+                })
+                return nil
+            end
+            return selectedScript
+        end
+
+        local function copyToClipboard(value, successText)
+            if type(clipboardFn) ~= "function" then
+                UILibrary:NotifyError({
+                    Title = "Scripts",
+                    Content = "Clipboard API is not available in this executor.",
+                    Duration = 2.6,
+                })
+                return false
+            end
+            local ok, err = pcall(clipboardFn, tostring(value or ""))
+            if not ok then
+                UILibrary:NotifyError({
+                    Title = "Scripts",
+                    Content = "Clipboard failed: " .. tostring(err),
+                    Duration = 2.6,
+                })
+                return false
+            end
+            UILibrary:NotifyInfo({
+                Title = "Scripts",
+                Content = successText or "Copied.",
+                Duration = 1.8,
+            })
+            return true
+        end
+
+        local function dumpScript(scriptObj)
+            if type(decompile) == "function" then
+                local ok, source = pcall(decompile, scriptObj)
+                if ok and type(source) == "string" and source ~= "" then
+                    return source
+                end
+            end
+            if type(getscriptbytecode) == "function" then
+                local ok, bytecode = pcall(getscriptbytecode, scriptObj)
+                if ok and bytecode ~= nil then
+                    return type(bytecode) == "string" and bytecode or tostring(bytecode)
+                end
+            end
+            return nil
+        end
         actionsSection:CreateButton("Copy", function()
-            UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
+            local scriptObj = requireSelectedScript()
+            if not scriptObj then
+                return
+            end
+            copyToClipboard(scriptObj:GetFullName(), "Copied script name.")
         end)
         actionsSection:CreateButton("Dump", function()
-            UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
+            local scriptObj = requireSelectedScript()
+            if not scriptObj then
+                return
+            end
+            local dumped = dumpScript(scriptObj)
+            if not dumped then
+                UILibrary:NotifyError({
+                    Title = "Scripts",
+                    Content = "Could not dump script (decompile/bytecode unavailable).",
+                    Duration = 2.6,
+                })
+                return
+            end
+            copyToClipboard(dumped, "Dump copied to clipboard.")
         end)
         actionsSection:CreateButton("Copy Path", function()
-            UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
+            local scriptObj = requireSelectedScript()
+            if not scriptObj then
+                return
+            end
+            copyToClipboard(getScriptPath(scriptObj), "Copied script path.")
         end)
 
         scriptsCleanup = function()
