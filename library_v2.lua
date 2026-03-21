@@ -2305,8 +2305,12 @@ function Window:CreateRemotesCategory(options)
         LogSection = logsSection,
         ActionSection = actionsSection,
         SettingsSection = settingsSection,
-        SetCode = setCode,
-        GetCode = getCode,
+        SetCode = function(_, text)
+            setCode(text)
+        end,
+        GetCode = function(_)
+            return getCode()
+        end,
     }
 
     local loaded = false
