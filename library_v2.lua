@@ -2194,13 +2194,14 @@ function Window:CreateRemotesCategory(options)
     local actionsSection = remotesTab:CreateSection({ Name = "Controls", Side = "Right" })
     local settingsSection = remotesTab:CreateSection({ Name = "Status", Side = "Right" })
     local scriptSection = remotesTab:CreateSection({ Name = "Script", Side = "Right" })
-    actionsSection.Frame.LayoutOrder = 10
-    settingsSection.Frame.LayoutOrder = 20
+    settingsSection.Frame.LayoutOrder = 10
+    actionsSection.Frame.LayoutOrder = 20
     scriptSection.Frame.LayoutOrder = 30
     local selectedLabel = settingsSection:CreateLabel("Selected: None")
     local selectedMetaLabel = settingsSection:CreateLabel("Method: - | Time: -")
     local selectedTypeLabel = settingsSection:CreateLabel("Type: -")
-    logsSection:CreateLabel("Select a log entry, then use Controls.")
+    local logsHintLabel = logsSection:CreateLabel("Select a log entry, then use Controls.")
+    logsHintLabel.Frame.LayoutOrder = -1000000
     scriptSection:CreateLabel("Latest generated script for selected log.")
 
     local function iconizeRemoteLabel(text)
@@ -2219,6 +2220,14 @@ function Window:CreateRemotesCategory(options)
     local hostLogSection = setmetatable({}, {
         __index = logsSection,
     })
+    local newestLogOrder = 0
+    local function applyNewestTopOrder(control)
+        newestLogOrder -= 1
+        if control and control.Frame then
+            control.Frame.LayoutOrder = newestLogOrder
+        end
+        return control
+    end
     function hostLogSection:CreateButton(a, b)
         if typeof(a) == "table" then
             local payload = {}
@@ -2231,9 +2240,9 @@ function Window:CreateRemotesCategory(options)
             if payload.Text then
                 payload.Text = iconizeRemoteLabel(payload.Text)
             end
-            return logsSection:CreateButton(payload, b)
+            return applyNewestTopOrder(logsSection:CreateButton(payload, b))
         end
-        return logsSection:CreateButton(iconizeRemoteLabel(a), b)
+        return applyNewestTopOrder(logsSection:CreateButton(iconizeRemoteLabel(a), b))
     end
 
     local scriptShell = mk("Frame", {
