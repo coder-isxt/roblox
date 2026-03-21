@@ -200,7 +200,7 @@ end
 
 local function isPersistentTabName(name)
     local n = string.lower(tostring(name or ""))
-    return n == "local" or n == "players" or n == "universal" or n == "remotes" or n == "scripts"
+    return n == "local" or n == "players" or n == "universal" or n == "remotes"
 end
 
 local function closeDropdowns(except)
@@ -2166,7 +2166,7 @@ function Window:CreateRemotesCategory(options)
     end
 
     options = options or {}
-    local remotesTabIcon = options.TabIcon or options.Icon or "scripts"
+    local remotesTabIcon = "scripts"
     local defaultSourceUrl = "https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/simplespy.lua"
     local sourcePath = tostring(options.SourcePath or options.Source or defaultSourceUrl)
     local sourceUrl = options.SourceUrl or options.Url
@@ -2482,8 +2482,6 @@ function Window:CreateUniversalCategory(options)
 
     local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
     local infoSection = universalTab:CreateSection({ Name = "Info", Side = "Right" })
-    local scriptsTab = nil
-    local scriptsCleanup = nil
     local developerEnabled = false
     local remotesAllowed = self._remotesAllowed ~= false
     local remotesOptions = self._remotesOptions or {}
@@ -2531,496 +2529,6 @@ function Window:CreateUniversalCategory(options)
         end
     end
 
-    local function ensureScriptsTab()
-        if scriptsTab and scriptsTab.Button and scriptsTab.Button.Parent then
-            return scriptsTab
-        end
-        scriptsTab = self:CreateTab({
-            Name = "Scripts",
-            Icon = options.ScriptsTabIcon or options.ScriptsIcon or "scripts",
-        })
-        local scriptsListSection = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
-        local statusSection = scriptsTab:CreateSection({ Name = "Status", Side = "Right" })
-        local actionsSection = scriptsTab:CreateSection({ Name = "Actions", Side = "Right" })
-        statusSection.Frame.LayoutOrder = 10
-        actionsSection.Frame.LayoutOrder = 20
-
-        local scriptsHintLabel = scriptsListSection:CreateLabel("All Script / LocalScript / ModuleScript instances in-game.")
-        scriptsHintLabel.Frame.LayoutOrder = -1000000
-
-        local selectedLabel = statusSection:CreateLabel("Selected: None")
-        local classLabel = statusSection:CreateLabel("Class: -")
-        local pathLabel = statusSection:CreateLabel("Path: -")
-        local countLabel = statusSection:CreateLabel("Scripts: 0")
-
-        local scriptRows = {}
-        local selectedRow = nil
-        local scriptConnections = {}
-        local scriptEntries = {}
-        local selectedScript = nil
-        local pageSize = 80
-        local currentPage = 1
-        local totalPages = 1
-        local totalScriptCount = 0
-        local hasLoadedScripts = false
-        local loadInProgress = false
-        local classFilter = "All"
-        local nameFilter = ""
-        local pageLabel = statusSection:CreateLabel("Page: 1/1")
-        local filterLabel = statusSection:CreateLabel("Filter: All")
-
-        local function bindScriptConnection(conn)
-            table.insert(scriptConnections, conn)
-            return conn
-        end
-
-        local function disconnectScriptConnections()
-            for _, conn in ipairs(scriptConnections) do
-                if typeof(conn) == "RBXScriptConnection" then
-                    conn:Disconnect()
-                end
-            end
-            table.clear(scriptConnections)
-        end
-
-        local function isScriptInstance(obj)
-            if typeof(obj) ~= "Instance" then
-                return false
-            end
-            return obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript")
-        end
-
-        local function getScriptPath(obj)
-            if typeof(obj) ~= "Instance" then
-                return "-"
-            end
-            local ok, fullName = pcall(function()
-                return obj:GetFullName()
-            end)
-            return ok and ("game." .. fullName) or tostring(obj.Name)
-        end
-
-        local function getScriptTypeTag(obj)
-            if obj:IsA("ModuleScript") then
-                return "M"
-            elseif obj:IsA("LocalScript") then
-                return "L"
-            end
-            return "S"
-        end
-
-        local function getScriptSortKey(obj)
-            return string.lower(tostring(obj.Name))
-        end
-
-        local function getExecutorName()
-            local identifyexec = identifyexecutor or getexecutorname or whatexecutor
-            if type(identifyexec) == "function" then
-                local ok, name = pcall(identifyexec)
-                if ok and name ~= nil and tostring(name) ~= "" then
-                    return tostring(name)
-                end
-            end
-            return "Unknown Executor"
-        end
-
-        local function isViableDecompileScript(obj)
-            if not obj or typeof(obj) ~= "Instance" then
-                return false
-            end
-            if obj:IsA("ModuleScript") then
-                return true
-            elseif obj:IsA("LocalScript") then
-                local ok, runContext = pcall(function()
-                    return obj.RunContext
-                end)
-                if ok then
-                    return runContext == Enum.RunContext.Client or runContext == Enum.RunContext.Legacy
-                end
-                return true
-            elseif obj:IsA("Script") then
-                local ok, runContext = pcall(function()
-                    return obj.RunContext
-                end)
-                return ok and runContext == Enum.RunContext.Client
-            end
-            return false
-        end
-
-        local function scriptMatchesFilters(obj)
-            if classFilter ~= "All" and obj.ClassName ~= classFilter then
-                return false
-            end
-            if nameFilter ~= "" then
-                local lname = string.lower(tostring(obj.Name or ""))
-                local lfilter = string.lower(nameFilter)
-                if not string.find(lname, lfilter, 1, true) then
-                    return false
-                end
-            end
-            return true
-        end
-
-        local function buildRowText(row, isSelected)
-            local marker = isSelected and ">" or " "
-            return string.format("%s [%s] %s", marker, getScriptTypeTag(row.Script), tostring(row.Script.Name))
-        end
-
-        local function setStatusFromSelection()
-            if not selectedScript then
-                selectedLabel:Set("Selected: None")
-                classLabel:Set("Class: -")
-                pathLabel:Set("Path: -")
-                return
-            end
-            selectedLabel:Set("Selected: " .. tostring(selectedScript.Name))
-            classLabel:Set("Class: " .. tostring(selectedScript.ClassName))
-            pathLabel:Set("Path: " .. getScriptPath(selectedScript))
-        end
-
-        local function setSelectedRow(row)
-            if selectedRow and selectedRow.Control then
-                selectedRow.Control:SetText(buildRowText(selectedRow, false))
-                if selectedRow.Control.Button then
-                    selectedRow.Control.Button.BackgroundColor3 = C.Control
-                end
-            end
-
-            selectedRow = row
-
-            if selectedRow and selectedRow.Control then
-                selectedRow.Control:SetText(buildRowText(selectedRow, true))
-                if selectedRow.Control.Button then
-                    selectedRow.Control.Button.BackgroundColor3 = C.ControlPress
-                end
-            end
-
-            selectedScript = selectedRow and selectedRow.Script or nil
-            setStatusFromSelection()
-        end
-
-        local function clearScriptRows()
-            for _, row in ipairs(scriptRows) do
-                if row.Control and row.Control.Frame and row.Control.Frame.Parent then
-                    row.Control.Frame:Destroy()
-                end
-            end
-            table.clear(scriptRows)
-        end
-
-        local function collectScripts()
-            local list = {}
-            local seen = {}
-
-            local function addScript(obj)
-                if not obj or seen[obj] then
-                    return
-                end
-                if isScriptInstance(obj) then
-                    seen[obj] = true
-                    table.insert(list, obj)
-                end
-            end
-
-            local function addFromRoot(root)
-                if typeof(root) ~= "Instance" then
-                    return
-                end
-                addScript(root)
-                for _, obj in ipairs(root:GetDescendants()) do
-                    addScript(obj)
-                end
-            end
-
-            local function serviceSafe(name)
-                local ok, svc = pcall(function()
-                    return game:GetService(name)
-                end)
-                return ok and svc or nil
-            end
-
-            local roots = {
-                workspace,
-                serviceSafe("ReplicatedStorage"),
-                serviceSafe("ReplicatedFirst"),
-                serviceSafe("StarterPlayer"),
-                serviceSafe("StarterGui"),
-                serviceSafe("StarterPack"),
-                serviceSafe("ServerScriptService"),
-            }
-
-            for _, root in ipairs(roots) do
-                addFromRoot(root)
-            end
-
-            table.sort(list, function(a, b)
-                return getScriptSortKey(a) < getScriptSortKey(b)
-            end)
-
-            return list
-        end
-
-        local function renderCurrentPage()
-            clearScriptRows()
-            local startIndex = ((currentPage - 1) * pageSize) + 1
-            local endIndex = math.min(startIndex + pageSize - 1, #scriptEntries)
-
-            for i = startIndex, endIndex do
-                local obj = scriptEntries[i]
-                local row = {
-                    Script = obj,
-                }
-                row.Control = scriptsListSection:CreateButton(" ", function()
-                    setSelectedRow(row)
-                end)
-                row.Control:SetText(buildRowText(row, false))
-                scriptRows[#scriptRows + 1] = row
-
-                if i % 120 == 0 then
-                    task.wait()
-                end
-            end
-
-            countLabel:Set(string.format("Scripts: %d / %d", #scriptEntries, totalScriptCount))
-            pageLabel:Set(string.format("Page: %d/%d", currentPage, totalPages))
-
-            if selectedScript then
-                local restored = nil
-                for _, row in ipairs(scriptRows) do
-                    if row.Script == selectedScript then
-                        restored = row
-                        break
-                    end
-                end
-                if restored then
-                    setSelectedRow(restored)
-                else
-                    selectedRow = nil
-                    setStatusFromSelection()
-                end
-            end
-        end
-
-        local function rebuildScriptList()
-            local allEntries = collectScripts()
-            local filtered = {}
-            for _, obj in ipairs(allEntries) do
-                if scriptMatchesFilters(obj) then
-                    filtered[#filtered + 1] = obj
-                end
-            end
-            totalScriptCount = #allEntries
-            scriptEntries = filtered
-            totalPages = math.max(1, math.ceil(#scriptEntries / pageSize))
-            currentPage = math.clamp(currentPage, 1, totalPages)
-            renderCurrentPage()
-            if nameFilter ~= "" then
-                filterLabel:Set(string.format("Filter: %s + \"%s\"", classFilter, nameFilter))
-            else
-                filterLabel:Set("Filter: " .. classFilter)
-            end
-        end
-
-        local function loadScriptsAsync(force)
-            if loadInProgress then
-                return
-            end
-            if hasLoadedScripts and not force then
-                return
-            end
-            loadInProgress = true
-            UILibrary:NotifyInfo({
-                Title = "Scripts",
-                Content = "Loading script list...",
-                Duration = 1.4,
-            })
-            task.defer(function()
-                local ok, err = pcall(rebuildScriptList)
-                loadInProgress = false
-                if ok then
-                    hasLoadedScripts = true
-                else
-                    UILibrary:NotifyError({
-                        Title = "Scripts",
-                        Content = "Failed to load scripts: " .. tostring(err),
-                        Duration = 2.5,
-                    })
-                end
-            end)
-        end
-        actionsSection:CreateButton("Prev Page", function()
-            if currentPage > 1 then
-                currentPage -= 1
-                renderCurrentPage()
-            end
-        end)
-        actionsSection:CreateButton("Next Page", function()
-            if currentPage < totalPages then
-                currentPage += 1
-                renderCurrentPage()
-            end
-        end)
-        actionsSection:CreateButton("Refresh List", function()
-            loadScriptsAsync(true)
-        end)
-        statusSection:CreateDropdown({
-            Name = "Type",
-            Options = {"All", "Script", "LocalScript", "ModuleScript"},
-            CurrentOption = "All",
-            Callback = function(v)
-                classFilter = tostring(v or "All")
-                if hasLoadedScripts then
-                    loadScriptsAsync(true)
-                end
-            end,
-        })
-        statusSection:CreateInput({
-            Name = "Name",
-            PlaceholderText = "contains...",
-            CurrentValue = "",
-            Callback = function(v)
-                nameFilter = tostring(v or "")
-                if hasLoadedScripts then
-                    loadScriptsAsync(true)
-                end
-            end,
-        })
-        local clipboardFn = setclipboard or toclipboard or set_clipboard or (Clipboard and Clipboard.set)
-
-        local function requireSelectedScript()
-            if not selectedScript then
-                UILibrary:NotifyWarning({
-                    Title = "Scripts",
-                    Content = "Select a script first.",
-                    Duration = 1.8,
-                })
-                return nil
-            end
-            return selectedScript
-        end
-
-        local function copyToClipboard(value, successText)
-            if type(clipboardFn) ~= "function" then
-                UILibrary:NotifyError({
-                    Title = "Scripts",
-                    Content = "Clipboard API is not available in this executor.",
-                    Duration = 2.6,
-                })
-                return false
-            end
-            local ok, err = pcall(clipboardFn, tostring(value or ""))
-            if not ok then
-                UILibrary:NotifyError({
-                    Title = "Scripts",
-                    Content = "Clipboard failed: " .. tostring(err),
-                    Duration = 2.6,
-                })
-                return false
-            end
-            UILibrary:NotifyInfo({
-                Title = "Scripts",
-                Content = successText or "Copied.",
-                Duration = 1.8,
-            })
-            return true
-        end
-
-        local function dumpScript(scriptObj)
-            if type(decompile) == "function" and isViableDecompileScript(scriptObj) then
-                local ok, source = pcall(decompile, scriptObj)
-                if ok and type(source) == "string" and source ~= "" then
-                    return source:gsub("\0", "\\0")
-                end
-                return ("-- DEX - %s failed to decompile %s"):format(getExecutorName(), tostring(scriptObj.ClassName))
-            end
-            if type(getscriptbytecode) == "function" then
-                local ok, bytecode = pcall(getscriptbytecode, scriptObj)
-                if ok and bytecode ~= nil then
-                    return type(bytecode) == "string" and bytecode or tostring(bytecode)
-                end
-            end
-            return nil
-        end
-        local function getRawScriptSource(scriptObj)
-            if type(getscriptsource) == "function" then
-                local ok, source = pcall(getscriptsource, scriptObj)
-                if ok and type(source) == "string" and source ~= "" then
-                    return source
-                end
-            end
-            local okSource, sourceProp = pcall(function()
-                return scriptObj.Source
-            end)
-            if okSource and type(sourceProp) == "string" and sourceProp ~= "" then
-                return sourceProp
-            end
-            return nil
-        end
-
-        actionsSection:CreateButton("Copy", function()
-            local scriptObj = requireSelectedScript()
-            if not scriptObj then
-                return
-            end
-            local raw = getRawScriptSource(scriptObj)
-            if raw then
-                copyToClipboard(raw, "Raw script source copied.")
-                return
-            end
-
-            local fallback = dumpScript(scriptObj)
-            if fallback then
-                copyToClipboard(fallback, "Raw unavailable. Copied Dex-style output.")
-                return
-            end
-
-            local unavailable = ("-- DEX - %s cannot read %s\n-- Path: %s"):format(
-                getExecutorName(),
-                tostring(scriptObj.ClassName),
-                getScriptPath(scriptObj)
-            )
-            copyToClipboard(unavailable, "Copied unavailable-script details.")
-        end)
-        actionsSection:CreateButton("Dump", function()
-            local scriptObj = requireSelectedScript()
-            if not scriptObj then
-                return
-            end
-            local dumped = dumpScript(scriptObj)
-            if not dumped then
-                UILibrary:NotifyError({
-                    Title = "Scripts",
-                    Content = "Could not dump script (decompile/bytecode unavailable).",
-                    Duration = 2.6,
-                })
-                return
-            end
-            copyToClipboard(dumped, "Dump copied to clipboard.")
-        end)
-        actionsSection:CreateButton("Copy Path", function()
-            local scriptObj = requireSelectedScript()
-            if not scriptObj then
-                return
-            end
-            copyToClipboard(getScriptPath(scriptObj), "Copied script path.")
-        end)
-
-        scriptsCleanup = function()
-            disconnectScriptConnections()
-            clearScriptRows()
-            selectedRow = nil
-            selectedScript = nil
-            scriptEntries = {}
-            totalScriptCount = 0
-            hasLoadedScripts = false
-            loadInProgress = false
-        end
-
-        countLabel:Set("Scripts: not loaded")
-        pageLabel:Set("Page: -/-")
-        return scriptsTab
-    end
-
     local function removeRemotesTab()
         local category = self.RemotesCategory
         if not category then
@@ -3046,14 +2554,7 @@ function Window:CreateUniversalCategory(options)
             if remotesAllowed then
                 self:CreateRemotesCategory(remotesOptions)
             end
-            ensureScriptsTab()
         else
-            if scriptsCleanup then
-                scriptsCleanup()
-                scriptsCleanup = nil
-            end
-            removeTab(scriptsTab)
-            scriptsTab = nil
             removeRemotesTab()
         end
 
@@ -3101,7 +2602,7 @@ function Window:CreateUniversalCategory(options)
 
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
     otherSection:CreateLabel("Remotes tab is available only in Developer mode.")
-    infoSection:CreateParagraph("Developer Tabs", "Developer mode enables Scripts and Remotes.")
+    infoSection:CreateParagraph("Developer Tabs", "Developer mode enables Remotes.")
     infoSection:CreateLabel("Turn Developer on to use SimpleSpy remotes.")
 
     setDeveloperEnabled(options.DeveloperEnabled == true, true)
@@ -3123,7 +2624,7 @@ function Window:CreateUniversalCategory(options)
             return developerEnabled
         end,
         GetDeveloperTabs = function()
-            return self.RemotesCategory and self.RemotesCategory.Tab or nil, scriptsTab
+            return self.RemotesCategory and self.RemotesCategory.Tab or nil
         end,
         Options = options,
     }
@@ -4719,3 +4220,4 @@ function UILibrary:NotifyError(args)
 end
 
 return UILibrary
+
