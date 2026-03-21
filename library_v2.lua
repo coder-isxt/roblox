@@ -2786,32 +2786,68 @@ function Window:CreateRemotesCategory(options)
 
     local function iconizeRemoteLabel(text)
         local value = tostring(text or "")
-        if string.sub(value, 1, 4) == "[BE]" then
-            return string.gsub(string.sub(value, 5), "^%s*", ""), REMOTE_LOG_ICONS.BindableEvent
-        end
-        if string.sub(value, 1, 4) == "[BF]" then
-            return string.gsub(string.sub(value, 5), "^%s*", ""), REMOTE_LOG_ICONS.BindableFunction
-        end
-        if string.sub(value, 1, 3) == "[E]" then
-            return string.gsub(string.sub(value, 4), "^%s*", ""), REMOTE_LOG_ICONS.RemoteEvent
-        end
-        if string.sub(value, 1, 3) == "[F]" then
-            return string.gsub(string.sub(value, 4), "^%s*", ""), REMOTE_LOG_ICONS.RemoteFunction
+        local noRich = string.gsub(value, "<.->", "")
+        local trimmed = string.gsub(noRich, "^%s+", "")
+        local upperValue = string.upper(trimmed)
+
+        local function stripLeadingToken(raw)
+            local stripped = string.gsub(raw, "^%s*%[?%s*[A-Z][A-Z]?%s*%]?%s*[:|%-]?%s*", "")
+            stripped = string.gsub(stripped, "^%s+", "")
+            if stripped == "" then
+                return raw
+            end
+            return stripped
         end
 
-        if string.find(value, "BindableEvent", 1, true) then
-            return value, REMOTE_LOG_ICONS.BindableEvent
+        local function byPrefix(prefix, icon)
+            if string.sub(upperValue, 1, #prefix) == prefix then
+                return stripLeadingToken(trimmed), icon
+            end
+            return nil, nil
         end
-        if string.find(value, "BindableFunction", 1, true) then
-            return value, REMOTE_LOG_ICONS.BindableFunction
+
+        local cleaned, icon = byPrefix("[BE]", REMOTE_LOG_ICONS.BindableEvent)
+        if icon then
+            return cleaned, icon
         end
-        if string.find(value, "RemoteFunction", 1, true) then
-            return value, REMOTE_LOG_ICONS.RemoteFunction
+        cleaned, icon = byPrefix("[BF]", REMOTE_LOG_ICONS.BindableFunction)
+        if icon then
+            return cleaned, icon
         end
-        if string.find(value, "RemoteEvent", 1, true) or string.find(value, "UnreliableRemoteEvent", 1, true) then
-            return value, REMOTE_LOG_ICONS.RemoteEvent
+        cleaned, icon = byPrefix("[E]", REMOTE_LOG_ICONS.RemoteEvent)
+        if icon then
+            return cleaned, icon
         end
-        return value, nil
+        cleaned, icon = byPrefix("[F]", REMOTE_LOG_ICONS.RemoteFunction)
+        if icon then
+            return cleaned, icon
+        end
+
+        local token = string.match(upperValue, "^%[?([A-Z][A-Z]?)%]?")
+        if token == "BE" then
+            return stripLeadingToken(trimmed), REMOTE_LOG_ICONS.BindableEvent
+        elseif token == "BF" then
+            return stripLeadingToken(trimmed), REMOTE_LOG_ICONS.BindableFunction
+        elseif token == "E" then
+            return stripLeadingToken(trimmed), REMOTE_LOG_ICONS.RemoteEvent
+        elseif token == "F" then
+            return stripLeadingToken(trimmed), REMOTE_LOG_ICONS.RemoteFunction
+        end
+
+        if string.find(upperValue, "BINDABLEEVENT", 1, true) then
+            return trimmed, REMOTE_LOG_ICONS.BindableEvent
+        end
+        if string.find(upperValue, "BINDABLEFUNCTION", 1, true) then
+            return trimmed, REMOTE_LOG_ICONS.BindableFunction
+        end
+        if string.find(upperValue, "REMOTEFUNCTION", 1, true) then
+            return trimmed, REMOTE_LOG_ICONS.RemoteFunction
+        end
+        if string.find(upperValue, "REMOTEEVENT", 1, true) or string.find(upperValue, "UNRELIABLEREMOTEEVENT", 1, true) then
+            return trimmed, REMOTE_LOG_ICONS.RemoteEvent
+        end
+
+        return trimmed, nil
     end
 
     local hostLogSection = setmetatable({}, {
