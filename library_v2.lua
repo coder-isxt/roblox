@@ -2168,20 +2168,16 @@ function Window:CreateLocalCategory(options)
     end
 
     local flySection = localTab:CreateSection({ Name = "Fly", Side = "Left" })
-    local rocketFlySection = localTab:CreateSection({ Name = "Rocket Fly", Side = "Left" })
+    local visualsSection = localTab:CreateSection({ Name = "Visuals", Side = "Left" })
     local funSection = localTab:CreateSection({ Name = "Fun Features", Side = "Right" })
     local otherSection = localTab:CreateSection({ Name = "Other", Side = "Right" })
     flySection.Frame.LayoutOrder = 10
-    rocketFlySection.Frame.LayoutOrder = 20
+    visualsSection.Frame.LayoutOrder = 20
 
     local flyEnabled = false
     local flySpeed = tonumber(options.FlySpeed) or 80
     flySpeed = math.clamp(flySpeed, 20, 250)
     local flyKey = keycode(options.FlyKey) or Enum.KeyCode.F
-    local rocketFlyEnabled = false
-    local rocketFlySpeed = tonumber(options.RocketFlySpeed) or flySpeed
-    rocketFlySpeed = math.clamp(rocketFlySpeed, 20, 250)
-    local rocketFlyKey = keycode(options.RocketFlyKey) or Enum.KeyCode.G
     local flyControls = {
         Forward = false,
         Back = false,
@@ -2192,8 +2188,6 @@ function Window:CreateLocalCategory(options)
     }
     local flyBV = nil
     local flyBG = nil
-    local rocketFlyBV = nil
-    local rocketFlyBG = nil
 
     local flingProtectEnabled = false
     local flingProtectSafeCFrame = nil
@@ -2207,7 +2201,10 @@ function Window:CreateLocalCategory(options)
     local flingProtectConnection = nil
 
     local flyToggleControl = nil
-    local rocketFlyToggleControl = nil
+    local fpsBoostToggle = nil
+    local noFogToggle = nil
+    local fullBrightToggle = nil
+    local xbox2016Toggle = nil
     local killBrickEnabled = false
     local killBrickConnection = nil
     local unanchoredFlingEnabled = false
@@ -2225,12 +2222,311 @@ function Window:CreateLocalCategory(options)
     local spinFlingAutoRotateLocked = false
     local spinFlingAutoRotateWas = true
 
+    local Lighting = game:GetService("Lighting")
+    local Terrain = workspace:FindFirstChildOfClass("Terrain")
+
+    local fpsBoostEnabled = false
+    local noFogEnabled = false
+    local fullBrightEnabled = false
+    local xbox2016Enabled = false
+    local fpsBoostWorkspaceAddedConnection = nil
+    local fpsBoostLightingAddedConnection = nil
+    local fpsBoostTrackedProps = setmetatable({}, { __mode = "k" })
+    local fpsBoostTerrainOriginal = nil
+    local baseLightingSnapshot = nil
+
     local function notify(title, content, duration)
         UILibrary:Notify({
             Title = title,
             Content = content,
             Duration = duration or 2.2,
         })
+    end
+
+    local function captureBaseLightingSnapshot()
+        if baseLightingSnapshot then
+            return
+        end
+        baseLightingSnapshot = {}
+        local props = {
+            "Ambient",
+            "OutdoorAmbient",
+            "Brightness",
+            "ClockTime",
+            "GlobalShadows",
+            "FogStart",
+            "FogEnd",
+            "FogColor",
+            "ExposureCompensation",
+            "EnvironmentDiffuseScale",
+            "EnvironmentSpecularScale",
+            "Technology",
+        }
+        for _, prop in ipairs(props) do
+            local ok, value = pcall(function()
+                return Lighting[prop]
+            end)
+            if ok then
+                baseLightingSnapshot[prop] = value
+            end
+        end
+    end
+
+    local function applyVisualLightingState()
+        captureBaseLightingSnapshot()
+        local target = {}
+        for prop, value in pairs(baseLightingSnapshot or {}) do
+            target[prop] = value
+        end
+
+        if xbox2016Enabled then
+            target.Brightness = 1.8
+            target.ClockTime = 14
+            target.Ambient = Color3.fromRGB(148, 148, 148)
+            target.OutdoorAmbient = Color3.fromRGB(116, 116, 116)
+            target.FogColor = Color3.fromRGB(182, 186, 193)
+            target.FogStart = 40
+            target.FogEnd = 650
+            target.GlobalShadows = false
+            target.ExposureCompensation = -0.05
+            if target.EnvironmentDiffuseScale ~= nil then
+                target.EnvironmentDiffuseScale = 0
+            end
+            if target.EnvironmentSpecularScale ~= nil then
+                target.EnvironmentSpecularScale = 0
+            end
+            if target.Technology ~= nil then
+                target.Technology = Enum.Technology.Compatibility
+            end
+        end
+
+        if fullBrightEnabled then
+            target.Brightness = 2.6
+            target.ClockTime = 13.2
+            target.Ambient = Color3.fromRGB(255, 255, 255)
+            target.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+            target.GlobalShadows = false
+            target.ExposureCompensation = 0
+        end
+
+        if noFogEnabled then
+            target.FogStart = 0
+            target.FogEnd = 100000
+            target.FogColor = Color3.fromRGB(255, 255, 255)
+        end
+
+        if fpsBoostEnabled then
+            target.GlobalShadows = false
+            if target.EnvironmentDiffuseScale ~= nil then
+                target.EnvironmentDiffuseScale = 0
+            end
+            if target.EnvironmentSpecularScale ~= nil then
+                target.EnvironmentSpecularScale = 0
+            end
+        end
+
+        for prop, value in pairs(target) do
+            pcall(function()
+                Lighting[prop] = value
+            end)
+        end
+    end
+
+    local function snapshotFpsProperty(inst, prop)
+        local ok, current = pcall(function()
+            return inst[prop]
+        end)
+        if not ok then
+            return false
+        end
+        local entry = fpsBoostTrackedProps[inst]
+        if not entry then
+            entry = {}
+            fpsBoostTrackedProps[inst] = entry
+        end
+        if entry[prop] == nil then
+            entry[prop] = current
+        end
+        return true
+    end
+
+    local function setFpsProperty(inst, prop, value)
+        if not snapshotFpsProperty(inst, prop) then
+            return
+        end
+        pcall(function()
+            inst[prop] = value
+        end)
+    end
+
+    local function applyFpsBoostToInstance(inst)
+        if not inst then
+            return
+        end
+
+        if inst:IsA("ParticleEmitter")
+            or inst:IsA("Trail")
+            or inst:IsA("Beam")
+            or inst:IsA("Smoke")
+            or inst:IsA("Fire")
+            or inst:IsA("Sparkles") then
+            setFpsProperty(inst, "Enabled", false)
+        end
+
+        if inst:IsA("PostEffect") then
+            setFpsProperty(inst, "Enabled", false)
+        end
+
+        if inst:IsA("BasePart") then
+            setFpsProperty(inst, "CastShadow", false)
+        end
+
+        if inst:IsA("Decal") or inst:IsA("Texture") then
+            setFpsProperty(inst, "Transparency", 1)
+        end
+    end
+
+    local function restoreFpsBoostState()
+        if fpsBoostWorkspaceAddedConnection then
+            fpsBoostWorkspaceAddedConnection:Disconnect()
+            fpsBoostWorkspaceAddedConnection = nil
+        end
+        if fpsBoostLightingAddedConnection then
+            fpsBoostLightingAddedConnection:Disconnect()
+            fpsBoostLightingAddedConnection = nil
+        end
+
+        for inst, props in pairs(fpsBoostTrackedProps) do
+            if inst and type(props) == "table" then
+                for prop, value in pairs(props) do
+                    pcall(function()
+                        inst[prop] = value
+                    end)
+                end
+            end
+            fpsBoostTrackedProps[inst] = nil
+        end
+        fpsBoostTrackedProps = setmetatable({}, { __mode = "k" })
+
+        if Terrain and fpsBoostTerrainOriginal then
+            for prop, value in pairs(fpsBoostTerrainOriginal) do
+                pcall(function()
+                    Terrain[prop] = value
+                end)
+            end
+        end
+    end
+
+    local function applyFpsBoostState()
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+
+        for _, inst in ipairs(workspace:GetDescendants()) do
+            applyFpsBoostToInstance(inst)
+        end
+        for _, inst in ipairs(Lighting:GetDescendants()) do
+            applyFpsBoostToInstance(inst)
+        end
+
+        if Terrain then
+            if not fpsBoostTerrainOriginal then
+                fpsBoostTerrainOriginal = {}
+                local terrainProps = {
+                    "WaterWaveSize",
+                    "WaterWaveSpeed",
+                    "WaterReflectance",
+                    "WaterTransparency",
+                }
+                for _, prop in ipairs(terrainProps) do
+                    local ok, value = pcall(function()
+                        return Terrain[prop]
+                    end)
+                    if ok then
+                        fpsBoostTerrainOriginal[prop] = value
+                    end
+                end
+            end
+            pcall(function()
+                Terrain.WaterWaveSize = 0
+            end)
+            pcall(function()
+                Terrain.WaterWaveSpeed = 0
+            end)
+            pcall(function()
+                Terrain.WaterReflectance = 0
+            end)
+            pcall(function()
+                Terrain.WaterTransparency = 1
+            end)
+        end
+    end
+
+    local function setFpsBoostEnabled(state, silent)
+        state = state == true
+        if fpsBoostEnabled == state then
+            return
+        end
+
+        fpsBoostEnabled = state
+        if fpsBoostEnabled then
+            restoreFpsBoostState()
+            applyFpsBoostState()
+
+            fpsBoostWorkspaceAddedConnection = workspace.DescendantAdded:Connect(function(inst)
+                if fpsBoostEnabled then
+                    applyFpsBoostToInstance(inst)
+                end
+            end)
+            fpsBoostLightingAddedConnection = Lighting.DescendantAdded:Connect(function(inst)
+                if fpsBoostEnabled then
+                    applyFpsBoostToInstance(inst)
+                end
+            end)
+        else
+            restoreFpsBoostState()
+        end
+
+        applyVisualLightingState()
+        if not silent then
+            notify("FPS Boost", fpsBoostEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function setNoFogEnabled(state, silent)
+        state = state == true
+        if noFogEnabled == state then
+            return
+        end
+        noFogEnabled = state
+        applyVisualLightingState()
+        if not silent then
+            notify("No fog", noFogEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function setFullBrightEnabled(state, silent)
+        state = state == true
+        if fullBrightEnabled == state then
+            return
+        end
+        fullBrightEnabled = state
+        applyVisualLightingState()
+        if not silent then
+            notify("Full bright", fullBrightEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function setXbox2016Enabled(state, silent)
+        state = state == true
+        if xbox2016Enabled == state then
+            return
+        end
+        xbox2016Enabled = state
+        applyVisualLightingState()
+        if not silent then
+            notify("2016 xbox", xbox2016Enabled and "Enabled." or "Disabled.", 1.9)
+        end
     end
 
     local function getLocalRoot()
@@ -2246,7 +2542,7 @@ function Window:CreateLocalCategory(options)
     local function refreshFlyPlatformStand()
         local humanoid = getLocalHumanoid()
         if humanoid then
-            humanoid.PlatformStand = (flyEnabled or rocketFlyEnabled)
+            humanoid.PlatformStand = flyEnabled
         end
     end
 
@@ -2297,56 +2593,6 @@ function Window:CreateLocalCategory(options)
         flyBV.Velocity = Vector3.new(0, 0, 0)
         flyBV.Parent = rootPart
 
-        refreshFlyPlatformStand()
-        return true
-    end
-
-    local function stopRocketFly()
-        if rocketFlyBV then
-            pcall(function()
-                rocketFlyBV:Destroy()
-            end)
-            rocketFlyBV = nil
-        end
-
-        if rocketFlyBG then
-            pcall(function()
-                rocketFlyBG:Destroy()
-            end)
-            rocketFlyBG = nil
-        end
-        refreshFlyPlatformStand()
-    end
-
-    local function startRocketFly()
-        local rootPart = getLocalRoot()
-        local humanoid = getLocalHumanoid()
-        if not rootPart or not humanoid then
-            return false
-        end
-
-        if rocketFlyBV then
-            rocketFlyBV:Destroy()
-            rocketFlyBV = nil
-        end
-        if rocketFlyBG then
-            rocketFlyBG:Destroy()
-            rocketFlyBG = nil
-        end
-
-        rocketFlyBG = Instance.new("BodyGyro")
-        rocketFlyBG.Name = "LimboRocketFlyBG"
-        rocketFlyBG.P = 9e4
-        rocketFlyBG.D = 70
-        rocketFlyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
-        rocketFlyBG.CFrame = rootPart.CFrame
-        rocketFlyBG.Parent = rootPart
-
-        rocketFlyBV = Instance.new("BodyVelocity")
-        rocketFlyBV.Name = "LimboRocketFlyBV"
-        rocketFlyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
-        rocketFlyBV.Velocity = Vector3.new(0, 0, 0)
-        rocketFlyBV.Parent = rootPart
         refreshFlyPlatformStand()
         return true
     end
@@ -2420,44 +2666,6 @@ function Window:CreateLocalCategory(options)
         flyBG.CFrame = cam.CFrame
     end
 
-    local function updateRocketFlyVelocity()
-        if not rocketFlyEnabled or not rocketFlyBV or not rocketFlyBG then
-            return
-        end
-
-        local rootPart = getLocalRoot()
-        if not rootPart then
-            stopRocketFly()
-            rocketFlyEnabled = false
-            if rocketFlyToggleControl and rocketFlyToggleControl.Set then
-                rocketFlyToggleControl:Set(false, true)
-            end
-            return
-        end
-
-        local cam = workspace.CurrentCamera
-        if not cam then
-            return
-        end
-
-        local move = getFlyMoveDirection(cam)
-        if move.Magnitude > 0 then
-            move = move.Unit * (rocketFlySpeed * 1.35)
-        end
-        rocketFlyBV.Velocity = move
-
-        local forward = (move.Magnitude > 0.001) and move.Unit or cam.CFrame.LookVector
-
-        local upRef = Vector3.new(0, 1, 0)
-        if math.abs(forward:Dot(upRef)) > 0.98 then
-            upRef = cam.CFrame.RightVector
-        end
-
-        -- Superman mode: no rolling, just face and dash to travel direction.
-        rocketFlyBG.CFrame = CFrame.lookAt(rootPart.Position, rootPart.Position + forward, upRef)
-    end
-
-    local setRocketFlyEnabled
     local function setFlyEnabled(state, silent)
         state = state == true
         if state == flyEnabled then
@@ -2466,12 +2674,6 @@ function Window:CreateLocalCategory(options)
 
         flyEnabled = state
         if flyEnabled then
-            if rocketFlyEnabled then
-                setRocketFlyEnabled(false, true)
-                if rocketFlyToggleControl and rocketFlyToggleControl.Set then
-                    rocketFlyToggleControl:Set(false, true)
-                end
-            end
             local ok = startFly()
             if not ok then
                 flyEnabled = false
@@ -2482,33 +2684,6 @@ function Window:CreateLocalCategory(options)
             end
         else
             stopFly()
-        end
-    end
-
-    setRocketFlyEnabled = function(state, silent)
-        state = state == true
-        if state == rocketFlyEnabled then
-            return
-        end
-
-        rocketFlyEnabled = state
-        if rocketFlyEnabled then
-            if flyEnabled then
-                setFlyEnabled(false, true)
-                if flyToggleControl and flyToggleControl.Set then
-                    flyToggleControl:Set(false, true)
-                end
-            end
-            local ok = startRocketFly()
-            if not ok then
-                rocketFlyEnabled = false
-                if not silent then
-                    notify("Rocket Fly", "Character not ready.", 1.8)
-                end
-                return
-            end
-        else
-            stopRocketFly()
         end
     end
 
@@ -2826,12 +3001,6 @@ function Window:CreateLocalCategory(options)
                 flyToggleControl:Set(newState, true)
             end
             setFlyEnabled(newState, false)
-        elseif key == rocketFlyKey then
-            local newState = not rocketFlyEnabled
-            if rocketFlyToggleControl and rocketFlyToggleControl.Set then
-                rocketFlyToggleControl:Set(newState, true)
-            end
-            setRocketFlyEnabled(newState, false)
         end
         setControlFromKey(key, true)
     end))
@@ -2843,16 +3012,12 @@ function Window:CreateLocalCategory(options)
 
     flyVelocityConnection = track(self.Connections, RunService.Heartbeat:Connect(function()
         updateFlyVelocity()
-        updateRocketFlyVelocity()
     end))
 
     flyCharacterAddedConnection = track(self.Connections, localPlayer.CharacterAdded:Connect(function()
         task.defer(function()
             if flyEnabled then
                 startFly()
-            end
-            if rocketFlyEnabled then
-                startRocketFly()
             end
             if spinFlingEnabled then
                 task.wait(0.1)
@@ -2865,7 +3030,7 @@ function Window:CreateLocalCategory(options)
         if not flingProtectEnabled then
             return
         end
-        if flyEnabled or rocketFlyEnabled then
+        if flyEnabled then
             return
         end
         if UILibrary:IsFlingProtectSuspended() then
@@ -2956,21 +3121,23 @@ function Window:CreateLocalCategory(options)
     end)
     flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
 
-    rocketFlyToggleControl = rocketFlySection:CreateToggle("Rocket Fly", function(v)
-        setRocketFlyEnabled(v, true)
+    fpsBoostToggle = visualsSection:CreateToggle("FPS Boost", function(v)
+        setFpsBoostEnabled(v, false)
+    end, false)
+    visualsSection:CreateLabel("Disables heavy effects/shadows for more FPS.")
+
+    noFogToggle = visualsSection:CreateToggle("No fog", function(v)
+        setNoFogEnabled(v, false)
     end, false)
 
-    rocketFlySection:CreateKeybind("Rocket Fly Toggle Key", function(key, changed)
-        if changed then
-            rocketFlyKey = key
-            notify("Rocket Fly Keybind", "Set to " .. tostring(key.Name) .. ".", 1.8)
-        end
-    end, rocketFlyKey)
+    fullBrightToggle = visualsSection:CreateToggle("Full bright", function(v)
+        setFullBrightEnabled(v, false)
+    end, false)
 
-    rocketFlySection:CreateSlider("Rocket Fly Speed", 20, 400, rocketFlySpeed, function(v)
-        rocketFlySpeed = tonumber(v) or rocketFlySpeed
-    end)
-    rocketFlySection:CreateLabel("Superman controls: WASD + Space/Ctrl")
+    xbox2016Toggle = visualsSection:CreateToggle("2016 xbox", function(v)
+        setXbox2016Enabled(v, false)
+    end, false)
+    visualsSection:CreateLabel("Old-gen style lighting + flatter visuals.")
 
     local clickFlingToggle, punchFlingToggle = nil, nil
     clickFlingToggle = funSection:CreateToggle("Click Player to Fling", function(v)
@@ -3023,7 +3190,10 @@ function Window:CreateLocalCategory(options)
 
     self:OnClose(function()
         setFlyEnabled(false, true)
-        setRocketFlyEnabled(false, true)
+        setFpsBoostEnabled(false, true)
+        setNoFogEnabled(false, true)
+        setFullBrightEnabled(false, true)
+        setXbox2016Enabled(false, true)
         setKillBrickEnabled(false, true)
         setUnanchoredPartFlingEnabled(false, true)
         setSpinFlingEnabled(false, true)
@@ -3040,7 +3210,7 @@ function Window:CreateLocalCategory(options)
     self.LocalCategory = {
         Tab = localTab,
         FlySection = flySection,
-        RocketFlySection = rocketFlySection,
+        VisualsSection = visualsSection,
         FunSection = funSection,
         OtherSection = otherSection,
         SetFlyEnabled = function(_, state)
@@ -3058,20 +3228,41 @@ function Window:CreateLocalCategory(options)
         GetFlySpeed = function()
             return flySpeed
         end,
-        SetRocketFlyEnabled = function(_, state)
-            if rocketFlyToggleControl and rocketFlyToggleControl.Set then
-                rocketFlyToggleControl:Set(state == true, true)
+        SetFpsBoost = function(_, state)
+            if fpsBoostToggle and fpsBoostToggle.Set then
+                fpsBoostToggle:Set(state == true, true)
             end
-            setRocketFlyEnabled(state == true, true)
+            setFpsBoostEnabled(state == true, true)
         end,
-        GetRocketFlyEnabled = function()
-            return rocketFlyEnabled
+        GetFpsBoost = function()
+            return fpsBoostEnabled
         end,
-        SetRocketFlySpeed = function(_, speed)
-            rocketFlySpeed = math.clamp(tonumber(speed) or rocketFlySpeed, 20, 400)
+        SetNoFog = function(_, state)
+            if noFogToggle and noFogToggle.Set then
+                noFogToggle:Set(state == true, true)
+            end
+            setNoFogEnabled(state == true, true)
         end,
-        GetRocketFlySpeed = function()
-            return rocketFlySpeed
+        GetNoFog = function()
+            return noFogEnabled
+        end,
+        SetFullBright = function(_, state)
+            if fullBrightToggle and fullBrightToggle.Set then
+                fullBrightToggle:Set(state == true, true)
+            end
+            setFullBrightEnabled(state == true, true)
+        end,
+        GetFullBright = function()
+            return fullBrightEnabled
+        end,
+        SetXbox2016 = function(_, state)
+            if xbox2016Toggle and xbox2016Toggle.Set then
+                xbox2016Toggle:Set(state == true, true)
+            end
+            setXbox2016Enabled(state == true, true)
+        end,
+        GetXbox2016 = function()
+            return xbox2016Enabled
         end,
         SetFlingProtect = function(_, state)
             setFlingProtectEnabled(state == true)
