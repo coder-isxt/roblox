@@ -2770,6 +2770,7 @@ function Window:CreateRemotesCategory(options)
     settingsSection.Frame.LayoutOrder = 10
     actionsSection.Frame.LayoutOrder = 20
     scriptSection.Frame.LayoutOrder = 30
+    scriptSection.Frame.Visible = false
     local selectedLabel = settingsSection:CreateLabel("Selected: None")
     local selectedMetaLabel = settingsSection:CreateLabel("Method: - | Time: -")
     local selectedTypeLabel = settingsSection:CreateLabel("Type: -")
@@ -2958,6 +2959,10 @@ function Window:CreateRemotesCategory(options)
         if selectedTypeLabel and selectedTypeLabel.Set then
             selectedTypeLabel:Set("Type: -")
         end
+        local trimmed = string.gsub(string.gsub(value, "^%s+", ""), "%s+$", "")
+        local lower = string.lower(trimmed)
+        local hasSelection = trimmed ~= "" and lower ~= "none" and lower ~= "-"
+        scriptSection.Frame.Visible = hasSelection
     end
     local function setSelectionInfo(info)
         if typeof(info) ~= "table" then
@@ -2979,6 +2984,10 @@ function Window:CreateRemotesCategory(options)
         if selectedTypeLabel and selectedTypeLabel.Set then
             selectedTypeLabel:Set("Type: " .. rtype)
         end
+        local trimmed = string.gsub(string.gsub(name, "^%s+", ""), "%s+$", "")
+        local lower = string.lower(trimmed)
+        local hasSelection = trimmed ~= "" and lower ~= "none" and lower ~= "-"
+        scriptSection.Frame.Visible = hasSelection
     end
 
     local genv = (typeof(getgenv) == "function" and getgenv()) or _G
