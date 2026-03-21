@@ -801,26 +801,24 @@ function Window:CreatePlayersCategory(options)
         punchAnimationIds = { tostring(options.PunchAnimationId) }
     else
         punchAnimationIds = {
-            "522635514",
-            "522638767",
+            "913402848",
+            "180426354",
         }
     end
-    local punchAnimationId = tostring(punchAnimationIds[1] or "522635514")
+    local punchAnimationId = tostring(punchAnimationIds[1] or "913402848")
     local punchAnimationIndex = 0
-    local punchActivateRange = tonumber(options.PunchActivateRange) or 120
-    local punchRange = tonumber(options.PunchRange) or 11
-    local punchReachPadding = tonumber(options.PunchReachPadding) or 2
-    local punchWindup = tonumber(options.PunchWindup) or 0.68
-    local punchJumpDuration = tonumber(options.PunchJumpDuration) or 0.34
-    local punchJumpHeight = tonumber(options.PunchJumpHeight) or 3.8
-    local punchImpactDelay = tonumber(options.PunchImpactDelay) or 0.08
-    local punchApproachSpeed = tonumber(options.PunchApproachSpeed) or 42
-    local punchApproachTimeout = tonumber(options.PunchApproachTimeout) or 3.2
-    local punchStepTeleport = tonumber(options.PunchStepTeleport) or 3
-    local punchAnimationSpeed = tonumber(options.PunchAnimationSpeed) or 0.9
-    local punchAnimationVisibleTime = tonumber(options.PunchAnimationVisibleTime) or 1.35
+    local punchActivateRange = tonumber(options.PunchActivateRange) or 180
+    local punchRange = tonumber(options.PunchRange) or 15
+    local punchReachPadding = tonumber(options.PunchReachPadding) or 4
+    local punchApproachSpeed = tonumber(options.PunchApproachSpeed) or 64
+    local punchApproachTimeout = tonumber(options.PunchApproachTimeout) or 2.4
+    local punchStepTeleport = tonumber(options.PunchStepTeleport) or 6
+    local punchAnimationSpeed = tonumber(options.PunchAnimationSpeed) or 3.15
+    local punchAnimationVisibleTime = tonumber(options.PunchAnimationVisibleTime) or 2.2
+    local punchSpamInterval = tonumber(options.PunchSpamInterval) or 0.045
     local punchFlingDuration = tonumber(options.PunchFlingDuration) or 2
     local punchAnimationTrack = nil
+    local punchAnimationSpamConnection = nil
 
     local selectedName = optionsSection:CreateLabel("Selected: None")
     local selectedUser = optionsSection:CreateLabel("@none")
@@ -1419,6 +1417,10 @@ function Window:CreatePlayersCategory(options)
     end
 
     local function stopPunchAnimation()
+        if punchAnimationSpamConnection then
+            punchAnimationSpamConnection:Disconnect()
+            punchAnimationSpamConnection = nil
+        end
         if punchAnimationTrack then
             pcall(function()
                 punchAnimationTrack:Stop(0)
@@ -1428,10 +1430,10 @@ function Window:CreatePlayersCategory(options)
         end
     end
 
-    local function playPunchAnimation()
+    local function loadNextPunchAnimationTrack()
         local humanoid = getLocalHumanoid()
         if not humanoid then
-            return false
+            return nil
         end
 
         local animator = humanoid:FindFirstChildOfClass("Animator")
@@ -1462,68 +1464,10 @@ function Window:CreatePlayersCategory(options)
             return animator:LoadAnimation(animation)
         end)
         animation:Destroy()
-
-        if not ok or not track then
-            return false
+        if not ok then
+            return nil
         end
-
-        stopPunchAnimation()
-        punchAnimationTrack = track
-        pcall(function()
-            track.Looped = false
-            track:Play(0.06, 1, punchAnimationSpeed)
-        end)
-
-        task.delay(punchAnimationVisibleTime, function()
-            if punchAnimationTrack == track then
-                stopPunchAnimation()
-            end
-        end)
-        return true
-    end
-
-    local function punchJumpOnTopAt(player)
-        local localRoot = getLocalRoot()
-        local targetRoot = getTargetRoot(player)
-        if not localRoot or not targetRoot then
-            return false
-        end
-
-        local startPos = localRoot.Position
-        local startedAt = os.clock()
-        local finishAt = startedAt + punchJumpDuration
-
-        while os.clock() < finishAt do
-            localRoot = getLocalRoot()
-            targetRoot = getTargetRoot(player)
-            if not localRoot or not targetRoot then
-                break
-            end
-
-            local alpha = math.clamp((os.clock() - startedAt) / math.max(punchJumpDuration, 0.001), 0, 1)
-            local targetTop = targetRoot.Position + Vector3.new(0, 2.6, 0)
-            local base = startPos:Lerp(targetTop, alpha)
-            local arc = math.sin(alpha * math.pi) * punchJumpHeight
-            local jumpPos = base + Vector3.new(0, arc, 0)
-
-            localRoot.CFrame = CFrame.lookAt(
-                jumpPos,
-                Vector3.new(targetRoot.Position.X, jumpPos.Y, targetRoot.Position.Z)
-            )
-            localRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            RunService.Heartbeat:Wait()
-        end
-
-        localRoot = getLocalRoot()
-        targetRoot = getTargetRoot(player)
-        if localRoot and targetRoot then
-            local landingPos = targetRoot.Position + Vector3.new(0, 2.6, 0)
-            localRoot.CFrame = CFrame.lookAt(
-                landingPos,
-                Vector3.new(targetRoot.Position.X, landingPos.Y, targetRoot.Position.Z)
-            )
-        end
-        return true
+        return track
     end
 
     local function runToTargetForPunch(player)
@@ -1534,8 +1478,6 @@ function Window:CreatePlayersCategory(options)
         end
 
         local timeoutAt = os.clock() + punchApproachTimeout
-        local lastDistance = math.huge
-        local stuckTicks = 0
         while os.clock() < timeoutAt do
             localRoot = getLocalRoot()
             targetRoot = getTargetRoot(player)
@@ -1552,39 +1494,124 @@ function Window:CreatePlayersCategory(options)
             local planar = Vector3.new(toward.X, 0, toward.Z)
             if planar.Magnitude > 0.001 then
                 local unit = planar.Unit
+                localRoot.CFrame = CFrame.lookAt(
+                    localRoot.Position,
+                    Vector3.new(targetRoot.Position.X, localRoot.Position.Y, targetRoot.Position.Z)
+                )
                 localRoot.AssemblyLinearVelocity = Vector3.new(
                     unit.X * punchApproachSpeed,
                     localRoot.AssemblyLinearVelocity.Y,
                     unit.Z * punchApproachSpeed
                 )
-                localRoot.CFrame = CFrame.lookAt(
-                    localRoot.Position,
-                    Vector3.new(targetRoot.Position.X, localRoot.Position.Y, targetRoot.Position.Z)
-                )
 
-                if distance > (lastDistance - 0.05) then
-                    stuckTicks += 1
-                else
-                    stuckTicks = 0
-                end
-
-                if stuckTicks >= 10 then
+                if distance > (punchRange + punchReachPadding + 5) and punchStepTeleport > 0 then
                     local step = math.min(punchStepTeleport, math.max(0, distance - (punchRange + punchReachPadding)))
                     if step > 0 then
-                        local jumpPos = localRoot.Position + (unit * step)
+                        local stepPos = localRoot.Position + (unit * step)
                         localRoot.CFrame = CFrame.lookAt(
-                            jumpPos,
-                            Vector3.new(targetRoot.Position.X, jumpPos.Y, targetRoot.Position.Z)
+                            stepPos,
+                            Vector3.new(targetRoot.Position.X, stepPos.Y, targetRoot.Position.Z)
                         )
                     end
-                    stuckTicks = 0
                 end
             end
-            lastDistance = distance
+
             RunService.Heartbeat:Wait()
         end
-
         return getDistanceToTarget(player) <= (punchRange + punchReachPadding)
+    end
+
+    local function playRunAnimationSpam(duration, targetPlayer)
+        stopPunchAnimation()
+        local track = loadNextPunchAnimationTrack()
+        if not track then
+            return false
+        end
+
+        punchAnimationTrack = track
+        local stopAt = os.clock() + math.max(0.3, tonumber(duration) or 0.3)
+        local nextRestartAt = 0
+
+        pcall(function()
+            track.Looped = true
+            track:Play(0.02, 1, punchAnimationSpeed)
+        end)
+
+        punchAnimationSpamConnection = RunService.Heartbeat:Connect(function()
+            if os.clock() >= stopAt then
+                stopPunchAnimation()
+                return
+            end
+
+            if targetPlayer and targetPlayer.Parent == Players then
+                local localRoot = getLocalRoot()
+                local targetRoot = getTargetRoot(targetPlayer)
+                if localRoot and targetRoot then
+                    local toward = targetRoot.Position - localRoot.Position
+                    local planar = Vector3.new(toward.X, 0, toward.Z)
+                    if planar.Magnitude > 0.001 then
+                        local unit = planar.Unit
+                        localRoot.CFrame = CFrame.lookAt(
+                            localRoot.Position,
+                            Vector3.new(targetRoot.Position.X, localRoot.Position.Y, targetRoot.Position.Z)
+                        )
+                        localRoot.AssemblyLinearVelocity = Vector3.new(
+                            unit.X * (punchApproachSpeed + 18),
+                            localRoot.AssemblyLinearVelocity.Y,
+                            unit.Z * (punchApproachSpeed + 18)
+                        )
+                    end
+                end
+            end
+
+            if os.clock() >= nextRestartAt then
+                nextRestartAt = os.clock() + math.max(0.01, punchSpamInterval)
+                if punchAnimationTrack then
+                    pcall(function()
+                        punchAnimationTrack:Stop(0)
+                        punchAnimationTrack:Play(0, 1, punchAnimationSpeed + 0.75)
+                    end)
+                end
+            end
+        end)
+
+        task.delay(math.max(duration, punchAnimationVisibleTime) + 0.15, function()
+            stopPunchAnimation()
+        end)
+        return true
+    end
+
+    local function runAnimationSpamFling(targetPlayer)
+        local preAttackRoot = getLocalRoot()
+        local safeRestoreCFrame = preAttackRoot and preAttackRoot.CFrame or nil
+        local suspendFor = punchApproachTimeout + punchFlingDuration + 1.1
+        UILibrary:SuspendFlingProtect(suspendFor)
+
+        local reached = runToTargetForPunch(targetPlayer)
+        if not reached then
+            notify("Run Fling", "Couldn't get close enough.", 1.8)
+            return false
+        end
+
+        local spamDuration = punchFlingDuration + 0.45
+        playRunAnimationSpam(spamDuration, targetPlayer)
+        task.wait(0.08)
+
+        return flingForFiveSeconds(targetPlayer, {
+            Duration = punchFlingDuration,
+            RestoreCFrame = safeRestoreCFrame,
+            Force = Vector3.new(18500, 18500, 18500),
+            SpinBase = 235,
+            SpinAccel = 56,
+            RadiusBase = 0.12,
+            RadiusPulse = 0.42,
+            RiseBase = 0.22,
+            RisePulse = 0.2,
+            TangentPower = 1350,
+            ForwardPower = 520,
+            UpPower = 250,
+            AngularVelocity = Vector3.new(8200, 10200, 8200),
+        })
     end
 
     local setPunchFlingEnabled
@@ -1623,9 +1650,11 @@ function Window:CreatePlayersCategory(options)
                 UILibrary:SetSelectedPlayer(clickedPlayer)
                 selectedName:Set("Selected: " .. tostring(clickedPlayer.DisplayName or clickedPlayer.Name))
                 selectedUser:Set("@" .. tostring(clickedPlayer.Name))
-                clickFlingCooldownUntil = os.clock() + 5.3
+                clickFlingCooldownUntil = os.clock() + 2.35
 
-                local ok = flingForFiveSeconds(clickedPlayer)
+                local ok = flingForFiveSeconds(clickedPlayer, {
+                    Duration = 2,
+                })
                 if ok then
                     notify("Fling Click", "Flinging " .. tostring(clickedPlayer.Name) .. ".", 2.1)
                 end
@@ -1670,66 +1699,34 @@ function Window:CreatePlayersCategory(options)
                 if not clickedPlayer or clickedPlayer == localPlayer then
                     return
                 end
-
                 if getDistanceToTarget(clickedPlayer) > punchActivateRange then
                     return
                 end
-                punchFlingCooldownUntil = os.clock() + 1.8
 
+                punchFlingCooldownUntil = os.clock() + 2.2
                 selectedPlayer = clickedPlayer
                 UILibrary:SetSelectedPlayer(clickedPlayer)
                 selectedName:Set("Selected: " .. tostring(clickedPlayer.DisplayName or clickedPlayer.Name))
                 selectedUser:Set("@" .. tostring(clickedPlayer.Name))
 
                 task.spawn(function()
-                    local preAttackRoot = getLocalRoot()
-                    local safeRestoreCFrame = preAttackRoot and preAttackRoot.CFrame or nil
-                    UILibrary:SuspendFlingProtect(punchApproachTimeout + punchWindup + punchJumpDuration + punchFlingDuration + 1)
-                    local reached = runToTargetForPunch(clickedPlayer)
-                    if not reached then
-                        notify("Punch Fling", "Couldn't reach target to punch.", 1.8)
-                        return
-                    end
-
                     if not punchFlingEnabled then
                         return
                     end
                     if clickedPlayer.Parent ~= Players then
                         return
                     end
-                    playPunchAnimation()
-                    task.wait(punchWindup)
-                    punchJumpOnTopAt(clickedPlayer)
-                    task.wait(punchImpactDelay)
 
-                    if getDistanceToTarget(clickedPlayer) > (punchRange + 4) then
-                        return
-                    end
-
-                    local ok = flingForFiveSeconds(clickedPlayer, {
-                        Duration = punchFlingDuration,
-                        RestoreCFrame = safeRestoreCFrame,
-                        Force = Vector3.new(16000, 16000, 16000),
-                        SpinBase = 190,
-                        SpinAccel = 42,
-                        RadiusBase = 0.12,
-                        RadiusPulse = 0.4,
-                        RiseBase = 0.2,
-                        RisePulse = 0.18,
-                        TangentPower = 1200,
-                        ForwardPower = 430,
-                        UpPower = 220,
-                        AngularVelocity = Vector3.new(7200, 9000, 7200),
-                    })
+                    local ok = runAnimationSpamFling(clickedPlayer)
                     if ok then
-                        notify("Punch Fling", "Punched " .. tostring(clickedPlayer.Name) .. ".", 2.0)
+                        notify("Run Fling", "Run-spam flinging " .. tostring(clickedPlayer.Name) .. ".", 2.0)
                     end
                 end)
             end)
         end
 
         if not silent then
-            notify("Punch Fling", punchFlingEnabled and "Enabled." or "Disabled.", 1.9)
+            notify("Run Fling", punchFlingEnabled and "Enabled." or "Disabled.", 1.9)
         end
     end
 
@@ -1916,9 +1913,11 @@ function Window:CreatePlayersCategory(options)
             notify("Fling", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
-        local ok = flingForFiveSeconds(target)
+        local ok = flingForFiveSeconds(target, {
+            Duration = 2,
+        })
         if ok then
-            notify("Fling", "Flinging " .. tostring(target.Name) .. " (" .. targetMode .. ") for 5 seconds.", 2.3)
+            notify("Fling", "Flinging " .. tostring(target.Name) .. " (" .. targetMode .. ") for 2 seconds.", 2.3)
         else
             notify("Fling", "Could not fling target right now.", 2.8)
         end
@@ -2500,7 +2499,7 @@ function Window:CreateLocalCategory(options)
     end, false)
     funSection:CreateLabel("Click a player's character to fling them.")
 
-    punchFlingToggle = funSection:CreateToggle("Punch Fling", function(v)
+    punchFlingToggle = funSection:CreateToggle("Run Spam Fling", function(v)
         local playersCategory = self.PlayerCategory or self:CreatePlayersCategory()
         if not playersCategory or type(playersCategory.SetPunchFlingEnabled) ~= "function" then
             notify("Fun Features", "Players category is unavailable.", 2.2)
@@ -2514,7 +2513,7 @@ function Window:CreateLocalCategory(options)
         end
         playersCategory:SetPunchFlingEnabled(v, false)
     end, false)
-    funSection:CreateLabel("Runs fast, jumps on top smoothly, then flings on impact.")
+    funSection:CreateLabel("Spam run animation fast, then fling clicked target.")
 
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
