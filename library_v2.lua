@@ -1,10 +1,31 @@
 local UILibrary = {}
 
-local TweenService = game:GetService("TweenService")
-local UIS = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+--[[
+    library_v2.lua layout
+    1) Services
+    2) Definitions / Variables
+    3) Shared Helper Functions
+    4) Core Object Methods
+    5) UI Category Builders
+    6) UI Control Builders
+    7) Public API
+]]
 
+-- Services
+local Services = {
+    TweenService = game:GetService("TweenService"),
+    UserInputService = game:GetService("UserInputService"),
+    Players = game:GetService("Players"),
+    RunService = game:GetService("RunService"),
+}
+
+-- Service aliases kept for compatibility/readability in existing code
+local TweenService = Services.TweenService
+local UIS = Services.UserInputService
+local Players = Services.Players
+local RunService = Services.RunService
+
+-- Definitions / Variables
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
@@ -43,6 +64,7 @@ local C = {
     SubText = Color3.fromRGB(140, 159, 187),
 }
 
+-- Shared Helper Functions
 local function mk(className, props)
     local x = Instance.new(className)
     for k, v in pairs(props or {}) do
@@ -251,6 +273,7 @@ local function track(conns, c)
     return c
 end
 
+-- Core Object Definitions
 local Window = {}
 Window.__index = Window
 local Tab = {}
@@ -258,6 +281,7 @@ Tab.__index = Tab
 local Section = {}
 Section.__index = Section
 
+-- Core Object Methods
 function UILibrary:GetSelectedPlayer()
     return self._selectedPlayer
 end
@@ -654,6 +678,7 @@ function Window:GetTabs()
     return self.Tabs
 end
 
+-- UI Category Builders
 function Window:CreatePlayersCategory(options)
     if self.PlayerCategory then
         return self.PlayerCategory
@@ -1749,6 +1774,7 @@ function Window:CreatePlayersCategory(options)
     return self.PlayerCategory
 end
 
+-- UI Category Builders
 function Window:CreateLocalCategory(options)
     if self.LocalCategory then
         return self.LocalCategory
@@ -2160,6 +2186,7 @@ function Window:CreateLocalCategory(options)
     return self.LocalCategory
 end
 
+-- UI Category Builders
 function Window:CreateRemotesCategory(options)
     if self.RemotesCategory then
         return self.RemotesCategory
@@ -2459,6 +2486,7 @@ function Window:CreateRemotesCategory(options)
     return self.RemotesCategory
 end
 
+-- UI Category Builders
 function Window:CreateUniversalCategory(options)
     if self.UniversalCategory then
         return self.UniversalCategory
@@ -2631,6 +2659,8 @@ function Window:CreateUniversalCategory(options)
 
     return self.UniversalCategory
 end
+
+-- UI Control Builder Primitives
 local function controlShell(section, h)
     return mk("Frame", {
         Parent = section.Content,
@@ -2709,6 +2739,7 @@ function Section:CreateButton(a, b)
     }
 end
 
+-- UI Control Builders
 function Section:CreateToggle(a, b, c)
     local text, default, cb
     if typeof(a) == "table" then
@@ -2901,6 +2932,7 @@ function Section:CreateSlider(a, b, c, d, e)
     return controller
 end
 
+-- UI Control Builders
 function Section:CreateDropdown(a, b, c, d)
     local name, opts, cur, multi, cb
     if typeof(a) == "table" then
@@ -3234,6 +3266,7 @@ function Section:CreateInput(a, b, c)
     return controller
 end
 
+-- UI Control Builders
 function Section:CreateTextbox(...)
     return self:CreateInput(...)
 end
@@ -3415,6 +3448,7 @@ function Section:CreateParagraph(a, b)
     }
 end
 
+-- UI Section/Tab Builders
 function Section:SetSide(side)
     local requested = normalizeSectionSide(side)
     local column, resolved = self.Tab:_column(requested)
@@ -3547,6 +3581,7 @@ function Tab:GetIcon()
     return self.Icon
 end
 
+-- UI Core Builder
 function Window:CreateTab(a, iconMaybe)
     local name, icon, requestedLayoutOrder = "Tab", nil, nil
     if typeof(a) == "table" then
@@ -3753,6 +3788,7 @@ function Window:CreateTab(a, iconMaybe)
     return tab
 end
 
+-- Public API: window construction
 function UILibrary:CreateWindow(arg)
     if self._window and self._window.Destroy then
         self._window:Destroy()
@@ -4059,6 +4095,7 @@ function UILibrary:CreateWindow(arg)
     return w
 end
 
+-- Public API: window lifecycle helpers
 function UILibrary:SetVisibility(v)
     if self._window then
         self._window:SetVisible(v == true)
@@ -4075,6 +4112,7 @@ function UILibrary:Destroy()
     end
 end
 
+-- Public API: notifications
 function UILibrary:Notify(args)
     args = args or {}
     local title = tostring(args.Title or "Notification")
