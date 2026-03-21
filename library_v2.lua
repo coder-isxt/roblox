@@ -2478,11 +2478,10 @@ function Window:CreateLocalCategory(options)
             upRef = cam.CFrame.RightVector
         end
 
-        -- Dolphin-style spin: rotate around local right axis (somersault/front-flip),
-        -- not around the forward axis (barrel roll).
+        -- Side spin: rotate around local forward axis for a sideways roll feel.
         rocketFlyRoll = (rocketFlyRoll + math.rad(rocketFlySpinSpeed) * dt) % (math.pi * 2)
         local lookCf = CFrame.lookAt(rootPart.Position, rootPart.Position + diveForward, upRef)
-        rocketFlyBG.CFrame = lookCf * CFrame.Angles(rocketFlyRoll, 0, 0)
+        rocketFlyBG.CFrame = lookCf * CFrame.Angles(0, 0, rocketFlyRoll)
     end
 
     local setRocketFlyEnabled
