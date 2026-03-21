@@ -312,7 +312,7 @@ local RemoteTypeIcon = {
 local AllowedLibraryButtons = {
     ["Copy Code"] = true,
     ["Run Code"] = true,
-    ["Exclude"] = true,
+    ["Exclude (i)"] = true,
     ["Clr Logs"] = true,
     ["Clr Blacklist"] = true,
     ["Get Script"] = true
@@ -320,7 +320,7 @@ local AllowedLibraryButtons = {
 local LibraryButtonLabel = {
     ["Copy Code"] = "Copy",
     ["Run Code"] = "Run",
-    ["Exclude"] = "Exclude",
+    ["Exclude (i)"] = "Exclude",
     ["Clr Logs"] = "Clear",
     ["Clr Blacklist"] = "Clear Exclude",
     ["Get Script"] = "Get Script"
@@ -2420,7 +2420,7 @@ newButton(
 
 --- Excludes the selected.Log Remote from the RemoteSpy
 newButton(
-    "Exclude",
+    "Exclude (i)",
     function() return "Click to exclude this Remote.\nExcluding a remote makes SimpleSpy ignore it, but it will continue to be usable." end,
     function()
         if selected then
