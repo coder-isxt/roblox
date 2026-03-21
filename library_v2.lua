@@ -2168,13 +2168,22 @@ function Window:CreateLocalCategory(options)
     end
 
     local flySection = localTab:CreateSection({ Name = "Fly", Side = "Left" })
+    local rocketFlySection = localTab:CreateSection({ Name = "Rocket Fly", Side = "Left" })
     local funSection = localTab:CreateSection({ Name = "Fun Features", Side = "Right" })
     local otherSection = localTab:CreateSection({ Name = "Other", Side = "Right" })
+    flySection.Frame.LayoutOrder = 10
+    rocketFlySection.Frame.LayoutOrder = 20
 
     local flyEnabled = false
     local flySpeed = tonumber(options.FlySpeed) or 80
     flySpeed = math.clamp(flySpeed, 20, 250)
     local flyKey = keycode(options.FlyKey) or Enum.KeyCode.F
+    local rocketFlyEnabled = false
+    local rocketFlySpeed = tonumber(options.RocketFlySpeed) or flySpeed
+    rocketFlySpeed = math.clamp(rocketFlySpeed, 20, 250)
+    local rocketFlySpinSpeed = tonumber(options.RocketFlySpinSpeed) or 900
+    rocketFlySpinSpeed = math.clamp(rocketFlySpinSpeed, 60, 7200)
+    local rocketFlyKey = keycode(options.RocketFlyKey) or Enum.KeyCode.G
     local flyControls = {
         Forward = false,
         Back = false,
@@ -2185,6 +2194,10 @@ function Window:CreateLocalCategory(options)
     }
     local flyBV = nil
     local flyBG = nil
+    local rocketFlyBV = nil
+    local rocketFlyBG = nil
+    local rocketFlyRoll = 0
+    local rocketFlyLastStepAt = 0
 
     local flingProtectEnabled = false
     local flingProtectSafeCFrame = nil
@@ -2198,6 +2211,7 @@ function Window:CreateLocalCategory(options)
     local flingProtectConnection = nil
 
     local flyToggleControl = nil
+    local rocketFlyToggleControl = nil
     local killBrickEnabled = false
     local killBrickConnection = nil
     local unanchoredFlingEnabled = false
@@ -2233,12 +2247,14 @@ function Window:CreateLocalCategory(options)
         return character and character:FindFirstChildOfClass("Humanoid")
     end
 
-    local function stopFly()
+    local function refreshFlyPlatformStand()
         local humanoid = getLocalHumanoid()
         if humanoid then
-            humanoid.PlatformStand = false
+            humanoid.PlatformStand = (flyEnabled or rocketFlyEnabled)
         end
+    end
 
+    local function stopFly()
         if flyBV then
             pcall(function()
                 flyBV:Destroy()
@@ -2252,6 +2268,8 @@ function Window:CreateLocalCategory(options)
             end)
             flyBG = nil
         end
+
+        refreshFlyPlatformStand()
     end
 
     local function startFly()
@@ -2283,7 +2301,63 @@ function Window:CreateLocalCategory(options)
         flyBV.Velocity = Vector3.new(0, 0, 0)
         flyBV.Parent = rootPart
 
-        humanoid.PlatformStand = true
+        refreshFlyPlatformStand()
+        return true
+    end
+
+    local function stopRocketFly()
+        if rocketFlyBV then
+            pcall(function()
+                rocketFlyBV:Destroy()
+            end)
+            rocketFlyBV = nil
+        end
+
+        if rocketFlyBG then
+            pcall(function()
+                rocketFlyBG:Destroy()
+            end)
+            rocketFlyBG = nil
+        end
+
+        rocketFlyRoll = 0
+        rocketFlyLastStepAt = 0
+        refreshFlyPlatformStand()
+    end
+
+    local function startRocketFly()
+        local rootPart = getLocalRoot()
+        local humanoid = getLocalHumanoid()
+        if not rootPart or not humanoid then
+            return false
+        end
+
+        if rocketFlyBV then
+            rocketFlyBV:Destroy()
+            rocketFlyBV = nil
+        end
+        if rocketFlyBG then
+            rocketFlyBG:Destroy()
+            rocketFlyBG = nil
+        end
+
+        rocketFlyBG = Instance.new("BodyGyro")
+        rocketFlyBG.Name = "LimboRocketFlyBG"
+        rocketFlyBG.P = 9e4
+        rocketFlyBG.D = 70
+        rocketFlyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        rocketFlyBG.CFrame = rootPart.CFrame
+        rocketFlyBG.Parent = rootPart
+
+        rocketFlyBV = Instance.new("BodyVelocity")
+        rocketFlyBV.Name = "LimboRocketFlyBV"
+        rocketFlyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        rocketFlyBV.Velocity = Vector3.new(0, 0, 0)
+        rocketFlyBV.Parent = rootPart
+
+        rocketFlyRoll = 0
+        rocketFlyLastStepAt = 0
+        refreshFlyPlatformStand()
         return true
     end
 
@@ -2301,6 +2375,29 @@ function Window:CreateLocalCategory(options)
         elseif keyCode == Enum.KeyCode.LeftControl then
             flyControls.Down = isDown
         end
+    end
+
+    local function getFlyMoveDirection(cam)
+        local move = Vector3.new(0, 0, 0)
+        if flyControls.Forward then
+            move = move + cam.CFrame.LookVector
+        end
+        if flyControls.Back then
+            move = move - cam.CFrame.LookVector
+        end
+        if flyControls.Left then
+            move = move - cam.CFrame.RightVector
+        end
+        if flyControls.Right then
+            move = move + cam.CFrame.RightVector
+        end
+        if flyControls.Up then
+            move = move + Vector3.new(0, 1, 0)
+        end
+        if flyControls.Down then
+            move = move - Vector3.new(0, 1, 0)
+        end
+        return move
     end
 
     local function updateFlyVelocity()
@@ -2323,25 +2420,7 @@ function Window:CreateLocalCategory(options)
             return
         end
 
-        local move = Vector3.new(0, 0, 0)
-        if flyControls.Forward then
-            move = move + cam.CFrame.LookVector
-        end
-        if flyControls.Back then
-            move = move - cam.CFrame.LookVector
-        end
-        if flyControls.Left then
-            move = move - cam.CFrame.RightVector
-        end
-        if flyControls.Right then
-            move = move + cam.CFrame.RightVector
-        end
-        if flyControls.Up then
-            move = move + Vector3.new(0, 1, 0)
-        end
-        if flyControls.Down then
-            move = move - Vector3.new(0, 1, 0)
-        end
+        local move = getFlyMoveDirection(cam)
 
         if move.Magnitude > 0 then
             move = move.Unit * flySpeed
@@ -2351,6 +2430,51 @@ function Window:CreateLocalCategory(options)
         flyBG.CFrame = cam.CFrame
     end
 
+    local function updateRocketFlyVelocity()
+        if not rocketFlyEnabled or not rocketFlyBV or not rocketFlyBG then
+            return
+        end
+
+        local rootPart = getLocalRoot()
+        if not rootPart then
+            stopRocketFly()
+            rocketFlyEnabled = false
+            if rocketFlyToggleControl and rocketFlyToggleControl.Set then
+                rocketFlyToggleControl:Set(false, true)
+            end
+            return
+        end
+
+        local cam = workspace.CurrentCamera
+        if not cam then
+            return
+        end
+
+        local now = os.clock()
+        if rocketFlyLastStepAt <= 0 then
+            rocketFlyLastStepAt = now
+        end
+        local dt = math.max(1 / 240, now - rocketFlyLastStepAt)
+        rocketFlyLastStepAt = now
+
+        local move = getFlyMoveDirection(cam)
+        if move.Magnitude > 0 then
+            move = move.Unit * rocketFlySpeed
+        end
+        rocketFlyBV.Velocity = move
+
+        local forward = (move.Magnitude > 0.001) and move.Unit or cam.CFrame.LookVector
+        local upRef = cam.CFrame.UpVector
+        if math.abs(forward:Dot(upRef)) > 0.98 then
+            upRef = cam.CFrame.RightVector
+        end
+
+        rocketFlyRoll = (rocketFlyRoll + math.rad(rocketFlySpinSpeed) * dt) % (math.pi * 2)
+        local lookCf = CFrame.lookAt(rootPart.Position, rootPart.Position + forward, upRef)
+        rocketFlyBG.CFrame = lookCf * CFrame.fromAxisAngle(forward, rocketFlyRoll)
+    end
+
+    local setRocketFlyEnabled
     local function setFlyEnabled(state, silent)
         state = state == true
         if state == flyEnabled then
@@ -2359,6 +2483,12 @@ function Window:CreateLocalCategory(options)
 
         flyEnabled = state
         if flyEnabled then
+            if rocketFlyEnabled then
+                setRocketFlyEnabled(false, true)
+                if rocketFlyToggleControl and rocketFlyToggleControl.Set then
+                    rocketFlyToggleControl:Set(false, true)
+                end
+            end
             local ok = startFly()
             if not ok then
                 flyEnabled = false
@@ -2369,6 +2499,33 @@ function Window:CreateLocalCategory(options)
             end
         else
             stopFly()
+        end
+    end
+
+    setRocketFlyEnabled = function(state, silent)
+        state = state == true
+        if state == rocketFlyEnabled then
+            return
+        end
+
+        rocketFlyEnabled = state
+        if rocketFlyEnabled then
+            if flyEnabled then
+                setFlyEnabled(false, true)
+                if flyToggleControl and flyToggleControl.Set then
+                    flyToggleControl:Set(false, true)
+                end
+            end
+            local ok = startRocketFly()
+            if not ok then
+                rocketFlyEnabled = false
+                if not silent then
+                    notify("Rocket Fly", "Character not ready.", 1.8)
+                end
+                return
+            end
+        else
+            stopRocketFly()
         end
     end
 
@@ -2619,7 +2776,7 @@ function Window:CreateLocalCategory(options)
             spinFlingYaw = 0
             spinFlingLastStepAt = 0
             if not silent then
-                notify("Spin & Fling", "Disabled.", 1.9)
+                notify("Crazy Mode", "Disabled.", 1.9)
             end
             return
         end
@@ -2667,7 +2824,7 @@ function Window:CreateLocalCategory(options)
         end)
 
         if not silent then
-            notify("Spin & Fling", "Enabled. Walk into players to fling.", 2.1)
+            notify("Crazy Mode", "Enabled. Walk into players to fling.", 2.1)
         end
     end
 
@@ -2686,6 +2843,12 @@ function Window:CreateLocalCategory(options)
                 flyToggleControl:Set(newState, true)
             end
             setFlyEnabled(newState, false)
+        elseif key == rocketFlyKey then
+            local newState = not rocketFlyEnabled
+            if rocketFlyToggleControl and rocketFlyToggleControl.Set then
+                rocketFlyToggleControl:Set(newState, true)
+            end
+            setRocketFlyEnabled(newState, false)
         end
         setControlFromKey(key, true)
     end))
@@ -2697,12 +2860,16 @@ function Window:CreateLocalCategory(options)
 
     flyVelocityConnection = track(self.Connections, RunService.Heartbeat:Connect(function()
         updateFlyVelocity()
+        updateRocketFlyVelocity()
     end))
 
     flyCharacterAddedConnection = track(self.Connections, localPlayer.CharacterAdded:Connect(function()
         task.defer(function()
             if flyEnabled then
                 startFly()
+            end
+            if rocketFlyEnabled then
+                startRocketFly()
             end
             if spinFlingEnabled then
                 task.wait(0.1)
@@ -2715,7 +2882,7 @@ function Window:CreateLocalCategory(options)
         if not flingProtectEnabled then
             return
         end
-        if flyEnabled then
+        if flyEnabled or rocketFlyEnabled then
             return
         end
         if UILibrary:IsFlingProtectSuspended() then
@@ -2806,6 +2973,26 @@ function Window:CreateLocalCategory(options)
     end)
     flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
 
+    rocketFlyToggleControl = rocketFlySection:CreateToggle("Rocket Fly", function(v)
+        setRocketFlyEnabled(v, true)
+    end, false)
+
+    rocketFlySection:CreateKeybind("Rocket Fly Toggle Key", function(key, changed)
+        if changed then
+            rocketFlyKey = key
+            notify("Rocket Fly Keybind", "Set to " .. tostring(key.Name) .. ".", 1.8)
+        end
+    end, rocketFlyKey)
+
+    rocketFlySection:CreateSlider("Rocket Fly Speed", 20, 400, rocketFlySpeed, function(v)
+        rocketFlySpeed = tonumber(v) or rocketFlySpeed
+    end)
+
+    rocketFlySection:CreateSlider("Rocket Fly Spin Speed", 60, 7200, rocketFlySpinSpeed, function(v)
+        rocketFlySpinSpeed = tonumber(v) or rocketFlySpinSpeed
+    end)
+    rocketFlySection:CreateLabel("Rocket controls: WASD + Space/Ctrl")
+
     local clickFlingToggle, punchFlingToggle = nil, nil
     clickFlingToggle = funSection:CreateToggle("Click Player to Fling", function(v)
         local playersCategory = self.PlayerCategory or self:CreatePlayersCategory()
@@ -2845,7 +3032,7 @@ function Window:CreateLocalCategory(options)
     end, false)
     funSection:CreateLabel("Click an unanchored part to spin-fling it.")
 
-    local spinFlingToggle = funSection:CreateToggle("Spin & Fling", function(v)
+    local spinFlingToggle = funSection:CreateToggle("Crazy Mode", function(v)
         setSpinFlingEnabled(v, false)
     end, false)
     funSection:CreateLabel("Crazy spin + collision fling when you touch players.")
@@ -2857,6 +3044,7 @@ function Window:CreateLocalCategory(options)
 
     self:OnClose(function()
         setFlyEnabled(false, true)
+        setRocketFlyEnabled(false, true)
         setKillBrickEnabled(false, true)
         setUnanchoredPartFlingEnabled(false, true)
         setSpinFlingEnabled(false, true)
@@ -2873,6 +3061,7 @@ function Window:CreateLocalCategory(options)
     self.LocalCategory = {
         Tab = localTab,
         FlySection = flySection,
+        RocketFlySection = rocketFlySection,
         FunSection = funSection,
         OtherSection = otherSection,
         SetFlyEnabled = function(_, state)
@@ -2889,6 +3078,27 @@ function Window:CreateLocalCategory(options)
         end,
         GetFlySpeed = function()
             return flySpeed
+        end,
+        SetRocketFlyEnabled = function(_, state)
+            if rocketFlyToggleControl and rocketFlyToggleControl.Set then
+                rocketFlyToggleControl:Set(state == true, true)
+            end
+            setRocketFlyEnabled(state == true, true)
+        end,
+        GetRocketFlyEnabled = function()
+            return rocketFlyEnabled
+        end,
+        SetRocketFlySpeed = function(_, speed)
+            rocketFlySpeed = math.clamp(tonumber(speed) or rocketFlySpeed, 20, 400)
+        end,
+        GetRocketFlySpeed = function()
+            return rocketFlySpeed
+        end,
+        SetRocketFlySpinSpeed = function(_, speed)
+            rocketFlySpinSpeed = math.clamp(tonumber(speed) or rocketFlySpinSpeed, 60, 7200)
+        end,
+        GetRocketFlySpinSpeed = function()
+            return rocketFlySpinSpeed
         end,
         SetFlingProtect = function(_, state)
             setFlingProtectEnabled(state == true)
