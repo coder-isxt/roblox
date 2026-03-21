@@ -2539,7 +2539,7 @@ function Window:CreateUniversalCategory(options)
             Name = "Scripts",
             Icon = options.ScriptsTabIcon or options.ScriptsIcon or "scripts",
         })
-        local scriptsListSection = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
+        local scriptsListSection = scriptsTab:CreateSection({ Name = "Scripts 2", Side = "Left" })
         local statusSection = scriptsTab:CreateSection({ Name = "Status", Side = "Right" })
         local actionsSection = scriptsTab:CreateSection({ Name = "Actions", Side = "Right" })
         statusSection.Frame.LayoutOrder = 10
@@ -2556,12 +2556,13 @@ function Window:CreateUniversalCategory(options)
         local scriptRows = {}
         local selectedRow = nil
         local scriptConnections = {}
-        local refreshQueued = false
         local scriptEntries = {}
         local selectedScript = nil
-        local pageSize = 140
+        local pageSize = 80
         local currentPage = 1
         local totalPages = 1
+        local hasLoadedScripts = false
+        local loadInProgress = false
         local pageLabel = statusSection:CreateLabel("Page: 1/1")
 
         local function bindScriptConnection(conn)
@@ -2719,16 +2720,30 @@ function Window:CreateUniversalCategory(options)
             renderCurrentPage()
         end
 
-        local function queueScriptRefresh()
-            if refreshQueued then
+        local function loadScriptsAsync(force)
+            if loadInProgress then
                 return
             end
-            refreshQueued = true
+            if hasLoadedScripts and not force then
+                return
+            end
+            loadInProgress = true
+            UILibrary:NotifyInfo({
+                Title = "Scripts",
+                Content = "Loading script list...",
+                Duration = 1.4,
+            })
             task.defer(function()
-                task.wait(0.35)
-                refreshQueued = false
-                if scriptsTab and scriptsTab.Button and scriptsTab.Button.Parent then
-                    rebuildScriptList()
+                local ok, err = pcall(rebuildScriptList)
+                loadInProgress = false
+                if ok then
+                    hasLoadedScripts = true
+                else
+                    UILibrary:NotifyError({
+                        Title = "Scripts",
+                        Content = "Failed to load scripts: " .. tostring(err),
+                        Duration = 2.5,
+                    })
                 end
             end)
         end
@@ -2745,7 +2760,7 @@ function Window:CreateUniversalCategory(options)
             end
         end)
         actionsSection:CreateButton("Refresh List", function()
-            rebuildScriptList()
+            loadScriptsAsync(true)
         end)
         actionsSection:CreateButton("Copy", function()
             UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
@@ -2757,26 +2772,18 @@ function Window:CreateUniversalCategory(options)
             UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
         end)
 
-        bindScriptConnection(game.DescendantAdded:Connect(function(obj)
-            if isScriptInstance(obj) then
-                queueScriptRefresh()
-            end
-        end))
-        bindScriptConnection(game.DescendantRemoving:Connect(function(obj)
-            if isScriptInstance(obj) then
-                queueScriptRefresh()
-            end
-        end))
-
         scriptsCleanup = function()
             disconnectScriptConnections()
             clearScriptRows()
             selectedRow = nil
             selectedScript = nil
             scriptEntries = {}
+            hasLoadedScripts = false
+            loadInProgress = false
         end
 
-        rebuildScriptList()
+        countLabel:Set("Scripts: not loaded")
+        pageLabel:Set("Page: -/-")
         return scriptsTab
     end
 
@@ -2802,10 +2809,10 @@ function Window:CreateUniversalCategory(options)
         developerEnabled = state
 
         if developerEnabled then
-            ensureScriptsTab()
             if remotesAllowed then
                 self:CreateRemotesCategory(remotesOptions)
             end
+            ensureScriptsTab()
         else
             if scriptsCleanup then
                 scriptsCleanup()
@@ -4445,4 +4452,3 @@ function UILibrary:NotifyError(args)
 end
 
 return UILibrary
-
