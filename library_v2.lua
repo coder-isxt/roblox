@@ -810,14 +810,15 @@ function Window:CreatePlayersCategory(options)
     local punchActivateRange = tonumber(options.PunchActivateRange) or 120
     local punchRange = tonumber(options.PunchRange) or 11
     local punchReachPadding = tonumber(options.PunchReachPadding) or 2
-    local punchWindup = tonumber(options.PunchWindup) or 0.42
+    local punchWindup = tonumber(options.PunchWindup) or 0.68
     local punchLungeDuration = tonumber(options.PunchLungeDuration) or 0.22
     local punchLungeSpeed = tonumber(options.PunchLungeSpeed) or 30
     local punchApproachSpeed = tonumber(options.PunchApproachSpeed) or 24
     local punchApproachTimeout = tonumber(options.PunchApproachTimeout) or 4.5
     local punchStepTeleport = tonumber(options.PunchStepTeleport) or 3
     local punchAnimationSpeed = tonumber(options.PunchAnimationSpeed) or 0.9
-    local punchAnimationVisibleTime = tonumber(options.PunchAnimationVisibleTime) or 0.95
+    local punchAnimationVisibleTime = tonumber(options.PunchAnimationVisibleTime) or 1.35
+    local punchFlingDuration = tonumber(options.PunchFlingDuration) or 2
     local punchAnimationTrack = nil
 
     local selectedName = optionsSection:CreateLabel("Selected: None")
@@ -1664,7 +1665,7 @@ function Window:CreatePlayersCategory(options)
                 selectedUser:Set("@" .. tostring(clickedPlayer.Name))
 
                 task.spawn(function()
-                    UILibrary:SuspendFlingProtect(punchApproachTimeout + punchWindup + punchLungeDuration + 2)
+                    UILibrary:SuspendFlingProtect(punchApproachTimeout + punchWindup + punchLungeDuration + punchFlingDuration + 1)
                     local reached = runToTargetForPunch(clickedPlayer)
                     if not reached then
                         notify("Punch Fling", "Couldn't reach target to punch.", 1.8)
@@ -1686,7 +1687,9 @@ function Window:CreatePlayersCategory(options)
                         return
                     end
 
-                    local ok = flingForFiveSeconds(clickedPlayer)
+                    local ok = flingForFiveSeconds(clickedPlayer, {
+                        Duration = punchFlingDuration,
+                    })
                     if ok then
                         notify("Punch Fling", "Punched " .. tostring(clickedPlayer.Name) .. ".", 2.0)
                     end
@@ -2066,6 +2069,9 @@ function Window:CreatePlayersCategory(options)
         end,
         SetPunchActivateRange = function(_, range)
             punchActivateRange = math.max(5, tonumber(range) or punchActivateRange)
+        end,
+        SetPunchFlingDuration = function(_, seconds)
+            punchFlingDuration = math.max(0.5, tonumber(seconds) or punchFlingDuration)
         end,
         GetSelectedPlayer = function()
             return selectedPlayer
@@ -2571,17 +2577,41 @@ function Window:CreateRemotesCategory(options)
     logsHintLabel.Frame.LayoutOrder = -1000000
     scriptSection:CreateLabel("Latest generated script for selected log.")
 
+    local REMOTE_LOG_ICONS = {
+        RemoteEvent = "rbxassetid://4229806545",
+        RemoteFunction = "rbxassetid://4229810474",
+        BindableEvent = "rbxassetid://4229809371",
+        BindableFunction = "rbxassetid://4229807624",
+    }
+
     local function iconizeRemoteLabel(text)
         local value = tostring(text or "")
-        local eventIcon = (utf8 and utf8.char and utf8.char(0x1F4E1)) or "[event]"
-        local functionIcon = (utf8 and utf8.char and utf8.char(0x2699)) or "[func]"
+        if string.sub(value, 1, 4) == "[BE]" then
+            return string.gsub(string.sub(value, 5), "^%s*", ""), REMOTE_LOG_ICONS.BindableEvent
+        end
+        if string.sub(value, 1, 4) == "[BF]" then
+            return string.gsub(string.sub(value, 5), "^%s*", ""), REMOTE_LOG_ICONS.BindableFunction
+        end
         if string.sub(value, 1, 3) == "[E]" then
-            return eventIcon .. " " .. string.gsub(string.sub(value, 4), "^%s*", "")
+            return string.gsub(string.sub(value, 4), "^%s*", ""), REMOTE_LOG_ICONS.RemoteEvent
         end
         if string.sub(value, 1, 3) == "[F]" then
-            return functionIcon .. " " .. string.gsub(string.sub(value, 4), "^%s*", "")
+            return string.gsub(string.sub(value, 4), "^%s*", ""), REMOTE_LOG_ICONS.RemoteFunction
         end
-        return value
+
+        if string.find(value, "BindableEvent", 1, true) then
+            return value, REMOTE_LOG_ICONS.BindableEvent
+        end
+        if string.find(value, "BindableFunction", 1, true) then
+            return value, REMOTE_LOG_ICONS.BindableFunction
+        end
+        if string.find(value, "RemoteFunction", 1, true) then
+            return value, REMOTE_LOG_ICONS.RemoteFunction
+        end
+        if string.find(value, "RemoteEvent", 1, true) or string.find(value, "UnreliableRemoteEvent", 1, true) then
+            return value, REMOTE_LOG_ICONS.RemoteEvent
+        end
+        return value, nil
     end
 
     local hostLogSection = setmetatable({}, {
@@ -2601,15 +2631,25 @@ function Window:CreateRemotesCategory(options)
             for k, v in pairs(a) do
                 payload[k] = v
             end
+            local sourceLabel = payload.Name or payload.Text
+            local mappedText, mappedIcon = iconizeRemoteLabel(sourceLabel)
             if payload.Name then
-                payload.Name = iconizeRemoteLabel(payload.Name)
+                payload.Name = mappedText
             end
             if payload.Text then
-                payload.Text = iconizeRemoteLabel(payload.Text)
+                payload.Text = mappedText
             end
+            payload.Icon = mappedIcon or payload.Icon
+            payload.TextXAlignment = payload.TextXAlignment or Enum.TextXAlignment.Left
             return applyNewestTopOrder(logsSection:CreateButton(payload, b))
         end
-        return applyNewestTopOrder(logsSection:CreateButton(iconizeRemoteLabel(a), b))
+        local mappedText, mappedIcon = iconizeRemoteLabel(a)
+        return applyNewestTopOrder(logsSection:CreateButton({
+            Name = mappedText,
+            Icon = mappedIcon,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Callback = b,
+        }))
     end
 
     local scriptShell = mk("Frame", {
@@ -3030,13 +3070,24 @@ local function asOptions(list)
 end
 
 function Section:CreateButton(a, b)
-    local text, cb
+    local text, cb, iconImage, textAlign
     if typeof(a) == "table" then
         text = tostring(a.Name or a.Text or "Button")
         cb = a.Callback or b
+        iconImage = a.Icon or a.Image or a.IconImage
+        textAlign = a.TextXAlignment
     else
         text = tostring(a or "Button")
         cb = b
+    end
+
+    local hasIcon = type(iconImage) == "string" and iconImage ~= ""
+    local function renderButtonText(value)
+        local base = tostring(value or "")
+        if hasIcon then
+            return "      " .. base
+        end
+        return base
     end
 
     local shell = controlShell(self, 34)
@@ -3049,10 +3100,22 @@ function Section:CreateButton(a, b)
         Font = FONT,
         TextSize = 13,
         TextColor3 = C.Text,
-        Text = text,
+        TextXAlignment = textAlign or (hasIcon and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center),
+        Text = renderButtonText(text),
     })
     corner(btn, 4)
     stroke(btn, C.Stroke, 0.55)
+    if hasIcon then
+        mk("ImageLabel", {
+            Parent = btn,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.fromOffset(16, 16),
+            Position = UDim2.new(0, 8, 0.5, -8),
+            Image = iconImage,
+            ImageColor3 = Color3.new(1, 1, 1),
+        })
+    end
 
     track(self.Window.Connections, btn.MouseEnter:Connect(function()
         tw(btn, 0.1, { BackgroundColor3 = C.ControlHover }):Play()
@@ -3071,7 +3134,7 @@ function Section:CreateButton(a, b)
         Frame = shell,
         Button = btn,
         SetText = function(_, t)
-            btn.Text = tostring(t or "")
+            btn.Text = renderButtonText(t)
         end,
         Fire = function()
             safe(cb)
