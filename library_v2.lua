@@ -2214,6 +2214,12 @@ function Window:CreateLocalCategory(options)
     local spinFlingLastStepAt = 0
     local spinFlingLastImpactAt = 0
     local spinFlingImpactInterval = tonumber(options.SpinFlingImpactInterval) or 0.08
+    local spinFlingImpulseUntil = 0
+    local spinFlingImpulseVector = Vector3.new(0, 0, 0)
+    local spinFlingBodyVelocity = nil
+    local spinFlingBodyGyro = nil
+    local spinFlingAutoRotateLocked = false
+    local spinFlingAutoRotateWas = true
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -2516,10 +2522,6 @@ function Window:CreateLocalCategory(options)
                 if part:IsA("BasePart") then
                     local partName = tostring(part.Name)
                     local allowCollisionPart = (partName == "HumanoidRootPart")
-                        or (partName == "UpperTorso")
-                        or (partName == "Torso")
-                        or (partName == "LowerTorso")
-                        or (partName == "Head")
                     if not allowCollisionPart then
                         continue
                     end
@@ -2552,6 +2554,48 @@ function Window:CreateLocalCategory(options)
         table.clear(spinFlingPartState)
     end
 
+    local function destroySpinFlingMovers()
+        if spinFlingBodyVelocity then
+            pcall(function()
+                spinFlingBodyVelocity:Destroy()
+            end)
+            spinFlingBodyVelocity = nil
+        end
+        if spinFlingBodyGyro then
+            pcall(function()
+                spinFlingBodyGyro:Destroy()
+            end)
+            spinFlingBodyGyro = nil
+        end
+    end
+
+    local function ensureSpinFlingMovers(root)
+        if not root then
+            return nil, nil
+        end
+        if not spinFlingBodyGyro or spinFlingBodyGyro.Parent ~= root then
+            destroySpinFlingMovers()
+
+            local bg = Instance.new("BodyGyro")
+            bg.Name = "LimboSpinFlingBG"
+            bg.P = 9e4
+            bg.D = 160
+            bg.MaxTorque = Vector3.new(0, 8e7, 0)
+            bg.CFrame = root.CFrame
+            bg.Parent = root
+            spinFlingBodyGyro = bg
+
+            local bv = Instance.new("BodyVelocity")
+            bv.Name = "LimboSpinFlingBV"
+            bv.P = 12500
+            bv.MaxForce = Vector3.new(8e7, 0, 8e7)
+            bv.Velocity = Vector3.new(0, 0, 0)
+            bv.Parent = root
+            spinFlingBodyVelocity = bv
+        end
+        return spinFlingBodyGyro, spinFlingBodyVelocity
+    end
+
     local function setSpinFlingEnabled(state, silent)
         state = state == true
         if spinFlingEnabled == state then
@@ -2569,10 +2613,20 @@ function Window:CreateLocalCategory(options)
             local root = getLocalRoot()
             if root then
                 root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
             end
+            local hum = getLocalHumanoid()
+            if hum and spinFlingAutoRotateLocked then
+                hum.AutoRotate = spinFlingAutoRotateWas
+            end
+            spinFlingAutoRotateLocked = false
+            spinFlingAutoRotateWas = true
+            destroySpinFlingMovers()
             spinFlingYaw = 0
             spinFlingLastStepAt = 0
             spinFlingLastImpactAt = 0
+            spinFlingImpulseUntil = 0
+            spinFlingImpulseVector = Vector3.new(0, 0, 0)
             if not silent then
                 notify("Spin & Fling", "Disabled.", 1.9)
             end
@@ -2587,8 +2641,18 @@ function Window:CreateLocalCategory(options)
                 return
             end
 
+            if not spinFlingAutoRotateLocked then
+                spinFlingAutoRotateLocked = true
+                spinFlingAutoRotateWas = humanoid.AutoRotate
+            end
+            humanoid.AutoRotate = false
+
             UILibrary:SuspendFlingProtect(0.25)
             setSpinFlingCharacterCollision(true)
+            local bg, bv = ensureSpinFlingMovers(root)
+            if not bg or not bv then
+                return
+            end
 
             local now = os.clock()
             if spinFlingLastStepAt <= 0 then
@@ -2599,7 +2663,8 @@ function Window:CreateLocalCategory(options)
 
             spinFlingYaw = (spinFlingYaw + (spinFlingSpinRate * dt)) % 360
             root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(spinFlingYaw), 0)
+            local yawCf = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(spinFlingYaw), 0)
+            bg.CFrame = yawCf
 
             local closestRoot = nil
             local closestDistance = spinFlingHitRadius
@@ -2619,7 +2684,10 @@ function Window:CreateLocalCategory(options)
             end
 
             local moveDir = humanoid.MoveDirection
-            local currentVelocity = root.AssemblyLinearVelocity
+            local desiredPlanar = Vector3.new(0, 0, 0)
+            if moveDir.Magnitude > 0.001 then
+                desiredPlanar = moveDir.Unit * spinFlingWalkAssistSpeed
+            end
 
             if closestRoot and closestDistance <= spinFlingHitRadius then
                 local toward = closestRoot.Position - root.Position
@@ -2628,22 +2696,16 @@ function Window:CreateLocalCategory(options)
                     spinFlingLastImpactAt = now
                     local dir = planar.Unit
                     local pushScale = math.clamp(1 - (closestDistance / math.max(spinFlingHitRadius, 0.01)), 0.25, 1)
-                    local boostY = 6 + math.abs(math.sin(now * 13)) * 4
-                    local pushVector = dir * (spinFlingPushSpeed * pushScale)
-                    root.AssemblyLinearVelocity = Vector3.new(
-                        pushVector.X,
-                        math.clamp(currentVelocity.Y + boostY, -10, 22),
-                        pushVector.Z
-                    )
+                    spinFlingImpulseVector = dir * (spinFlingPushSpeed * pushScale)
+                    spinFlingImpulseUntil = now + 0.12
                 end
-            elseif moveDir.Magnitude > 0.001 then
-                local walkPlanar = moveDir.Unit * spinFlingWalkAssistSpeed
-                root.AssemblyLinearVelocity = Vector3.new(
-                    walkPlanar.X,
-                    math.clamp(currentVelocity.Y, -20, 30),
-                    walkPlanar.Z
-                )
             end
+
+            local impulsePlanar = Vector3.new(0, 0, 0)
+            if now < spinFlingImpulseUntil then
+                impulsePlanar = spinFlingImpulseVector
+            end
+            bv.Velocity = desiredPlanar + impulsePlanar
         end)
 
         if not silent then
