@@ -2167,7 +2167,15 @@ function Window:CreateRemotesCategory(options)
 
     options = options or {}
     local remotesTabIcon = options.TabIcon or options.Icon or "scripts"
-    local sourcePath = tostring(options.SourcePath or "simplespy.lua")
+    local defaultSourceUrl = "https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/simplespy.lua"
+    local sourcePath = tostring(options.SourcePath or options.Source or defaultSourceUrl)
+    local sourceUrl = options.SourceUrl or options.Url
+    if type(sourceUrl) == "string" and sourceUrl == "" then
+        sourceUrl = nil
+    end
+    if not sourceUrl and (string.sub(sourcePath, 1, 7) == "http://" or string.sub(sourcePath, 1, 8) == "https://") then
+        sourceUrl = sourcePath
+    end
 
     local remotesTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -2258,7 +2266,23 @@ function Window:CreateRemotesCategory(options)
     local loadErr = nil
     local chunk = nil
 
-    if typeof(loadfile) == "function" and typeof(isfile) == "function" and isfile(sourcePath) then
+    if not chunk and typeof(loadstring) == "function" and type(sourceUrl) == "string" and sourceUrl ~= "" then
+        local okHttp, bodyOrErr = pcall(function()
+            return game:HttpGet(sourceUrl)
+        end)
+        if okHttp and type(bodyOrErr) == "string" and bodyOrErr ~= "" then
+            local compiled, compileErr = loadstring(bodyOrErr)
+            if compiled then
+                chunk = compiled
+            else
+                loadErr = compileErr
+            end
+        else
+            loadErr = bodyOrErr
+        end
+    end
+
+    if not chunk and typeof(loadfile) == "function" and typeof(isfile) == "function" and isfile(sourcePath) then
         local okChunk, result = pcall(loadfile, sourcePath)
         if okChunk then
             chunk = result
@@ -2286,7 +2310,7 @@ function Window:CreateRemotesCategory(options)
             loadErr = runErr
         end
     else
-        loadErr = loadErr or ("SimpleSpy source not found at path: " .. sourcePath)
+        loadErr = loadErr or ("SimpleSpy source not found. url=" .. tostring(sourceUrl) .. " path=" .. tostring(sourcePath))
     end
 
     genv.__SimpleSpyHost = nil
@@ -2322,6 +2346,7 @@ function Window:CreateRemotesCategory(options)
         SettingsSection = settingsSection,
         SetCode = setCode,
         GetCode = getCode,
+        SourceUrl = sourceUrl,
         SourcePath = sourcePath,
         Loaded = loaded,
         Error = loadErr,
