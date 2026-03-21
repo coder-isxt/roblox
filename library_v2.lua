@@ -2209,6 +2209,7 @@ function Window:CreateLocalCategory(options)
     local spinFlingSpinRate = tonumber(options.SpinFlingSpinRate) or 3600
     local spinFlingHitRadius = tonumber(options.SpinFlingHitRadius) or 9
     local spinFlingPushSpeed = tonumber(options.SpinFlingPushSpeed) or 260
+    local spinFlingWalkAssistSpeed = tonumber(options.SpinFlingWalkAssistSpeed) or 22
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -2509,6 +2510,15 @@ function Window:CreateLocalCategory(options)
         if enabled then
             for _, part in ipairs(character:GetDescendants()) do
                 if part:IsA("BasePart") then
+                    local partName = tostring(part.Name)
+                    local allowCollisionPart = (partName == "HumanoidRootPart")
+                        or (partName == "UpperTorso")
+                        or (partName == "Torso")
+                        or (partName == "LowerTorso")
+                        or (partName == "Head")
+                    if not allowCollisionPart then
+                        continue
+                    end
                     if not spinFlingPartState[part] then
                         spinFlingPartState[part] = {
                             CanCollide = part.CanCollide,
@@ -2575,7 +2585,6 @@ function Window:CreateLocalCategory(options)
             local now = os.clock()
             local spinVector = Vector3.new(spinFlingSpinRate * 0.26, spinFlingSpinRate, spinFlingSpinRate * 0.26)
             root.AssemblyAngularVelocity = spinVector
-            root.CFrame = root.CFrame * CFrame.Angles(math.rad(8), math.rad(42), math.rad(8))
 
             local closestRoot = nil
             local closestDistance = spinFlingHitRadius
@@ -2594,14 +2603,30 @@ function Window:CreateLocalCategory(options)
                 end
             end
 
-            if closestRoot then
+            local moveDir = humanoid.MoveDirection
+            local currentVelocity = root.AssemblyLinearVelocity
+
+            if closestRoot and closestDistance <= spinFlingHitRadius then
                 local toward = closestRoot.Position - root.Position
                 local planar = Vector3.new(toward.X, 0, toward.Z)
                 if planar.Magnitude > 0.001 then
                     local dir = planar.Unit
-                    local boostY = 45 + math.abs(math.sin(now * 13)) * 35
-                    root.AssemblyLinearVelocity = (dir * spinFlingPushSpeed) + Vector3.new(0, boostY, 0)
+                    local pushScale = math.clamp(1 - (closestDistance / math.max(spinFlingHitRadius, 0.01)), 0.25, 1)
+                    local boostY = 10 + math.abs(math.sin(now * 13)) * 8
+                    local pushVector = dir * (spinFlingPushSpeed * pushScale)
+                    root.AssemblyLinearVelocity = Vector3.new(
+                        pushVector.X,
+                        math.clamp(currentVelocity.Y + boostY, -25, 45),
+                        pushVector.Z
+                    )
                 end
+            elseif moveDir.Magnitude > 0.001 then
+                local walkPlanar = moveDir.Unit * spinFlingWalkAssistSpeed
+                root.AssemblyLinearVelocity = Vector3.new(
+                    walkPlanar.X,
+                    math.clamp(currentVelocity.Y, -20, 30),
+                    walkPlanar.Z
+                )
             end
         end)
 
