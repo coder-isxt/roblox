@@ -2483,6 +2483,7 @@ function Window:CreateUniversalCategory(options)
     local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
     local infoSection = universalTab:CreateSection({ Name = "Info", Side = "Right" })
     local scriptsTab = nil
+    local scriptsCleanup = nil
     local developerEnabled = false
     local remotesAllowed = self._remotesAllowed ~= false
     local remotesOptions = self._remotesOptions or {}
@@ -2538,9 +2539,28 @@ function Window:CreateUniversalCategory(options)
             Name = "Scripts",
             Icon = options.ScriptsTabIcon or options.ScriptsIcon or "scripts",
         })
-        local scriptsMain = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
-        scriptsMain:CreateParagraph("Scripts", "DevEx will be implemented here later.")
-        scriptsMain:CreateLabel("Script copy/dump tools will be added here.")
+        local scriptsListSection = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
+        local statusSection = scriptsTab:CreateSection({ Name = "Status", Side = "Right" })
+        local actionsSection = scriptsTab:CreateSection({ Name = "Actions", Side = "Right" })
+        statusSection.Frame.LayoutOrder = 10
+        actionsSection.Frame.LayoutOrder = 20
+
+        scriptsListSection:CreateLabel("Script list setup (step 1).")
+        scriptsListSection:CreateLabel("Next step will populate all scripts with selection markers.")
+        statusSection:CreateLabel("Selected: None")
+        statusSection:CreateLabel("Class: -")
+        statusSection:CreateLabel("Path: -")
+        statusSection:CreateLabel("Scripts: 0")
+        actionsSection:CreateButton("Copy", function()
+            UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
+        end)
+        actionsSection:CreateButton("Dump", function()
+            UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
+        end)
+        actionsSection:CreateButton("Copy Path", function()
+            UILibrary:NotifyInfo({ Title = "Scripts", Content = "Step 1 only: action wiring comes next.", Duration = 1.8 })
+        end)
+        scriptsCleanup = nil
         return scriptsTab
     end
 
@@ -2571,6 +2591,10 @@ function Window:CreateUniversalCategory(options)
                 self:CreateRemotesCategory(remotesOptions)
             end
         else
+            if scriptsCleanup then
+                scriptsCleanup()
+                scriptsCleanup = nil
+            end
             removeTab(scriptsTab)
             scriptsTab = nil
             removeRemotesTab()
