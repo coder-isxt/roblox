@@ -35,7 +35,7 @@ local BUILTIN_ICON_ALIASES = {
         Fallback = "L",
     },
     ["players"] = {
-        Image = "rbxasset://textures/ui/PlayerList/StarIcon.png",
+        Image = "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTabIcon.png",
         Fallback = "P",
     },
     ["universal"] = {
