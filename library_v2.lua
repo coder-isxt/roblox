@@ -2613,6 +2613,40 @@ function Window:CreateUniversalCategory(options)
             return string.lower(tostring(obj.Name))
         end
 
+        local function getExecutorName()
+            local identifyexec = identifyexecutor or getexecutorname or whatexecutor
+            if type(identifyexec) == "function" then
+                local ok, name = pcall(identifyexec)
+                if ok and name ~= nil and tostring(name) ~= "" then
+                    return tostring(name)
+                end
+            end
+            return "Unknown Executor"
+        end
+
+        local function isViableDecompileScript(obj)
+            if not obj or typeof(obj) ~= "Instance" then
+                return false
+            end
+            if obj:IsA("ModuleScript") then
+                return true
+            elseif obj:IsA("LocalScript") then
+                local ok, runContext = pcall(function()
+                    return obj.RunContext
+                end)
+                if ok then
+                    return runContext == Enum.RunContext.Client or runContext == Enum.RunContext.Legacy
+                end
+                return true
+            elseif obj:IsA("Script") then
+                local ok, runContext = pcall(function()
+                    return obj.RunContext
+                end)
+                return ok and runContext == Enum.RunContext.Client
+            end
+            return false
+        end
+
         local function scriptMatchesFilters(obj)
             if classFilter ~= "All" and obj.ClassName ~= classFilter then
                 return false
@@ -2892,11 +2926,12 @@ function Window:CreateUniversalCategory(options)
         end
 
         local function dumpScript(scriptObj)
-            if type(decompile) == "function" then
+            if type(decompile) == "function" and isViableDecompileScript(scriptObj) then
                 local ok, source = pcall(decompile, scriptObj)
                 if ok and type(source) == "string" and source ~= "" then
-                    return source
+                    return source:gsub("\0", "\\0")
                 end
+                return ("-- DEX - %s failed to decompile %s"):format(getExecutorName(), tostring(scriptObj.ClassName))
             end
             if type(getscriptbytecode) == "function" then
                 local ok, bytecode = pcall(getscriptbytecode, scriptObj)
@@ -2935,11 +2970,16 @@ function Window:CreateUniversalCategory(options)
 
             local fallback = dumpScript(scriptObj)
             if fallback then
-                copyToClipboard(fallback, "Raw unavailable. Copied fallback source.")
+                copyToClipboard(fallback, "Raw unavailable. Copied Dex-style output.")
                 return
             end
 
-            copyToClipboard(getScriptPath(scriptObj), "Source unavailable. Copied script path.")
+            local unavailable = ("-- DEX - %s cannot read %s\n-- Path: %s"):format(
+                getExecutorName(),
+                tostring(scriptObj.ClassName),
+                getScriptPath(scriptObj)
+            )
+            copyToClipboard(unavailable, "Copied unavailable-script details.")
         end)
         actionsSection:CreateButton("Dump", function()
             local scriptObj = requireSelectedScript()
