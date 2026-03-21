@@ -2194,6 +2194,8 @@ function Window:CreateRemotesCategory(options)
     local actionsSection = remotesTab:CreateSection({ Name = "Controls", Side = "Right" })
     local settingsSection = remotesTab:CreateSection({ Name = "Status", Side = "Right" })
     local selectedLabel = settingsSection:CreateLabel("Selected: None")
+    local selectedMetaLabel = settingsSection:CreateLabel("Method: - | Time: -")
+    local selectedTypeLabel = settingsSection:CreateLabel("Type: -")
     logsSection:CreateLabel("Select a log entry, then use Controls.")
 
     local cachedCode = ""
@@ -2209,6 +2211,33 @@ function Window:CreateRemotesCategory(options)
         local value = tostring(text or "None")
         if selectedLabel and selectedLabel.Set then
             selectedLabel:Set("Selected: " .. value)
+        end
+        if selectedMetaLabel and selectedMetaLabel.Set then
+            selectedMetaLabel:Set("Method: - | Time: -")
+        end
+        if selectedTypeLabel and selectedTypeLabel.Set then
+            selectedTypeLabel:Set("Type: -")
+        end
+    end
+    local function setSelectionInfo(info)
+        if typeof(info) ~= "table" then
+            setSelectionText(info)
+            return
+        end
+
+        local name = tostring(info.Name or "None")
+        local method = tostring(info.Method or "-")
+        local ts = tostring(info.Time or "-")
+        local rtype = tostring(info.Type or "-")
+
+        if selectedLabel and selectedLabel.Set then
+            selectedLabel:Set("Selected: " .. name)
+        end
+        if selectedMetaLabel and selectedMetaLabel.Set then
+            selectedMetaLabel:Set(string.format("Method: %s | Time: %s", method, ts))
+        end
+        if selectedTypeLabel and selectedTypeLabel.Set then
+            selectedTypeLabel:Set("Type: " .. rtype)
         end
     end
 
@@ -2232,6 +2261,9 @@ function Window:CreateRemotesCategory(options)
         end,
         SetSelection = function(_, text)
             setSelectionText(text)
+        end,
+        SetSelectionInfo = function(_, info)
+            setSelectionInfo(info)
         end,
     }
 
@@ -2319,6 +2351,7 @@ function Window:CreateRemotesCategory(options)
         SetCode = setCode,
         GetCode = getCode,
         SetSelection = setSelectionText,
+        SetSelectionInfo = setSelectionInfo,
         SourceUrl = sourceUrl,
         SourcePath = sourcePath,
         Loaded = loaded,
