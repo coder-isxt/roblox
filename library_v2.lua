@@ -2202,9 +2202,10 @@ function Window:CreateLocalCategory(options)
 
     local flyToggleControl = nil
     local fpsBoostToggle = nil
+    local noShadowsToggle = nil
     local noFogToggle = nil
     local fullBrightToggle = nil
-    local xbox2016Toggle = nil
+    local xbox360Toggle = nil
     local killBrickEnabled = false
     local killBrickConnection = nil
     local unanchoredFlingEnabled = false
@@ -2226,13 +2227,21 @@ function Window:CreateLocalCategory(options)
     local Terrain = workspace:FindFirstChildOfClass("Terrain")
 
     local fpsBoostEnabled = false
+    local noShadowsEnabled = false
     local noFogEnabled = false
     local fullBrightEnabled = false
-    local xbox2016Enabled = false
+    local xbox360Enabled = false
     local fpsBoostWorkspaceAddedConnection = nil
     local fpsBoostLightingAddedConnection = nil
+    local noShadowsWorkspaceAddedConnection = nil
+    local noShadowsTrackedProps = setmetatable({}, { __mode = "k" })
     local fpsBoostTrackedProps = setmetatable({}, { __mode = "k" })
     local fpsBoostTerrainOriginal = nil
+    local xbox360WorkspaceAddedConnection = nil
+    local xbox360TrackedProps = setmetatable({}, { __mode = "k" })
+    local xbox360CursorOriginal = nil
+    local xbox360CursorSaved = false
+    local xbox360StyleEffect = nil
     local baseLightingSnapshot = nil
 
     local function notify(title, content, duration)
@@ -2279,7 +2288,7 @@ function Window:CreateLocalCategory(options)
             target[prop] = value
         end
 
-        if xbox2016Enabled then
+        if xbox360Enabled then
             target.Brightness = 1.8
             target.ClockTime = 14
             target.Ambient = Color3.fromRGB(148, 148, 148)
@@ -2287,7 +2296,6 @@ function Window:CreateLocalCategory(options)
             target.FogColor = Color3.fromRGB(182, 186, 193)
             target.FogStart = 40
             target.FogEnd = 650
-            target.GlobalShadows = false
             target.ExposureCompensation = -0.05
             if target.EnvironmentDiffuseScale ~= nil then
                 target.EnvironmentDiffuseScale = 0
@@ -2305,7 +2313,6 @@ function Window:CreateLocalCategory(options)
             target.ClockTime = 13.2
             target.Ambient = Color3.fromRGB(255, 255, 255)
             target.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-            target.GlobalShadows = false
             target.ExposureCompensation = 0
         end
 
@@ -2315,8 +2322,11 @@ function Window:CreateLocalCategory(options)
             target.FogColor = Color3.fromRGB(255, 255, 255)
         end
 
-        if fpsBoostEnabled then
+        if noShadowsEnabled then
             target.GlobalShadows = false
+        end
+
+        if fpsBoostEnabled then
             if target.EnvironmentDiffuseScale ~= nil then
                 target.EnvironmentDiffuseScale = 0
             end
@@ -2377,12 +2387,21 @@ function Window:CreateLocalCategory(options)
             setFpsProperty(inst, "Enabled", false)
         end
 
-        if inst:IsA("BasePart") then
-            setFpsProperty(inst, "CastShadow", false)
-        end
-
         if inst:IsA("Decal") or inst:IsA("Texture") then
             setFpsProperty(inst, "Transparency", 1)
+        end
+
+        if inst:IsA("MeshPart") then
+            setFpsProperty(inst, "TextureID", "")
+            setFpsProperty(inst, "RenderFidelity", Enum.RenderFidelity.Performance)
+        end
+
+        if inst:IsA("SpecialMesh") then
+            setFpsProperty(inst, "TextureId", "")
+        end
+
+        if inst:IsA("BasePart") then
+            setFpsProperty(inst, "MaterialVariant", "")
         end
     end
 
@@ -2437,6 +2456,7 @@ function Window:CreateLocalCategory(options)
                     "WaterWaveSpeed",
                     "WaterReflectance",
                     "WaterTransparency",
+                    "Decoration",
                 }
                 for _, prop in ipairs(terrainProps) do
                     local ok, value = pcall(function()
@@ -2458,6 +2478,9 @@ function Window:CreateLocalCategory(options)
             end)
             pcall(function()
                 Terrain.WaterTransparency = 1
+            end)
+            pcall(function()
+                Terrain.Decoration = false
             end)
         end
     end
@@ -2493,6 +2516,217 @@ function Window:CreateLocalCategory(options)
         end
     end
 
+    local function snapshotNoShadowsProperty(inst, prop)
+        local ok, current = pcall(function()
+            return inst[prop]
+        end)
+        if not ok then
+            return false
+        end
+        local entry = noShadowsTrackedProps[inst]
+        if not entry then
+            entry = {}
+            noShadowsTrackedProps[inst] = entry
+        end
+        if entry[prop] == nil then
+            entry[prop] = current
+        end
+        return true
+    end
+
+    local function setNoShadowsProperty(inst, prop, value)
+        if not snapshotNoShadowsProperty(inst, prop) then
+            return
+        end
+        pcall(function()
+            inst[prop] = value
+        end)
+    end
+
+    local function applyNoShadowsToInstance(inst)
+        if not inst then
+            return
+        end
+        if inst:IsA("BasePart") then
+            setNoShadowsProperty(inst, "CastShadow", false)
+        end
+    end
+
+    local function restoreNoShadowsState()
+        if noShadowsWorkspaceAddedConnection then
+            noShadowsWorkspaceAddedConnection:Disconnect()
+            noShadowsWorkspaceAddedConnection = nil
+        end
+        for inst, props in pairs(noShadowsTrackedProps) do
+            if inst and type(props) == "table" then
+                for prop, value in pairs(props) do
+                    pcall(function()
+                        inst[prop] = value
+                    end)
+                end
+            end
+            noShadowsTrackedProps[inst] = nil
+        end
+        noShadowsTrackedProps = setmetatable({}, { __mode = "k" })
+    end
+
+    local function setNoShadowsEnabled(state, silent)
+        state = state == true
+        if noShadowsEnabled == state then
+            return
+        end
+
+        noShadowsEnabled = state
+        if noShadowsEnabled then
+            restoreNoShadowsState()
+            for _, inst in ipairs(workspace:GetDescendants()) do
+                applyNoShadowsToInstance(inst)
+            end
+            noShadowsWorkspaceAddedConnection = workspace.DescendantAdded:Connect(function(inst)
+                if noShadowsEnabled then
+                    applyNoShadowsToInstance(inst)
+                end
+            end)
+        else
+            restoreNoShadowsState()
+        end
+
+        applyVisualLightingState()
+        if not silent then
+            notify("No shadows", noShadowsEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function snapshotXbox360Property(inst, prop)
+        local ok, current = pcall(function()
+            return inst[prop]
+        end)
+        if not ok then
+            return false
+        end
+        local entry = xbox360TrackedProps[inst]
+        if not entry then
+            entry = {}
+            xbox360TrackedProps[inst] = entry
+        end
+        if entry[prop] == nil then
+            entry[prop] = current
+        end
+        return true
+    end
+
+    local function setXbox360Property(inst, prop, value)
+        if not snapshotXbox360Property(inst, prop) then
+            return
+        end
+        pcall(function()
+            inst[prop] = value
+        end)
+    end
+
+    local function applyXbox360ToInstance(inst)
+        if not inst then
+            return
+        end
+
+        if inst:IsA("BasePart") then
+            setXbox360Property(inst, "Reflectance", 0)
+            local mat = nil
+            local okMat, currentMat = pcall(function()
+                return inst.Material
+            end)
+            if okMat then
+                mat = currentMat
+            end
+            if mat and mat ~= Enum.Material.Neon and mat ~= Enum.Material.ForceField then
+                setXbox360Property(inst, "Material", Enum.Material.Plastic)
+            end
+        end
+
+        if inst:IsA("Decal") or inst:IsA("Texture") then
+            local currentTransparency = 0
+            pcall(function()
+                currentTransparency = inst.Transparency
+            end)
+            setXbox360Property(inst, "Transparency", math.clamp(currentTransparency + 0.12, 0, 0.45))
+            setXbox360Property(inst, "Color3", Color3.fromRGB(224, 224, 224))
+        end
+
+    end
+
+    local function restoreXbox360State()
+        if xbox360WorkspaceAddedConnection then
+            xbox360WorkspaceAddedConnection:Disconnect()
+            xbox360WorkspaceAddedConnection = nil
+        end
+
+        for inst, props in pairs(xbox360TrackedProps) do
+            if inst and type(props) == "table" then
+                for prop, value in pairs(props) do
+                    pcall(function()
+                        inst[prop] = value
+                    end)
+                end
+            end
+            xbox360TrackedProps[inst] = nil
+        end
+        xbox360TrackedProps = setmetatable({}, { __mode = "k" })
+
+        if xbox360StyleEffect and xbox360StyleEffect.Parent then
+            xbox360StyleEffect:Destroy()
+        end
+        xbox360StyleEffect = nil
+
+        if xbox360CursorSaved then
+            local okMouse, mouse = pcall(function()
+                return localPlayer:GetMouse()
+            end)
+            if okMouse and mouse then
+                pcall(function()
+                    mouse.Icon = xbox360CursorOriginal or ""
+                end)
+            end
+            xbox360CursorSaved = false
+            xbox360CursorOriginal = nil
+        end
+    end
+
+    local function applyXbox360State()
+        for _, inst in ipairs(workspace:GetDescendants()) do
+            applyXbox360ToInstance(inst)
+        end
+
+        xbox360WorkspaceAddedConnection = workspace.DescendantAdded:Connect(function(inst)
+            if xbox360Enabled then
+                applyXbox360ToInstance(inst)
+            end
+        end)
+
+        local okMouse, mouse = pcall(function()
+            return localPlayer:GetMouse()
+        end)
+        if okMouse and mouse then
+            if not xbox360CursorSaved then
+                xbox360CursorSaved = true
+                xbox360CursorOriginal = mouse.Icon
+            end
+            pcall(function()
+                mouse.Icon = "rbxasset://textures/Cursors/KeyboardMouse/ArrowCursor.png"
+            end)
+        end
+
+        if xbox360StyleEffect and xbox360StyleEffect.Parent then
+            xbox360StyleEffect:Destroy()
+        end
+        xbox360StyleEffect = Instance.new("ColorCorrectionEffect")
+        xbox360StyleEffect.Name = "LimboXbox360Style"
+        xbox360StyleEffect.Brightness = -0.02
+        xbox360StyleEffect.Contrast = -0.08
+        xbox360StyleEffect.Saturation = -0.22
+        xbox360StyleEffect.TintColor = Color3.fromRGB(236, 232, 224)
+        xbox360StyleEffect.Parent = Lighting
+    end
+
     local function setNoFogEnabled(state, silent)
         state = state == true
         if noFogEnabled == state then
@@ -2517,15 +2751,29 @@ function Window:CreateLocalCategory(options)
         end
     end
 
-    local function setXbox2016Enabled(state, silent)
+    local function setXbox360Enabled(state, silent)
         state = state == true
-        if xbox2016Enabled == state then
+        if xbox360Enabled == state then
             return
         end
-        xbox2016Enabled = state
+        xbox360Enabled = state
+        if xbox360Enabled then
+            restoreXbox360State()
+            applyXbox360State()
+        else
+            restoreXbox360State()
+            if fpsBoostEnabled then
+                applyFpsBoostState()
+            end
+            if noShadowsEnabled then
+                for _, inst in ipairs(workspace:GetDescendants()) do
+                    applyNoShadowsToInstance(inst)
+                end
+            end
+        end
         applyVisualLightingState()
         if not silent then
-            notify("2016 xbox", xbox2016Enabled and "Enabled." or "Disabled.", 1.9)
+            notify("Xbox360 2016", xbox360Enabled and "Enabled." or "Disabled.", 1.9)
         end
     end
 
@@ -3124,7 +3372,11 @@ function Window:CreateLocalCategory(options)
     fpsBoostToggle = visualsSection:CreateToggle("FPS Boost", function(v)
         setFpsBoostEnabled(v, false)
     end, false)
-    visualsSection:CreateLabel("Disables heavy effects/shadows for more FPS.")
+    visualsSection:CreateLabel("Strips heavy effects and textures for faster loading/FPS.")
+
+    noShadowsToggle = visualsSection:CreateToggle("No shadows", function(v)
+        setNoShadowsEnabled(v, false)
+    end, false)
 
     noFogToggle = visualsSection:CreateToggle("No fog", function(v)
         setNoFogEnabled(v, false)
@@ -3134,10 +3386,10 @@ function Window:CreateLocalCategory(options)
         setFullBrightEnabled(v, false)
     end, false)
 
-    xbox2016Toggle = visualsSection:CreateToggle("2016 xbox", function(v)
-        setXbox2016Enabled(v, false)
+    xbox360Toggle = visualsSection:CreateToggle("Xbox360 2016", function(v)
+        setXbox360Enabled(v, false)
     end, false)
-    visualsSection:CreateLabel("Old-gen style lighting + flatter visuals.")
+    visualsSection:CreateLabel("Old 2016 console look: cursor, lighting and materials.")
 
     local clickFlingToggle, punchFlingToggle = nil, nil
     clickFlingToggle = funSection:CreateToggle("Click Player to Fling", function(v)
@@ -3191,9 +3443,10 @@ function Window:CreateLocalCategory(options)
     self:OnClose(function()
         setFlyEnabled(false, true)
         setFpsBoostEnabled(false, true)
+        setNoShadowsEnabled(false, true)
         setNoFogEnabled(false, true)
         setFullBrightEnabled(false, true)
-        setXbox2016Enabled(false, true)
+        setXbox360Enabled(false, true)
         setKillBrickEnabled(false, true)
         setUnanchoredPartFlingEnabled(false, true)
         setSpinFlingEnabled(false, true)
@@ -3237,6 +3490,15 @@ function Window:CreateLocalCategory(options)
         GetFpsBoost = function()
             return fpsBoostEnabled
         end,
+        SetNoShadows = function(_, state)
+            if noShadowsToggle and noShadowsToggle.Set then
+                noShadowsToggle:Set(state == true, true)
+            end
+            setNoShadowsEnabled(state == true, true)
+        end,
+        GetNoShadows = function()
+            return noShadowsEnabled
+        end,
         SetNoFog = function(_, state)
             if noFogToggle and noFogToggle.Set then
                 noFogToggle:Set(state == true, true)
@@ -3255,14 +3517,23 @@ function Window:CreateLocalCategory(options)
         GetFullBright = function()
             return fullBrightEnabled
         end,
-        SetXbox2016 = function(_, state)
-            if xbox2016Toggle and xbox2016Toggle.Set then
-                xbox2016Toggle:Set(state == true, true)
+        SetXbox360 = function(_, state)
+            if xbox360Toggle and xbox360Toggle.Set then
+                xbox360Toggle:Set(state == true, true)
             end
-            setXbox2016Enabled(state == true, true)
+            setXbox360Enabled(state == true, true)
+        end,
+        GetXbox360 = function()
+            return xbox360Enabled
+        end,
+        SetXbox2016 = function(_, state)
+            if xbox360Toggle and xbox360Toggle.Set then
+                xbox360Toggle:Set(state == true, true)
+            end
+            setXbox360Enabled(state == true, true)
         end,
         GetXbox2016 = function()
-            return xbox2016Enabled
+            return xbox360Enabled
         end,
         SetFlingProtect = function(_, state)
             setFlingProtectEnabled(state == true)
