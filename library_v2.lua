@@ -2191,24 +2191,33 @@ function Window:CreateRemotesCategory(options)
     end
 
     local logsSection = remotesTab:CreateSection({ Name = "Logs", Side = "Left" })
-    local codeSection = remotesTab:CreateSection({ Name = "Code", Side = "Left" })
+    local codeSection = remotesTab:CreateSection({ Name = "Code Preview", Side = "Right" })
     local actionsSection = remotesTab:CreateSection({ Name = "Actions", Side = "Right" })
     local settingsSection = remotesTab:CreateSection({ Name = "Settings", Side = "Right" })
+    logsSection:CreateLabel("Select a log entry to generate and preview script.")
+    codeSection:CreateLabel("Generated script output (SimpleSpy style).")
 
     local codeShell = mk("Frame", {
         Parent = codeSection.Content,
         BackgroundColor3 = Color3.fromRGB(8, 12, 20),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 200),
+        Size = UDim2.new(1, 0, 0, 300),
     })
     corner(codeShell, 4)
     stroke(codeShell, C.Stroke, 0.55)
 
-    local codeBox = mk("TextBox", {
+    local codeRenderHost = mk("Frame", {
         Parent = codeShell,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 8, 0, 8),
         Size = UDim2.new(1, -16, 1, -16),
+        BorderSizePixel = 0,
+    })
+
+    local fallbackCodeBox = mk("TextBox", {
+        Parent = codeRenderHost,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
         Font = Enum.Font.Code,
         TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -2223,13 +2232,51 @@ function Window:CreateRemotesCategory(options)
         Text = "",
     })
 
+    local highlightRenderer = nil
+    do
+        local highlightModule = nil
+        local okHighlight, highlightOrErr = pcall(function()
+            if typeof(isfile) == "function" and typeof(loadfile) == "function" and isfile("Highlight.lua") then
+                return loadfile("Highlight.lua")()
+            end
+            if typeof(loadstring) == "function" then
+                return loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/Highlight.lua"))()
+            end
+            return nil
+        end)
+        if okHighlight then
+            highlightModule = highlightOrErr
+        end
+
+        if type(highlightModule) == "table" and type(highlightModule.new) == "function" then
+            local okRenderer, renderer = pcall(highlightModule.new, codeRenderHost)
+            if okRenderer and renderer then
+                highlightRenderer = renderer
+                fallbackCodeBox.Visible = false
+            end
+        end
+    end
+
     local cachedCode = ""
     local function setCode(text)
         cachedCode = tostring(text or "")
-        codeBox.Text = cachedCode
+        if highlightRenderer and type(highlightRenderer.setRaw) == "function" then
+            pcall(highlightRenderer.setRaw, highlightRenderer, cachedCode)
+        else
+            fallbackCodeBox.Text = cachedCode
+        end
     end
     local function getCode()
-        local current = tostring(codeBox.Text or cachedCode or "")
+        local current = nil
+        if highlightRenderer and type(highlightRenderer.getString) == "function" then
+            local okGet, result = pcall(highlightRenderer.getString, highlightRenderer)
+            if okGet and type(result) == "string" then
+                current = result
+            end
+        end
+        if current == nil then
+            current = tostring(fallbackCodeBox.Text or cachedCode or "")
+        end
         cachedCode = current
         return current
     end
