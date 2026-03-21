@@ -2193,17 +2193,105 @@ function Window:CreateRemotesCategory(options)
     local logsSection = remotesTab:CreateSection({ Name = "Logs", Side = "Left" })
     local actionsSection = remotesTab:CreateSection({ Name = "Controls", Side = "Right" })
     local settingsSection = remotesTab:CreateSection({ Name = "Status", Side = "Right" })
+    local scriptSection = remotesTab:CreateSection({ Name = "Script", Side = "Right" })
+    actionsSection.Frame.LayoutOrder = 10
+    settingsSection.Frame.LayoutOrder = 20
+    scriptSection.Frame.LayoutOrder = 30
     local selectedLabel = settingsSection:CreateLabel("Selected: None")
     local selectedMetaLabel = settingsSection:CreateLabel("Method: - | Time: -")
     local selectedTypeLabel = settingsSection:CreateLabel("Type: -")
     logsSection:CreateLabel("Select a log entry, then use Controls.")
+    scriptSection:CreateLabel("Latest generated script for selected log.")
+
+    local function iconizeRemoteLabel(text)
+        local value = tostring(text or "")
+        local eventIcon = (utf8 and utf8.char and utf8.char(0x1F4E1)) or "[event]"
+        local functionIcon = (utf8 and utf8.char and utf8.char(0x2699)) or "[func]"
+        if string.sub(value, 1, 3) == "[E]" then
+            return eventIcon .. " " .. string.gsub(string.sub(value, 4), "^%s*", "")
+        end
+        if string.sub(value, 1, 3) == "[F]" then
+            return functionIcon .. " " .. string.gsub(string.sub(value, 4), "^%s*", "")
+        end
+        return value
+    end
+
+    local hostLogSection = setmetatable({}, {
+        __index = logsSection,
+    })
+    function hostLogSection:CreateButton(a, b)
+        if typeof(a) == "table" then
+            local payload = {}
+            for k, v in pairs(a) do
+                payload[k] = v
+            end
+            if payload.Name then
+                payload.Name = iconizeRemoteLabel(payload.Name)
+            end
+            if payload.Text then
+                payload.Text = iconizeRemoteLabel(payload.Text)
+            end
+            return logsSection:CreateButton(payload, b)
+        end
+        return logsSection:CreateButton(iconizeRemoteLabel(a), b)
+    end
+
+    local scriptShell = mk("Frame", {
+        Parent = scriptSection.Content,
+        BackgroundColor3 = Color3.fromRGB(8, 12, 20),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 220),
+    })
+    corner(scriptShell, 4)
+    stroke(scriptShell, C.Stroke, 0.55)
+
+    local scriptScroll = mk("ScrollingFrame", {
+        Parent = scriptShell,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 6, 0, 6),
+        Size = UDim2.new(1, -12, 1, -12),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = C.Stroke,
+    })
+
+    local scriptBox = mk("TextBox", {
+        Parent = scriptScroll,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, -2, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Font = Enum.Font.Code,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = false,
+        MultiLine = true,
+        ClearTextOnFocus = false,
+        TextEditable = false,
+        TextColor3 = C.Text,
+        PlaceholderColor3 = C.SubText,
+        PlaceholderText = "-- Script will appear here",
+        Text = "",
+    })
 
     local cachedCode = ""
+    local function refreshScriptCanvas()
+        local h = math.max(scriptBox.TextBounds.Y + 10, scriptScroll.AbsoluteSize.Y)
+        scriptScroll.CanvasSize = UDim2.new(0, 0, 0, h)
+    end
+    track(self.Connections, scriptBox:GetPropertyChangedSignal("TextBounds"):Connect(refreshScriptCanvas))
+    track(self.Connections, scriptScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshScriptCanvas))
+
     local function setCode(text)
         cachedCode = tostring(text or "")
+        scriptBox.Text = cachedCode
+        refreshScriptCanvas()
     end
     local function getCode()
-        local current = tostring(cachedCode or "")
+        local current = tostring(scriptBox.Text or cachedCode or "")
         cachedCode = current
         return current
     end
@@ -2250,7 +2338,7 @@ function Window:CreateRemotesCategory(options)
     genv.__SimpleSpyHost = {
         Library = UILibrary,
         Window = self,
-        LogSection = logsSection,
+        LogSection = hostLogSection,
         ActionSection = actionsSection,
         SettingsSection = settingsSection,
         SetCode = function(_, text)
@@ -2348,6 +2436,7 @@ function Window:CreateRemotesCategory(options)
         LogsSection = logsSection,
         ActionsSection = actionsSection,
         SettingsSection = settingsSection,
+        ScriptSection = scriptSection,
         SetCode = setCode,
         GetCode = getCode,
         SetSelection = setSelectionText,
@@ -2386,6 +2475,8 @@ function Window:CreateUniversalCategory(options)
     local infoSection = universalTab:CreateSection({ Name = "Info", Side = "Right" })
     local scriptsTab = nil
     local developerEnabled = false
+    local remotesAllowed = self._remotesAllowed ~= false
+    local remotesOptions = self._remotesOptions or {}
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -2444,6 +2535,20 @@ function Window:CreateUniversalCategory(options)
         return scriptsTab
     end
 
+    local function removeRemotesTab()
+        local category = self.RemotesCategory
+        if not category then
+            return
+        end
+        local tabRef = category.Tab
+        local genv = (typeof(getgenv) == "function" and getgenv()) or _G
+        if genv.SimpleSpyExecuted and type(genv.SimpleSpyShutdown) == "function" then
+            pcall(genv.SimpleSpyShutdown)
+        end
+        self.RemotesCategory = nil
+        removeTab(tabRef)
+    end
+
     local function setDeveloperEnabled(state, silent)
         state = state == true
         if developerEnabled == state then
@@ -2453,9 +2558,13 @@ function Window:CreateUniversalCategory(options)
 
         if developerEnabled then
             ensureScriptsTab()
+            if remotesAllowed then
+                self:CreateRemotesCategory(remotesOptions)
+            end
         else
             removeTab(scriptsTab)
             scriptsTab = nil
+            removeRemotesTab()
         end
 
         if not silent then
@@ -2468,9 +2577,9 @@ function Window:CreateUniversalCategory(options)
     end, options.DeveloperEnabled == true)
 
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
-    otherSection:CreateLabel("Remotes tab is now available as a persistent tab.")
-    infoSection:CreateParagraph("Developer Tabs", "Scripts tab remains available for future tooling.")
-    infoSection:CreateLabel("Use the Remotes tab for SimpleSpy integration.")
+    otherSection:CreateLabel("Remotes tab is available only in Developer mode.")
+    infoSection:CreateParagraph("Developer Tabs", "Developer mode enables Scripts and Remotes.")
+    infoSection:CreateLabel("Turn Developer on to use SimpleSpy remotes.")
 
     setDeveloperEnabled(options.DeveloperEnabled == true, true)
 
@@ -2491,7 +2600,7 @@ function Window:CreateUniversalCategory(options)
             return developerEnabled
         end,
         GetDeveloperTabs = function()
-            return nil, scriptsTab
+            return self.RemotesCategory and self.RemotesCategory.Tab or nil, scriptsTab
         end,
         Options = options,
     }
@@ -3832,6 +3941,8 @@ function UILibrary:CreateWindow(arg)
         CleanupRan = false,
         Destroyed = false,
     }, Window)
+    w._remotesAllowed = o.IncludeRemotes ~= false
+    w._remotesOptions = o.RemotesOptions or {}
 
     UILibrary._window = w
     UILibrary._toastHost = toastHost
@@ -3895,7 +4006,7 @@ function UILibrary:CreateWindow(arg)
         end)
     end
 
-    if o.IncludeRemotes ~= false then
+    if o.IncludeRemotes ~= false and o.IncludeUniversal == false then
         task.defer(function()
             if w and not w.Destroyed then
                 pcall(function()
