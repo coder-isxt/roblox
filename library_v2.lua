@@ -2198,6 +2198,11 @@ function Window:CreateLocalCategory(options)
     local flingProtectConnection = nil
 
     local flyToggleControl = nil
+    local killBrickEnabled = false
+    local killBrickConnection = nil
+    local unanchoredFlingEnabled = false
+    local unanchoredFlingConnection = nil
+    local unanchoredFlingCooldownUntil = 0
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -2377,6 +2382,118 @@ function Window:CreateLocalCategory(options)
         notify("Fling Protect", flingProtectEnabled and "Enabled." or "Disabled.", 1.8)
     end
 
+    local function runExternalLoader(name, url, useAsync, controlsHint)
+        local ok, err = pcall(function()
+            local source
+            if useAsync and type(game.HttpGetAsync) == "function" then
+                source = game:HttpGetAsync(url)
+            else
+                source = game:HttpGet(url)
+            end
+            local compiled, compileErr = loadstring(source)
+            if not compiled then
+                error(compileErr or "loadstring compile failed")
+            end
+            compiled()
+        end)
+        if ok then
+            notify(name, "Loaded.", 2.0)
+            if type(controlsHint) == "string" and controlsHint ~= "" then
+                notify("Controls", controlsHint, 5)
+            end
+        else
+            UILibrary:NotifyError({
+                Title = name,
+                Content = tostring(err),
+                Duration = 3.2,
+            })
+        end
+    end
+
+    local function setKillBrickEnabled(state, silent)
+        state = state == true
+        if killBrickEnabled == state then
+            return
+        end
+
+        killBrickEnabled = state
+        if killBrickConnection then
+            killBrickConnection:Disconnect()
+            killBrickConnection = nil
+        end
+
+        if killBrickEnabled then
+            killBrickConnection = RunService.Heartbeat:Connect(function()
+                local character = localPlayer.Character
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if not root then
+                    return
+                end
+                local parts = workspace:GetPartBoundsInRadius(root.Position, 10)
+                for _, part in ipairs(parts) do
+                    if part:IsA("BasePart") and part.Parent and not (character and part:IsDescendantOf(character)) then
+                        part.CanTouch = true
+                    end
+                end
+            end)
+        end
+
+        if not silent then
+            notify("FE Toggle Kill Brick", killBrickEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function setUnanchoredPartFlingEnabled(state, silent)
+        state = state == true
+        if unanchoredFlingEnabled == state then
+            return
+        end
+
+        unanchoredFlingEnabled = state
+        if unanchoredFlingConnection then
+            unanchoredFlingConnection:Disconnect()
+            unanchoredFlingConnection = nil
+        end
+
+        if unanchoredFlingEnabled then
+            local mouse = localPlayer:GetMouse()
+            unanchoredFlingConnection = mouse.Button1Down:Connect(function()
+                if not unanchoredFlingEnabled then
+                    return
+                end
+                if os.clock() < unanchoredFlingCooldownUntil then
+                    return
+                end
+
+                local obj = mouse.Target
+                local character = localPlayer.Character
+                if not obj or not obj:IsA("BasePart") or obj.Anchored then
+                    return
+                end
+                if character and obj:IsDescendantOf(character) then
+                    return
+                end
+
+                unanchoredFlingCooldownUntil = os.clock() + 0.1
+                local spin = Instance.new("BodyAngularVelocity")
+                spin.Name = "LimboPartFlingSpin"
+                spin.Parent = obj
+                spin.AngularVelocity = Vector3.new(99999, 99999, 99999)
+                spin.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                spin.P = math.huge
+                task.delay(1.5, function()
+                    if spin and spin.Parent then
+                        spin:Destroy()
+                    end
+                end)
+            end)
+        end
+
+        if not silent then
+            notify("Fling Click Unanchored Parts", unanchoredFlingEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
     flyInputConnectionBegan = track(self.Connections, UIS.InputBegan:Connect(function(input, gpe)
         if gpe then
             return
@@ -2541,12 +2658,42 @@ function Window:CreateLocalCategory(options)
     end, false)
     funSection:CreateLabel("Spam run animation fast, then fling clicked target.")
 
+    local killBrickToggle = funSection:CreateToggle("FE Toggle Kill Brick", function(v)
+        setKillBrickEnabled(v, false)
+    end, false)
+    funSection:CreateLabel("Continuously enables nearby touch bricks around you.")
+
+    local partFlingToggle = funSection:CreateToggle("Fling Click Unanchored Parts", function(v)
+        setUnanchoredPartFlingEnabled(v, false)
+    end, false)
+    funSection:CreateLabel("Click an unanchored part to spin-fling it.")
+
+    funSection:CreateButton("FE Ban Hammer", function()
+        runExternalLoader(
+            "FE Ban Hammer",
+            "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Ban%20Hammer",
+            false,
+            "Click: Ban | E: Ban 2 | R: Ban 3"
+        )
+    end)
+
+    funSection:CreateButton("FE Motorcycle", function()
+        runExternalLoader(
+            "FE Motorcycle",
+            "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Obfuscations/Motorcycle",
+            false,
+            "Click: Shoot | Z: Boost"
+        )
+    end)
+
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
     end, false)
 
     self:OnClose(function()
         setFlyEnabled(false, true)
+        setKillBrickEnabled(false, true)
+        setUnanchoredPartFlingEnabled(false, true)
         flingProtectEnabled = false
         resetFlingProtectState()
         flyControls.Forward = false
@@ -2582,6 +2729,24 @@ function Window:CreateLocalCategory(options)
         end,
         GetFlingProtect = function()
             return flingProtectEnabled
+        end,
+        SetKillBrick = function(_, state)
+            if killBrickToggle and killBrickToggle.Set then
+                killBrickToggle:Set(state == true, true)
+            end
+            setKillBrickEnabled(state == true, true)
+        end,
+        GetKillBrick = function()
+            return killBrickEnabled
+        end,
+        SetUnanchoredPartFling = function(_, state)
+            if partFlingToggle and partFlingToggle.Set then
+                partFlingToggle:Set(state == true, true)
+            end
+            setUnanchoredPartFlingEnabled(state == true, true)
+        end,
+        GetUnanchoredPartFling = function()
+            return unanchoredFlingEnabled
         end,
     }
 
@@ -4717,4 +4882,3 @@ function UILibrary:NotifyError(args)
 end
 
 return UILibrary
-
