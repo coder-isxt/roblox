@@ -2539,7 +2539,7 @@ function Window:CreateUniversalCategory(options)
             Name = "Scripts",
             Icon = options.ScriptsTabIcon or options.ScriptsIcon or "scripts",
         })
-        local scriptsListSection = scriptsTab:CreateSection({ Name = "Scripts 2", Side = "Left" })
+        local scriptsListSection = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
         local statusSection = scriptsTab:CreateSection({ Name = "Status", Side = "Right" })
         local actionsSection = scriptsTab:CreateSection({ Name = "Actions", Side = "Right" })
         statusSection.Frame.LayoutOrder = 10
@@ -2658,11 +2658,38 @@ function Window:CreateUniversalCategory(options)
 
         local function collectScripts()
             local list = {}
+            local seen = {}
 
-            for _, obj in ipairs(game:GetDescendants()) do
+            local function addScript(obj)
+                if not obj or seen[obj] then
+                    return
+                end
                 if isScriptInstance(obj) then
+                    seen[obj] = true
                     table.insert(list, obj)
                 end
+            end
+
+            local function addFromRoot(root)
+                if typeof(root) ~= "Instance" then
+                    return
+                end
+                addScript(root)
+                for _, obj in ipairs(root:GetDescendants()) do
+                    addScript(obj)
+                end
+            end
+
+            local lp = Players.LocalPlayer
+            local roots = {
+                workspace,
+                game:GetService("ReplicatedStorage"),
+                game:GetService("ReplicatedFirst"),
+                lp,
+            }
+
+            for _, root in ipairs(roots) do
+                addFromRoot(root)
             end
 
             table.sort(list, function(a, b)
