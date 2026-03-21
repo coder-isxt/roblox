@@ -1261,11 +1261,11 @@ function Window:CreatePlayersCategory(options)
         local angularVelocity = (typeof(flingOptions.AngularVelocity) == "Vector3")
             and flingOptions.AngularVelocity
             or Vector3.new(4200, 6000, 4200)
+        local restoreCFrame = (typeof(flingOptions.RestoreCFrame) == "CFrame" and flingOptions.RestoreCFrame) or localRoot.CFrame
 
         UILibrary:SuspendFlingProtect(duration + 0.9)
         stopFlingAndRestore()
 
-        local startCFrame = localRoot.CFrame
         local oldLinear = localRoot.AssemblyLinearVelocity
         local oldAngular = localRoot.AssemblyAngularVelocity
         local startAt = os.clock()
@@ -1291,7 +1291,12 @@ function Window:CreatePlayersCategory(options)
             if currentRoot and currentRoot.Parent then
                 currentRoot.AssemblyAngularVelocity = oldAngular
                 currentRoot.AssemblyLinearVelocity = oldLinear
-                currentRoot.CFrame = startCFrame
+                currentRoot.CFrame = restoreCFrame
+                local hum = getLocalHumanoid()
+                if hum then
+                    hum.PlatformStand = false
+                    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+                end
             end
 
             if thrust and thrust.Parent then
@@ -1677,6 +1682,8 @@ function Window:CreatePlayersCategory(options)
                 selectedUser:Set("@" .. tostring(clickedPlayer.Name))
 
                 task.spawn(function()
+                    local preAttackRoot = getLocalRoot()
+                    local safeRestoreCFrame = preAttackRoot and preAttackRoot.CFrame or nil
                     UILibrary:SuspendFlingProtect(punchApproachTimeout + punchWindup + punchJumpDuration + punchFlingDuration + 1)
                     local reached = runToTargetForPunch(clickedPlayer)
                     if not reached then
@@ -1701,6 +1708,18 @@ function Window:CreatePlayersCategory(options)
 
                     local ok = flingForFiveSeconds(clickedPlayer, {
                         Duration = punchFlingDuration,
+                        RestoreCFrame = safeRestoreCFrame,
+                        Force = Vector3.new(16000, 16000, 16000),
+                        SpinBase = 190,
+                        SpinAccel = 42,
+                        RadiusBase = 0.12,
+                        RadiusPulse = 0.4,
+                        RiseBase = 0.2,
+                        RisePulse = 0.18,
+                        TangentPower = 1200,
+                        ForwardPower = 430,
+                        UpPower = 220,
+                        AngularVelocity = Vector3.new(7200, 9000, 7200),
                     })
                     if ok then
                         notify("Punch Fling", "Punched " .. tostring(clickedPlayer.Name) .. ".", 2.0)
