@@ -3648,38 +3648,48 @@ function Section:CreateSlider(a, b, c, d, e)
     end
     local value = roundStep(clamp(defV, minV, maxV), step)
 
-    local shell = controlShell(self, 52)
-    local back = controlBack(shell, 52)
+    local shell = controlShell(self, 62)
+    local back = controlBack(shell, 62)
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 4),
-        Size = UDim2.new(1, -70, 0, 16),
+        Position = UDim2.new(0, 11, 0, 7),
+        Size = UDim2.new(1, -108, 0, 18),
         Font = FONT,
-        TextSize = 13,
+        TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
         Text = name,
     })
-    local val = mk("TextLabel", {
+    local valBack = mk("Frame", {
         Parent = back,
+        BackgroundColor3 = Color3.fromRGB(8, 12, 20),
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -90, 0, 6),
+        Size = UDim2.new(0, 80, 0, 20),
+    })
+    corner(valBack, 4)
+    stroke(valBack, C.Stroke, 0.55)
+    local val = mk("TextLabel", {
+        Parent = valBack,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -64, 0, 4),
-        Size = UDim2.new(0, 58, 0, 16),
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
         Font = FONT,
         TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Right,
-        TextColor3 = C.SubText,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextColor3 = C.Text,
         Text = "",
     })
     local bar = mk("Frame", {
         Parent = back,
         BackgroundColor3 = Color3.fromRGB(8, 12, 20),
         BorderSizePixel = 0,
-        Position = UDim2.new(0, 10, 1, -14),
-        Size = UDim2.new(1, -20, 0, 6),
+        Position = UDim2.new(0, 11, 0, 39),
+        Size = UDim2.new(1, -22, 0, 8),
     })
     corner(bar, 99)
+    stroke(bar, C.Stroke, 0.65)
     local fill = mk("Frame", {
         Parent = bar,
         BackgroundColor3 = C.Accent,
@@ -3693,9 +3703,19 @@ function Section:CreateSlider(a, b, c, d, e)
         BorderSizePixel = 0,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0, 0, 0.5, 0),
-        Size = UDim2.new(0, 10, 0, 10),
+        Size = UDim2.new(0, 14, 0, 14),
     })
     corner(knob, 99)
+    stroke(knob, C.Stroke, 0.2)
+    local hit = mk("TextButton", {
+        Parent = back,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 8, 0, 33),
+        Size = UDim2.new(1, -16, 0, 20),
+        Text = "",
+        AutoButtonColor = false,
+    })
 
     local drag = false
     local controller = { Frame = shell }
@@ -3720,10 +3740,11 @@ function Section:CreateSlider(a, b, c, d, e)
         local a = clamp((x - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)
         controller:Set(minV + ((maxV - minV) * a))
     end
-    track(self.Window.Connections, bar.InputBegan:Connect(function(i)
+    track(self.Window.Connections, hit.InputBegan:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
             drag = true
             at(i.Position.X)
+            tw(knob, 0.08, { Size = UDim2.new(0, 16, 0, 16) }):Play()
         end
     end))
     track(self.Window.Connections, UIS.InputChanged:Connect(function(i)
@@ -3734,7 +3755,14 @@ function Section:CreateSlider(a, b, c, d, e)
     track(self.Window.Connections, UIS.InputEnded:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
             drag = false
+            tw(knob, 0.08, { Size = UDim2.new(0, 14, 0, 14) }):Play()
         end
+    end))
+    track(self.Window.Connections, back.MouseEnter:Connect(function()
+        tw(back, 0.1, { BackgroundColor3 = C.ControlHover }):Play()
+    end))
+    track(self.Window.Connections, back.MouseLeave:Connect(function()
+        tw(back, 0.1, { BackgroundColor3 = C.Control }):Play()
     end))
     draw()
     return controller
