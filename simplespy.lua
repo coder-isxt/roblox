@@ -1111,14 +1111,11 @@ function newRemote(type, data)
                 return
             end
             logthread(running())
-            eventSelect(log.Log)
             log.GenScript = genScript(log.Remote, log.args)
             if log.Blocked then
                 log.GenScript = "-- THIS REMOTE WAS PREVENTED FROM FIRING TO THE SERVER BY SIMPLESPY\n\n" .. log.GenScript
             end
-            if selected == log and log.Log then
-                eventSelect(log.Log)
-            end
+            eventSelect(log.Log)
         end)
         RemoteTemplate = logControl.Frame
         Button = logControl.Button
