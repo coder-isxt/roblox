@@ -3027,7 +3027,7 @@ function Window:CreateUniversalCategory(options)
         end
     end
 
-    local developerToggle = otherSection:CreateToggle("Developer", function(v)
+    local developerToggle = otherSection:CreateToggle("Remotes", function(v)
         setDeveloperEnabled(v, false)
     end, options.DeveloperEnabled == true)
     local function runExternalLoader(name, url, useAsync)
