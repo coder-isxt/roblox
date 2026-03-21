@@ -2658,33 +2658,12 @@ function Window:CreateLocalCategory(options)
     end, false)
     funSection:CreateLabel("Spam run animation fast, then fling clicked target.")
 
-    local killBrickToggle = funSection:CreateToggle("FE Toggle Kill Brick", function(v)
-        setKillBrickEnabled(v, false)
-    end, false)
-    funSection:CreateLabel("Continuously enables nearby touch bricks around you.")
 
     local partFlingToggle = funSection:CreateToggle("Fling Click Unanchored Parts", function(v)
         setUnanchoredPartFlingEnabled(v, false)
     end, false)
     funSection:CreateLabel("Click an unanchored part to spin-fling it.")
 
-    funSection:CreateButton("FE Ban Hammer", function()
-        runExternalLoader(
-            "FE Ban Hammer",
-            "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Loadstrings/Ban%20Hammer",
-            false,
-            "Click: Ban | E: Ban 2 | R: Ban 3"
-        )
-    end)
-
-    funSection:CreateButton("FE Motorcycle", function()
-        runExternalLoader(
-            "FE Motorcycle",
-            "https://raw.githubusercontent.com/GenesisFE/Genesis/main/Obfuscations/Motorcycle",
-            false,
-            "Click: Shoot | Z: Boost"
-        )
-    end)
 
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
