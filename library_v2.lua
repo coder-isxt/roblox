@@ -200,7 +200,7 @@ end
 
 local function isPersistentTabName(name)
     local n = string.lower(tostring(name or ""))
-    return n == "local" or n == "players" or n == "universal" or n == "scripts"
+    return n == "local" or n == "players" or n == "universal" or n == "remotes" or n == "scripts"
 end
 
 local function closeDropdowns(except)
@@ -2160,6 +2160,176 @@ function Window:CreateLocalCategory(options)
     return self.LocalCategory
 end
 
+function Window:CreateRemotesCategory(options)
+    if self.RemotesCategory then
+        return self.RemotesCategory
+    end
+
+    options = options or {}
+    local remotesTabIcon = options.TabIcon or options.Icon or "scripts"
+    local sourcePath = tostring(options.SourcePath or "simplespy.lua")
+
+    local remotesTab = nil
+    for _, existingTab in ipairs(self.Tabs) do
+        if existingTab.Name == "Remotes" then
+            remotesTab = existingTab
+            break
+        end
+    end
+    if not remotesTab then
+        remotesTab = self:CreateTab({ Name = "Remotes", Icon = remotesTabIcon })
+    elseif remotesTab.SetIcon then
+        remotesTab:SetIcon(remotesTabIcon)
+    end
+
+    local logsSection = remotesTab:CreateSection({ Name = "Logs", Side = "Left" })
+    local codeSection = remotesTab:CreateSection({ Name = "Code", Side = "Left" })
+    local actionsSection = remotesTab:CreateSection({ Name = "Actions", Side = "Right" })
+    local settingsSection = remotesTab:CreateSection({ Name = "Settings", Side = "Right" })
+
+    local codeShell = mk("Frame", {
+        Parent = codeSection.Content,
+        BackgroundColor3 = Color3.fromRGB(8, 12, 20),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 200),
+    })
+    corner(codeShell, 4)
+    stroke(codeShell, C.Stroke, 0.55)
+
+    local codeBox = mk("TextBox", {
+        Parent = codeShell,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 8, 0, 8),
+        Size = UDim2.new(1, -16, 1, -16),
+        Font = Enum.Font.Code,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = false,
+        MultiLine = true,
+        ClearTextOnFocus = false,
+        TextColor3 = C.Text,
+        PlaceholderColor3 = C.SubText,
+        PlaceholderText = "SimpleSpy output...",
+        TextEditable = false,
+        Text = "",
+    })
+
+    local cachedCode = ""
+    local function setCode(text)
+        cachedCode = tostring(text or "")
+        codeBox.Text = cachedCode
+    end
+    local function getCode()
+        local current = tostring(codeBox.Text or cachedCode or "")
+        cachedCode = current
+        return current
+    end
+
+    codeSection:CreateButton("Copy Code", function()
+        local text = getCode()
+        if text ~= "" and typeof(setclipboard) == "function" then
+            pcall(setclipboard, text)
+            UILibrary:NotifyInfo({
+                Title = "Remotes",
+                Content = "Copied code to clipboard.",
+                Duration = 1.8,
+            })
+        end
+    end)
+
+    local genv = (typeof(getgenv) == "function" and getgenv()) or _G
+
+    if genv.SimpleSpyExecuted and type(genv.SimpleSpyShutdown) == "function" then
+        pcall(genv.SimpleSpyShutdown)
+    end
+
+    genv.__SimpleSpyHost = {
+        Library = UILibrary,
+        Window = self,
+        LogSection = logsSection,
+        ActionSection = actionsSection,
+        SettingsSection = settingsSection,
+        SetCode = setCode,
+        GetCode = getCode,
+    }
+
+    local loaded = false
+    local loadErr = nil
+    local chunk = nil
+
+    if typeof(loadfile) == "function" and typeof(isfile) == "function" and isfile(sourcePath) then
+        local okChunk, result = pcall(loadfile, sourcePath)
+        if okChunk then
+            chunk = result
+        else
+            loadErr = result
+        end
+    end
+
+    if not chunk and typeof(readfile) == "function" and typeof(isfile) == "function" and isfile(sourcePath) and typeof(loadstring) == "function" then
+        local okRead, source = pcall(readfile, sourcePath)
+        if okRead and type(source) == "string" and source ~= "" then
+            local compiled, compileErr = loadstring(source)
+            if compiled then
+                chunk = compiled
+            else
+                loadErr = compileErr
+            end
+        end
+    end
+
+    if chunk then
+        local okRun, runErr = pcall(chunk)
+        loaded = okRun
+        if not okRun then
+            loadErr = runErr
+        end
+    else
+        loadErr = loadErr or ("SimpleSpy source not found at path: " .. sourcePath)
+    end
+
+    genv.__SimpleSpyHost = nil
+
+    if loaded then
+        UILibrary:NotifyInfo({
+            Title = "Remotes",
+            Content = "SimpleSpy attached to library Remotes tab.",
+            Duration = 2.2,
+        })
+    else
+        local errText = tostring(loadErr or "unknown error")
+        actionsSection:CreateLabel("SimpleSpy load failed.")
+        settingsSection:CreateParagraph("Error", errText)
+        UILibrary:NotifyError({
+            Title = "Remotes",
+            Content = "SimpleSpy failed to load. See Remotes tab for details.",
+            Duration = 4,
+        })
+    end
+
+    self:OnClose(function()
+        if genv.SimpleSpyExecuted and type(genv.SimpleSpyShutdown) == "function" then
+            pcall(genv.SimpleSpyShutdown)
+        end
+    end)
+
+    self.RemotesCategory = {
+        Tab = remotesTab,
+        LogsSection = logsSection,
+        CodeSection = codeSection,
+        ActionsSection = actionsSection,
+        SettingsSection = settingsSection,
+        SetCode = setCode,
+        GetCode = getCode,
+        SourcePath = sourcePath,
+        Loaded = loaded,
+        Error = loadErr,
+    }
+
+    return self.RemotesCategory
+end
+
 function Window:CreateUniversalCategory(options)
     if self.UniversalCategory then
         return self.UniversalCategory
@@ -2267,9 +2437,9 @@ function Window:CreateUniversalCategory(options)
     end, options.DeveloperEnabled == true)
 
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
-    otherSection:CreateLabel("Remotes tab features have been removed.")
-    infoSection:CreateParagraph("Developer Tabs", "Remotes has been removed from this build.")
-    infoSection:CreateLabel("Scripts tab remains available for future tooling.")
+    otherSection:CreateLabel("Remotes tab is now available as a persistent tab.")
+    infoSection:CreateParagraph("Developer Tabs", "Scripts tab remains available for future tooling.")
+    infoSection:CreateLabel("Use the Remotes tab for SimpleSpy integration.")
 
     setDeveloperEnabled(options.DeveloperEnabled == true, true)
 
@@ -3234,6 +3404,8 @@ function Window:CreateTab(a, iconMaybe)
         tabLayoutOrder = 20
     elseif tabNameLower == "universal" then
         tabLayoutOrder = 30
+    elseif tabNameLower == "remotes" then
+        tabLayoutOrder = 40
     elseif tabNameLower == "scripts" then
         tabLayoutOrder = 50
     else
@@ -3687,6 +3859,16 @@ function UILibrary:CreateWindow(arg)
             if w and not w.Destroyed then
                 pcall(function()
                     w:CreateUniversalCategory(o.UniversalOptions)
+                end)
+            end
+        end)
+    end
+
+    if o.IncludeRemotes ~= false then
+        task.defer(function()
+            if w and not w.Destroyed then
+                pcall(function()
+                    w:CreateRemotesCategory(o.RemotesOptions)
                 end)
             end
         end)
