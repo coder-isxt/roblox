@@ -2203,6 +2203,12 @@ function Window:CreateLocalCategory(options)
     local unanchoredFlingEnabled = false
     local unanchoredFlingConnection = nil
     local unanchoredFlingCooldownUntil = 0
+    local spinFlingEnabled = false
+    local spinFlingConnection = nil
+    local spinFlingPartState = {}
+    local spinFlingSpinRate = tonumber(options.SpinFlingSpinRate) or 3600
+    local spinFlingHitRadius = tonumber(options.SpinFlingHitRadius) or 9
+    local spinFlingPushSpeed = tonumber(options.SpinFlingPushSpeed) or 260
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -2494,6 +2500,116 @@ function Window:CreateLocalCategory(options)
         end
     end
 
+    local function setSpinFlingCharacterCollision(enabled)
+        local character = localPlayer.Character
+        if not character then
+            return
+        end
+
+        if enabled then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    if not spinFlingPartState[part] then
+                        spinFlingPartState[part] = {
+                            CanCollide = part.CanCollide,
+                            CanTouch = part.CanTouch,
+                            CanQuery = part.CanQuery,
+                        }
+                    end
+                    part.CanCollide = true
+                    part.CanTouch = true
+                    part.CanQuery = true
+                    pcall(function()
+                        part.CollisionGroup = "Default"
+                    end)
+                end
+            end
+            return
+        end
+
+        for part, state in pairs(spinFlingPartState) do
+            if part and part.Parent and type(state) == "table" then
+                part.CanCollide = state.CanCollide == true
+                part.CanTouch = state.CanTouch ~= false
+                part.CanQuery = state.CanQuery ~= false
+            end
+            spinFlingPartState[part] = nil
+        end
+        table.clear(spinFlingPartState)
+    end
+
+    local function setSpinFlingEnabled(state, silent)
+        state = state == true
+        if spinFlingEnabled == state then
+            return
+        end
+
+        spinFlingEnabled = state
+        if spinFlingConnection then
+            spinFlingConnection:Disconnect()
+            spinFlingConnection = nil
+        end
+
+        if not spinFlingEnabled then
+            setSpinFlingCharacterCollision(false)
+            local root = getLocalRoot()
+            if root then
+                root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            end
+            if not silent then
+                notify("Spin & Fling", "Disabled.", 1.9)
+            end
+            return
+        end
+
+        spinFlingConnection = RunService.Heartbeat:Connect(function()
+            local character = localPlayer.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if not character or not humanoid or humanoid.Health <= 0 or not root then
+                return
+            end
+
+            setSpinFlingCharacterCollision(true)
+
+            local now = os.clock()
+            local spinVector = Vector3.new(spinFlingSpinRate * 0.26, spinFlingSpinRate, spinFlingSpinRate * 0.26)
+            root.AssemblyAngularVelocity = spinVector
+            root.CFrame = root.CFrame * CFrame.Angles(math.rad(8), math.rad(42), math.rad(8))
+
+            local closestRoot = nil
+            local closestDistance = spinFlingHitRadius
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= localPlayer then
+                    local targetCharacter = plr.Character
+                    local targetHum = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+                    local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+                    if targetRoot and targetHum and targetHum.Health > 0 then
+                        local distance = (root.Position - targetRoot.Position).Magnitude
+                        if distance <= closestDistance then
+                            closestDistance = distance
+                            closestRoot = targetRoot
+                        end
+                    end
+                end
+            end
+
+            if closestRoot then
+                local toward = closestRoot.Position - root.Position
+                local planar = Vector3.new(toward.X, 0, toward.Z)
+                if planar.Magnitude > 0.001 then
+                    local dir = planar.Unit
+                    local boostY = 45 + math.abs(math.sin(now * 13)) * 35
+                    root.AssemblyLinearVelocity = (dir * spinFlingPushSpeed) + Vector3.new(0, boostY, 0)
+                end
+            end
+        end)
+
+        if not silent then
+            notify("Spin & Fling", "Enabled. Walk into players to fling.", 2.1)
+        end
+    end
+
     flyInputConnectionBegan = track(self.Connections, UIS.InputBegan:Connect(function(input, gpe)
         if gpe then
             return
@@ -2526,6 +2642,10 @@ function Window:CreateLocalCategory(options)
         task.defer(function()
             if flyEnabled then
                 startFly()
+            end
+            if spinFlingEnabled then
+                task.wait(0.1)
+                setSpinFlingCharacterCollision(true)
             end
         end)
     end))
@@ -2664,6 +2784,11 @@ function Window:CreateLocalCategory(options)
     end, false)
     funSection:CreateLabel("Click an unanchored part to spin-fling it.")
 
+    local spinFlingToggle = funSection:CreateToggle("Spin & Fling", function(v)
+        setSpinFlingEnabled(v, false)
+    end, false)
+    funSection:CreateLabel("Crazy spin + collision fling when you touch players.")
+
 
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
@@ -2673,6 +2798,7 @@ function Window:CreateLocalCategory(options)
         setFlyEnabled(false, true)
         setKillBrickEnabled(false, true)
         setUnanchoredPartFlingEnabled(false, true)
+        setSpinFlingEnabled(false, true)
         flingProtectEnabled = false
         resetFlingProtectState()
         flyControls.Forward = false
@@ -2726,6 +2852,15 @@ function Window:CreateLocalCategory(options)
         end,
         GetUnanchoredPartFling = function()
             return unanchoredFlingEnabled
+        end,
+        SetSpinFling = function(_, state)
+            if spinFlingToggle and spinFlingToggle.Set then
+                spinFlingToggle:Set(state == true, true)
+            end
+            setSpinFlingEnabled(state == true, true)
+        end,
+        GetSpinFling = function()
+            return spinFlingEnabled
         end,
     }
 
