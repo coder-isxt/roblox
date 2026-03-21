@@ -807,10 +807,13 @@ function Window:CreatePlayersCategory(options)
     end
     local punchAnimationId = tostring(punchAnimationIds[1] or "522635514")
     local punchAnimationIndex = 0
-    local punchRange = tonumber(options.PunchRange) or 10
-    local punchWindup = tonumber(options.PunchWindup) or 0.09
-    local punchLungeDuration = tonumber(options.PunchLungeDuration) or 0.12
-    local punchLungeSpeed = tonumber(options.PunchLungeSpeed) or 56
+    local punchActivateRange = tonumber(options.PunchActivateRange) or 120
+    local punchRange = tonumber(options.PunchRange) or 11
+    local punchWindup = tonumber(options.PunchWindup) or 0.28
+    local punchLungeDuration = tonumber(options.PunchLungeDuration) or 0.16
+    local punchLungeSpeed = tonumber(options.PunchLungeSpeed) or 42
+    local punchApproachSpeed = tonumber(options.PunchApproachSpeed) or 28
+    local punchApproachTimeout = tonumber(options.PunchApproachTimeout) or 3
     local punchAnimationTrack = nil
 
     local selectedName = optionsSection:CreateLabel("Selected: None")
@@ -1501,6 +1504,50 @@ function Window:CreatePlayersCategory(options)
         return true
     end
 
+    local function runToTargetForPunch(player)
+        local humanoid = getLocalHumanoid()
+        local localRoot = getLocalRoot()
+        local targetRoot = getTargetRoot(player)
+        if not humanoid or not localRoot or not targetRoot then
+            return false
+        end
+
+        local timeoutAt = os.clock() + punchApproachTimeout
+        while os.clock() < timeoutAt do
+            humanoid = getLocalHumanoid()
+            localRoot = getLocalRoot()
+            targetRoot = getTargetRoot(player)
+            if not humanoid or not localRoot or not targetRoot then
+                break
+            end
+
+            local distance = (localRoot.Position - targetRoot.Position).Magnitude
+            if distance <= (punchRange + 2) then
+                return true
+            end
+
+            local toward = targetRoot.Position - localRoot.Position
+            local planar = Vector3.new(toward.X, 0, toward.Z)
+            if planar.Magnitude > 0.001 then
+                local unit = planar.Unit
+                local followPos = targetRoot.Position - (unit * 2.5)
+                humanoid:MoveTo(Vector3.new(followPos.X, localRoot.Position.Y, followPos.Z))
+                localRoot.AssemblyLinearVelocity = Vector3.new(
+                    unit.X * punchApproachSpeed,
+                    localRoot.AssemblyLinearVelocity.Y,
+                    unit.Z * punchApproachSpeed
+                )
+                localRoot.CFrame = CFrame.lookAt(
+                    localRoot.Position,
+                    Vector3.new(targetRoot.Position.X, localRoot.Position.Y, targetRoot.Position.Z)
+                )
+            end
+            RunService.Heartbeat:Wait()
+        end
+
+        return getDistanceToTarget(player) <= (punchRange + 2)
+    end
+
     local setPunchFlingEnabled
 
     local function setClickFlingEnabled(state, silent)
@@ -1576,21 +1623,19 @@ function Window:CreatePlayersCategory(options)
                     return
                 end
 
-                playPunchAnimation()
-
                 if os.clock() < punchFlingCooldownUntil then
                     return
                 end
-                punchFlingCooldownUntil = os.clock() + 0.75
 
                 local clickedPlayer = getPlayerFromPart(mouse.Target)
                 if not clickedPlayer or clickedPlayer == localPlayer then
                     return
                 end
 
-                if getDistanceToTarget(clickedPlayer) > (punchRange + 2) then
+                if getDistanceToTarget(clickedPlayer) > punchActivateRange then
                     return
                 end
+                punchFlingCooldownUntil = os.clock() + 1.35
 
                 selectedPlayer = clickedPlayer
                 UILibrary:SetSelectedPlayer(clickedPlayer)
@@ -1598,8 +1643,10 @@ function Window:CreatePlayersCategory(options)
                 selectedUser:Set("@" .. tostring(clickedPlayer.Name))
 
                 task.spawn(function()
-                    punchLungeAt(clickedPlayer)
-                    task.wait(punchWindup)
+                    local reached = runToTargetForPunch(clickedPlayer)
+                    if not reached then
+                        return
+                    end
 
                     if not punchFlingEnabled then
                         return
@@ -1607,6 +1654,11 @@ function Window:CreatePlayersCategory(options)
                     if clickedPlayer.Parent ~= Players then
                         return
                     end
+                    playPunchAnimation()
+                    task.wait(punchWindup)
+                    punchLungeAt(clickedPlayer)
+                    task.wait(0.06)
+
                     if getDistanceToTarget(clickedPlayer) > punchRange then
                         return
                     end
@@ -1988,6 +2040,9 @@ function Window:CreatePlayersCategory(options)
         end,
         SetPunchRange = function(_, range)
             punchRange = math.max(2, tonumber(range) or punchRange)
+        end,
+        SetPunchActivateRange = function(_, range)
+            punchActivateRange = math.max(5, tonumber(range) or punchActivateRange)
         end,
         GetSelectedPlayer = function()
             return selectedPlayer
@@ -2399,7 +2454,7 @@ function Window:CreateLocalCategory(options)
         end
         playersCategory:SetPunchFlingEnabled(v, false)
     end, false)
-    funSection:CreateLabel("Punches with windup+lunge, then flings on close hit.")
+    funSection:CreateLabel("Runs to target first, then punches and flings on close hit.")
 
     otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
