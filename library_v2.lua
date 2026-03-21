@@ -3025,6 +3025,39 @@ function Window:CreateUniversalCategory(options)
     local developerToggle = otherSection:CreateToggle("Developer", function(v)
         setDeveloperEnabled(v, false)
     end, options.DeveloperEnabled == true)
+    local function runExternalLoader(name, url, useAsync)
+        local ok, err = pcall(function()
+            local source
+            if useAsync and type(game.HttpGetAsync) == "function" then
+                source = game:HttpGetAsync(url)
+            else
+                source = game:HttpGet(url)
+            end
+            local compiled, compileErr = loadstring(source)
+            if not compiled then
+                error(compileErr or "loadstring compile failed")
+            end
+            compiled()
+        end)
+        if ok then
+            notify(name, "Loaded.", 2.0)
+        else
+            UILibrary:NotifyError({
+                Title = name,
+                Content = tostring(err),
+                Duration = 3.2,
+            })
+        end
+    end
+    otherSection:CreateButton("Load Remotespy", function()
+        runExternalLoader("Load Remotespy", "https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578", false)
+    end)
+    otherSection:CreateButton("Load SimpleSpy", function()
+        runExternalLoader("Load SimpleSpy", "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua", true)
+    end)
+    otherSection:CreateButton("Load DevEx", function()
+        runExternalLoader("Load DevEx", "https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265", false)
+    end)
 
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
     otherSection:CreateLabel("Remotes tab is available only in Developer mode.")
