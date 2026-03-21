@@ -2203,6 +2203,7 @@ function Window:CreateLocalCategory(options)
     local flyToggleControl = nil
     local fpsBoostToggle = nil
     local noShadowsToggle = nil
+    local noCameraCollisionToggle = nil
     local noFogToggle = nil
     local fullBrightToggle = nil
     local xbox360Toggle = nil
@@ -2228,6 +2229,7 @@ function Window:CreateLocalCategory(options)
 
     local fpsBoostEnabled = false
     local noShadowsEnabled = false
+    local noCameraCollisionEnabled = false
     local noFogEnabled = false
     local fullBrightEnabled = false
     local xbox360Enabled = false
@@ -2242,6 +2244,8 @@ function Window:CreateLocalCategory(options)
     local xbox360CursorOriginal = nil
     local xbox360CursorSaved = false
     local xbox360StyleEffect = nil
+    local cameraOcclusionOriginal = nil
+    local cameraOcclusionOriginalSaved = false
     local baseLightingSnapshot = nil
 
     local function notify(title, content, duration)
@@ -2594,6 +2598,39 @@ function Window:CreateLocalCategory(options)
         applyVisualLightingState()
         if not silent then
             notify("No shadows", noShadowsEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
+
+    local function setNoCameraCollisionEnabled(state, silent)
+        state = state == true
+        if noCameraCollisionEnabled == state then
+            return
+        end
+
+        noCameraCollisionEnabled = state
+        if noCameraCollisionEnabled then
+            if not cameraOcclusionOriginalSaved then
+                local ok, current = pcall(function()
+                    return localPlayer.DevCameraOcclusionMode
+                end)
+                if ok then
+                    cameraOcclusionOriginal = current
+                    cameraOcclusionOriginalSaved = true
+                end
+            end
+            pcall(function()
+                localPlayer.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Invisicam
+            end)
+        else
+            pcall(function()
+                localPlayer.DevCameraOcclusionMode = cameraOcclusionOriginalSaved
+                        and (cameraOcclusionOriginal or Enum.DevCameraOcclusionMode.Zoom)
+                    or Enum.DevCameraOcclusionMode.Zoom
+            end)
+        end
+
+        if not silent then
+            notify("No Camera Collision", noCameraCollisionEnabled and "Enabled." or "Disabled.", 1.9)
         end
     end
 
@@ -3378,6 +3415,10 @@ function Window:CreateLocalCategory(options)
         setNoShadowsEnabled(v, false)
     end, false)
 
+    noCameraCollisionToggle = visualsSection:CreateToggle("No Camera Collision", function(v)
+        setNoCameraCollisionEnabled(v, false)
+    end, false)
+
     noFogToggle = visualsSection:CreateToggle("No fog", function(v)
         setNoFogEnabled(v, false)
     end, false)
@@ -3444,6 +3485,7 @@ function Window:CreateLocalCategory(options)
         setFlyEnabled(false, true)
         setFpsBoostEnabled(false, true)
         setNoShadowsEnabled(false, true)
+        setNoCameraCollisionEnabled(false, true)
         setNoFogEnabled(false, true)
         setFullBrightEnabled(false, true)
         setXbox360Enabled(false, true)
@@ -3498,6 +3540,15 @@ function Window:CreateLocalCategory(options)
         end,
         GetNoShadows = function()
             return noShadowsEnabled
+        end,
+        SetNoCameraCollision = function(_, state)
+            if noCameraCollisionToggle and noCameraCollisionToggle.Set then
+                noCameraCollisionToggle:Set(state == true, true)
+            end
+            setNoCameraCollisionEnabled(state == true, true)
+        end,
+        GetNoCameraCollision = function()
+            return noCameraCollisionEnabled
         end,
         SetNoFog = function(_, state)
             if noFogToggle and noFogToggle.Set then
