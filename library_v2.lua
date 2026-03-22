@@ -5770,7 +5770,7 @@ function UILibrary:CreateWindow(arg)
         Destroyed = false,
         LibrarySettings = {},
         LibraryConfigItems = {},
-        ConfigFolder = "Limbo/" .. (tostring(game.PlaceId) or "Universal"),
+        ConfigFolder = "Limbo",
     }, Window)
     w._remotesAllowed = o.IncludeRemotes ~= false
     w._remotesOptions = o.RemotesOptions or {}
