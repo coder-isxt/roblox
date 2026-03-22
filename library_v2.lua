@@ -38,6 +38,10 @@ local BUILTIN_ICON_ALIASES = {
         Image = "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTabIcon.png",
         Fallback = "P",
     },
+    ["config"] = {
+        Image = "rbxasset://textures/ui/Settings/icon_localization-16.png",
+        Fallback = "C",
+    },
     ["universal"] = {
         Image = "rbxasset://textures/ui/Settings/MenuBarIcons/HomeTab.png",
         Fallback = "U",
@@ -4165,9 +4169,6 @@ function Window:CreateUniversalCategory(options)
             })
         end
     end
-    otherSection:CreateButton("Load Remotespy", function()
-        runExternalLoader("Load Remotespy", "https://rawscripts.net/raw/Universal-Script-RemoteSpy-for-Xeno-and-Solara-32578", false)
-    end)
     otherSection:CreateButton("Load SimpleSpy", function()
         runExternalLoader("Load SimpleSpy", "https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua", true)
     end)
@@ -4209,12 +4210,13 @@ function Window:CreateUniversalCategory(options)
     return self.UniversalCategory
 end
 
+--UI Category Builders
 function Window:CreateConfigCategory(options)
     if self.ConfigCategory then
         return self.ConfigCategory
     end
 
-    local configTab = self:CreateTab({ Name = "Config", Icon = "settings", LayoutOrder = 25 })
+    local configTab = self:CreateTab({ Name = "Config", Icon = "config", LayoutOrder = 25 })
     local managementSection = configTab:CreateSection({ Name = "Management", Side = "Left" })
     local listSection = configTab:CreateSection({ Name = "Configs", Side = "Right" })
 
@@ -4282,8 +4284,8 @@ end
 
 -- Config Management Implementation
 function Window:GetLibraryConfigs()
-    if not isfolder("XenoConfigs") then
-        pcall(makefolder, "XenoConfigs")
+    if not isfolder("Limbo") then
+        pcall(makefolder, "Limbo")
     end
     if not isfolder(self.ConfigFolder) then
         pcall(makefolder, self.ConfigFolder)
@@ -5768,7 +5770,7 @@ function UILibrary:CreateWindow(arg)
         Destroyed = false,
         LibrarySettings = {},
         LibraryConfigItems = {},
-        ConfigFolder = "XenoConfigs/" .. (tostring(game.PlaceId) or "Universal"),
+        ConfigFolder = "Limbo/" .. (tostring(game.PlaceId) or "Universal"),
     }, Window)
     w._remotesAllowed = o.IncludeRemotes ~= false
     w._remotesOptions = o.RemotesOptions or {}
