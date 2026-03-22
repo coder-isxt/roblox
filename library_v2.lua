@@ -237,6 +237,14 @@ local function keycode(v)
     if typeof(v) == "EnumItem" and v.EnumType == Enum.KeyCode then
         return v
     end
+    if typeof(v) == "string" and v ~= "" then
+        local ok, k = pcall(function()
+            return Enum.KeyCode[v]
+        end)
+        if ok then
+            return k
+        end
+    end
     return nil
 end
 
@@ -2496,6 +2504,7 @@ function Window:CreateLocalCategory(options)
         end
 
         fpsBoostEnabled = state
+        self.LibrarySettings.FpsBoost = state
         if fpsBoostEnabled then
             restoreFpsBoostState()
             applyFpsBoostState()
@@ -2581,6 +2590,7 @@ function Window:CreateLocalCategory(options)
         end
 
         noShadowsEnabled = state
+        self.LibrarySettings.NoShadows = state
         if noShadowsEnabled then
             restoreNoShadowsState()
             for _, inst in ipairs(workspace:GetDescendants()) do
@@ -2608,6 +2618,7 @@ function Window:CreateLocalCategory(options)
         end
 
         noCameraCollisionEnabled = state
+        self.LibrarySettings.NoCameraCollision = state
         if noCameraCollisionEnabled then
             if not cameraOcclusionOriginalSaved then
                 local ok, current = pcall(function()
@@ -2770,6 +2781,7 @@ function Window:CreateLocalCategory(options)
             return
         end
         noFogEnabled = state
+        self.LibrarySettings.NoFog = state
         applyVisualLightingState()
         if not silent then
             notify("No fog", noFogEnabled and "Enabled." or "Disabled.", 1.9)
@@ -2782,6 +2794,7 @@ function Window:CreateLocalCategory(options)
             return
         end
         fullBrightEnabled = state
+        self.LibrarySettings.FullBright = state
         applyVisualLightingState()
         if not silent then
             notify("Full bright", fullBrightEnabled and "Enabled." or "Disabled.", 1.9)
@@ -2794,6 +2807,7 @@ function Window:CreateLocalCategory(options)
             return
         end
         xbox360Enabled = state
+        self.LibrarySettings.Xbox360 = state
         if xbox360Enabled then
             restoreXbox360State()
             applyXbox360State()
@@ -2958,10 +2972,12 @@ function Window:CreateLocalCategory(options)
         end
 
         flyEnabled = state
+        self.LibrarySettings.FlyEnabled = state
         if flyEnabled then
             local ok = startFly()
             if not ok then
                 flyEnabled = false
+                self.LibrarySettings.FlyEnabled = false
                 if not silent then
                     notify("Fly", "Character not ready.", 1.8)
                 end
@@ -2980,6 +2996,7 @@ function Window:CreateLocalCategory(options)
 
     local function setFlingProtectEnabled(state)
         flingProtectEnabled = state == true
+        self.LibrarySettings.FlingProtect = flingProtectEnabled
         if flingProtectEnabled then
             local root = getLocalRoot()
             if root then
@@ -3393,43 +3410,54 @@ function Window:CreateLocalCategory(options)
     flyToggleControl = flySection:CreateToggle("Fly", function(v)
         setFlyEnabled(v, true)
     end, false)
+    self.LibraryConfigItems.FlyEnabled = flyToggleControl
 
-    flySection:CreateKeybind("Fly Toggle Key", function(key, changed)
+    local flyKeybind = flySection:CreateKeybind("Fly Toggle Key", function(key, changed)
         if changed then
             flyKey = key
+            self.LibrarySettings.FlyKey = key.Name
             notify("Fly Keybind", "Set to " .. tostring(key.Name) .. ".", 1.8)
         end
     end, flyKey)
+    self.LibraryConfigItems.FlyKey = flyKeybind
 
-    flySection:CreateSlider("Fly Speed", 20, 400, flySpeed, function(v)
+    local flySpeedSlider = flySection:CreateSlider("Fly Speed", 20, 400, flySpeed, function(v)
         flySpeed = tonumber(v) or flySpeed
+        self.LibrarySettings.FlySpeed = flySpeed
     end)
+    self.LibraryConfigItems.FlySpeed = flySpeedSlider
     flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
 
     fpsBoostToggle = visualsSection:CreateToggle("FPS Boost", function(v)
         setFpsBoostEnabled(v, false)
     end, false)
+    self.LibraryConfigItems.FpsBoost = fpsBoostToggle
     visualsSection:CreateLabel("Strips heavy effects and textures for faster loading/FPS.")
 
     noShadowsToggle = visualsSection:CreateToggle("No shadows", function(v)
         setNoShadowsEnabled(v, false)
     end, false)
+    self.LibraryConfigItems.NoShadows = noShadowsToggle
 
     noCameraCollisionToggle = visualsSection:CreateToggle("No Camera Collision", function(v)
         setNoCameraCollisionEnabled(v, false)
     end, false)
+    self.LibraryConfigItems.NoCameraCollision = noCameraCollisionToggle
 
     noFogToggle = visualsSection:CreateToggle("No fog", function(v)
         setNoFogEnabled(v, false)
     end, false)
+    self.LibraryConfigItems.NoFog = noFogToggle
 
     fullBrightToggle = visualsSection:CreateToggle("Full bright", function(v)
         setFullBrightEnabled(v, false)
     end, false)
+    self.LibraryConfigItems.FullBright = fullBrightToggle
 
     xbox360Toggle = visualsSection:CreateToggle("Xbox360 2016", function(v)
         setXbox360Enabled(v, false)
     end, false)
+    self.LibraryConfigItems.Xbox360 = xbox360Toggle
     visualsSection:CreateLabel("Old 2016 console look: cursor, lighting and materials.")
 
     local clickFlingToggle, punchFlingToggle = nil, nil
@@ -3477,9 +3505,10 @@ function Window:CreateLocalCategory(options)
     funSection:CreateLabel("Crazy spin + collision fling when you touch players.")
 
 
-    otherSection:CreateToggle("Fling Protect", function(v)
+    local flingProtectToggle = otherSection:CreateToggle("Fling Protect", function(v)
         setFlingProtectEnabled(v)
     end, false)
+    self.LibraryConfigItems.FlingProtect = flingProtectToggle
 
     self:OnClose(function()
         setFlyEnabled(false, true)
@@ -4094,6 +4123,7 @@ function Window:CreateUniversalCategory(options)
             return
         end
         developerEnabled = state
+        self.LibrarySettings.DeveloperMode = state
 
         if developerEnabled then
             if remotesAllowed then
@@ -4174,7 +4204,162 @@ function Window:CreateUniversalCategory(options)
         Options = options,
     }
 
+    self.LibraryConfigItems.DeveloperMode = developerToggle
+
     return self.UniversalCategory
+end
+
+function Window:CreateConfigCategory(options)
+    if self.ConfigCategory then
+        return self.ConfigCategory
+    end
+
+    local configTab = self:CreateTab({ Name = "Config", Icon = "settings", LayoutOrder = 25 })
+    local managementSection = configTab:CreateSection({ Name = "Management", Side = "Left" })
+    local listSection = configTab:CreateSection({ Name = "Configs", Side = "Right" })
+
+    local configNameInput = managementSection:CreateInput("Config Name", "e.g. Default", "", function() end)
+    
+    local function refreshConfigList()
+        for _, child in ipairs(listSection.Content:GetChildren()) do
+            if child:IsA("Frame") and child.Name ~= "UIListLayout" and child.Name ~= "UIPadding" then
+                child:Destroy()
+            end
+        end
+
+        local configs = self:GetLibraryConfigs()
+        if #configs == 0 then
+            listSection:CreateLabel("No configs found.")
+        else
+            for _, name in ipairs(configs) do
+                local row = listSection:CreateLabel(name)
+                managementSection:CreateButton({ Name = "Load " .. name, Callback = function()
+                    if self:LoadLibraryConfig(name) then
+                        UILibrary:NotifyInfo({ Title = "Config", Content = "Loaded " .. name, Duration = 2 })
+                    else
+                        UILibrary:NotifyError({ Title = "Config", Content = "Failed to load " .. name })
+                    end
+                end })
+            end
+        end
+    end
+
+    managementSection:CreateButton("Save Current", function()
+        local name = configNameInput:GetValue()
+        if name == "" then
+            UILibrary:NotifyError({ Title = "Config", Content = "Please enter a name." })
+            return
+        end
+        if self:SaveLibraryConfig(name) then
+            UILibrary:NotifyInfo({ Title = "Config", Content = "Saved " .. name, Duration = 2 })
+            refreshConfigList()
+        else
+            UILibrary:NotifyError({ Title = "Config", Content = "Failed to save " .. name })
+        end
+    end)
+
+    managementSection:CreateButton("Refresh List", refreshConfigList)
+
+    refreshConfigList()
+
+    self.ConfigCategory = {
+        Tab = configTab,
+        ManagementSection = managementSection,
+        ListSection = listSection,
+        RefreshList = refreshConfigList,
+    }
+
+    return self.ConfigCategory
+end
+
+-- Config Management Implementation
+function Window:GetLibraryConfigs()
+    if not isfolder("XenoConfigs") then
+        pcall(makefolder, "XenoConfigs")
+    end
+    if not isfolder(self.ConfigFolder) then
+        pcall(makefolder, self.ConfigFolder)
+    end
+
+    local configs = {}
+    local ok, files = pcall(listfiles, self.ConfigFolder)
+    if ok and type(files) == "table" then
+        for _, file in ipairs(files) do
+            local name = string.match(file, "([^/\\]+)$")
+            if string.find(name, "%.json$") then
+                table.insert(configs, string.gsub(name, "%.json$", ""))
+            end
+        end
+    end
+    return configs
+end
+
+function Window:SaveLibraryConfig(name)
+    if not name or name == "" then
+        return false
+    end
+    if not isfolder(self.ConfigFolder) then
+        pcall(makefolder, self.ConfigFolder)
+    end
+
+    -- Update settings from items before saving
+    for flag, item in pairs(self.LibraryConfigItems) do
+        local val = item:Get()
+        -- Handle Keybinds which return KeyCode object
+        if typeof(val) == "EnumItem" then
+            val = val.Name
+        end
+        self.LibrarySettings[flag] = val
+    end
+
+    local ok, json = pcall(function()
+        return game:GetService("HttpService"):JSONEncode(self.LibrarySettings)
+    end)
+    if ok then
+        local okWrite = pcall(writefile, self.ConfigFolder .. "/" .. name .. ".json", json)
+        return okWrite
+    end
+    return false
+end
+
+function Window:LoadLibraryConfig(name)
+    local path = self.ConfigFolder .. "/" .. name .. ".json"
+    if not isfile(path) then
+        return false
+    end
+
+    local ok, content = pcall(readfile, path)
+    if not ok then
+        return false
+    end
+
+    local ok2, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(content)
+    end)
+    if not ok2 then
+        return false
+    end
+
+    for flag, value in pairs(data) do
+        local item = self.LibraryConfigItems[flag]
+        if item then
+            if item.Set then
+                item:Set(value, false)
+            elseif item.SetValue then
+                item:SetValue(value, false)
+            end
+        end
+    end
+    return true
+end
+
+function Window:DeleteLibraryConfig(name)
+    local path = self.ConfigFolder .. "/" .. name .. ".json"
+    if isfile(path) then
+        local ok = pcall(delfile, path)
+        return ok
+    end
+    return false
 end
 
 -- UI Control Builder Primitives
@@ -5568,6 +5753,9 @@ function UILibrary:CreateWindow(arg)
         InitAnimationPlayed = false,
         CleanupRan = false,
         Destroyed = false,
+        LibrarySettings = {},
+        LibraryConfigItems = {},
+        ConfigFolder = "XenoConfigs/" .. (tostring(game.PlaceId) or "Universal"),
     }, Window)
     w._remotesAllowed = o.IncludeRemotes ~= false
     w._remotesOptions = o.RemotesOptions or {}
@@ -5649,6 +5837,16 @@ function UILibrary:CreateWindow(arg)
             if w and not w.Destroyed then
                 pcall(function()
                     w:CreatePlayersCategory(o.PlayersOptions)
+                end)
+            end
+        end)
+    end
+
+    if o.IncludeConfig ~= false then
+        task.defer(function()
+            if w and not w.Destroyed then
+                pcall(function()
+                    w:CreateConfigCategory(o.ConfigOptions)
                 end)
             end
         end)
