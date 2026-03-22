@@ -4222,7 +4222,7 @@ function Window:CreateConfigCategory(options)
     
     local function refreshConfigList()
         for _, child in ipairs(listSection.Content:GetChildren()) do
-            if child:IsA("Frame") and child.Name ~= "UIListLayout" and child.Name ~= "UIPadding" then
+            if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
                 child:Destroy()
             end
         end
@@ -4232,12 +4232,20 @@ function Window:CreateConfigCategory(options)
             listSection:CreateLabel("No configs found.")
         else
             for _, name in ipairs(configs) do
-                local row = listSection:CreateLabel(name)
-                managementSection:CreateButton({ Name = "Load " .. name, Callback = function()
+                listSection:CreateLabel("Config: " .. name)
+                listSection:CreateButton({ Name = "Load " .. name, Callback = function()
                     if self:LoadLibraryConfig(name) then
                         UILibrary:NotifyInfo({ Title = "Config", Content = "Loaded " .. name, Duration = 2 })
                     else
                         UILibrary:NotifyError({ Title = "Config", Content = "Failed to load " .. name })
+                    end
+                end })
+                listSection:CreateButton({ Name = "Delete " .. name, Callback = function()
+                    if self:DeleteLibraryConfig(name) then
+                        UILibrary:NotifyInfo({ Title = "Config", Content = "Deleted " .. name, Duration = 2 })
+                        refreshConfigList()
+                    else
+                        UILibrary:NotifyError({ Title = "Config", Content = "Failed to delete " .. name })
                     end
                 end })
             end
@@ -4287,7 +4295,7 @@ function Window:GetLibraryConfigs()
         for _, file in ipairs(files) do
             local name = string.match(file, "([^/\\]+)$")
             if string.find(name, "%.json$") then
-                table.insert(configs, string.gsub(name, "%.json$", ""))
+                table.insert(configs, (string.gsub(name, "%.json$", "")))
             end
         end
     end
@@ -4304,7 +4312,12 @@ function Window:SaveLibraryConfig(name)
 
     -- Update settings from items before saving
     for flag, item in pairs(self.LibraryConfigItems) do
-        local val = item:Get()
+        local val = nil
+        local ok, result = pcall(function() return item:Get() end)
+        if ok then
+            val = result
+        end
+
         -- Handle Keybinds which return KeyCode object
         if typeof(val) == "EnumItem" then
             val = val.Name
