@@ -4216,12 +4216,26 @@ function Window:CreateConfigCategory(options)
         return self.ConfigCategory
     end
 
+    options = options or {}
     local configTab = self:CreateTab({ Name = "Config", Icon = "config", LayoutOrder = 25 })
     local managementSection = configTab:CreateSection({ Name = "Management", Side = "Left" })
     local listSection = configTab:CreateSection({ Name = "Configs", Side = "Right" })
 
     local configNameInput = managementSection:CreateInput("Config Name", "e.g. Default", "", function() end)
-    
+    local autoLoadOnExecute = self.AutoLoadPreviousConfig == true
+    if options.AutoLoadPreviousConfig ~= nil then
+        autoLoadOnExecute = options.AutoLoadPreviousConfig == true
+    elseif options.LoadPreviousConfigOnExecute ~= nil then
+        autoLoadOnExecute = options.LoadPreviousConfigOnExecute == true
+    end
+    self.AutoLoadPreviousConfig = autoLoadOnExecute
+
+    managementSection:CreateToggle("Load previous config on execute", function(v)
+        self.AutoLoadPreviousConfig = v == true
+        self:WriteLibraryConfigState()
+    end, autoLoadOnExecute)
+    managementSection:CreateLabel("Loads your last used config when the script executes.")
+
     local function refreshConfigList()
         for _, child in ipairs(listSection.Content:GetChildren()) do
             if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
@@ -4304,6 +4318,97 @@ function Window:GetLibraryConfigs()
     return configs
 end
 
+function Window:GetLibraryConfigStatePath()
+    return self.ConfigFolder .. "/library_state.meta"
+end
+
+function Window:ReadLibraryConfigState()
+    local state = {
+        AutoLoadPreviousConfig = false,
+        LastLoadedConfig = nil,
+    }
+
+    if not isfolder(self.ConfigFolder) then
+        pcall(makefolder, self.ConfigFolder)
+    end
+
+    local path = self:GetLibraryConfigStatePath()
+    if not isfile(path) then
+        return state
+    end
+
+    local ok, content = pcall(readfile, path)
+    if not ok then
+        return state
+    end
+
+    local okDecode, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(content)
+    end)
+    if not okDecode or type(data) ~= "table" then
+        return state
+    end
+
+    state.AutoLoadPreviousConfig = data.AutoLoadPreviousConfig == true
+    if type(data.LastLoadedConfig) == "string" and data.LastLoadedConfig ~= "" then
+        state.LastLoadedConfig = data.LastLoadedConfig
+    end
+
+    return state
+end
+
+function Window:WriteLibraryConfigState()
+    if not isfolder(self.ConfigFolder) then
+        pcall(makefolder, self.ConfigFolder)
+    end
+
+    local payload = {
+        AutoLoadPreviousConfig = self.AutoLoadPreviousConfig == true,
+        LastLoadedConfig = (type(self.LastLoadedConfigName) == "string" and self.LastLoadedConfigName ~= "")
+            and self.LastLoadedConfigName or nil,
+    }
+
+    local okEncode, json = pcall(function()
+        return game:GetService("HttpService"):JSONEncode(payload)
+    end)
+    if not okEncode then
+        return false
+    end
+
+    local okWrite = pcall(writefile, self:GetLibraryConfigStatePath(), json)
+    return okWrite
+end
+
+function Window:LoadPreviousConfigOnExecute(silent)
+    if self.AutoLoadPreviousConfig ~= true then
+        return false
+    end
+
+    local name = self.LastLoadedConfigName
+    if type(name) ~= "string" or name == "" then
+        return false
+    end
+
+    if self:LoadLibraryConfig(name) then
+        if not silent then
+            UILibrary:NotifyInfo({ Title = "Config", Content = "Auto-loaded " .. name, Duration = 2 })
+        end
+        return true
+    end
+
+    local path = self.ConfigFolder .. "/" .. name .. ".json"
+    if not isfile(path) then
+        self.LastLoadedConfigName = nil
+        self:WriteLibraryConfigState()
+    end
+
+    if not silent then
+        UILibrary:NotifyError({ Title = "Config", Content = "Failed to auto-load " .. tostring(name) })
+    end
+
+    return false
+end
+
 function Window:SaveLibraryConfig(name)
     if not name or name == "" then
         return false
@@ -4332,12 +4437,20 @@ function Window:SaveLibraryConfig(name)
     end)
     if ok then
         local okWrite = pcall(writefile, self.ConfigFolder .. "/" .. name .. ".json", json)
+        if okWrite then
+            self.LastLoadedConfigName = name
+            self:WriteLibraryConfigState()
+        end
         return okWrite
     end
     return false
 end
 
 function Window:LoadLibraryConfig(name)
+    if not name or name == "" then
+        return false
+    end
+
     local path = self.ConfigFolder .. "/" .. name .. ".json"
     if not isfile(path) then
         return false
@@ -4365,13 +4478,24 @@ function Window:LoadLibraryConfig(name)
             end
         end
     end
+
+    self.LastLoadedConfigName = name
+    self:WriteLibraryConfigState()
     return true
 end
 
 function Window:DeleteLibraryConfig(name)
+    if not name or name == "" then
+        return false
+    end
+
     local path = self.ConfigFolder .. "/" .. name .. ".json"
     if isfile(path) then
         local ok = pcall(delfile, path)
+        if ok and self.LastLoadedConfigName == name then
+            self.LastLoadedConfigName = nil
+            self:WriteLibraryConfigState()
+        end
         return ok
     end
     return false
@@ -5771,9 +5895,15 @@ function UILibrary:CreateWindow(arg)
         LibrarySettings = {},
         LibraryConfigItems = {},
         ConfigFolder = "Limbo",
+        AutoLoadPreviousConfig = false,
+        LastLoadedConfigName = nil,
+        _startupAutoLoadConfigDone = false,
     }, Window)
     w._remotesAllowed = o.IncludeRemotes ~= false
     w._remotesOptions = o.RemotesOptions or {}
+    local savedConfigState = w:ReadLibraryConfigState()
+    w.AutoLoadPreviousConfig = savedConfigState.AutoLoadPreviousConfig == true
+    w.LastLoadedConfigName = savedConfigState.LastLoadedConfig
 
     UILibrary._window = w
     UILibrary._toastHost = toastHost
@@ -5866,6 +5996,29 @@ function UILibrary:CreateWindow(arg)
             end
         end)
     end
+
+    task.defer(function()
+        if not w or w.Destroyed or w._startupAutoLoadConfigDone then
+            return
+        end
+        w._startupAutoLoadConfigDone = true
+
+        for _ = 1, 10 do
+            if not w or w.Destroyed then
+                return
+            end
+            if next(w.LibraryConfigItems) ~= nil then
+                break
+            end
+            task.wait(0.1)
+        end
+
+        if w and not w.Destroyed then
+            pcall(function()
+                w:LoadPreviousConfigOnExecute(true)
+            end)
+        end
+    end)
 
     w:SetVisible(true)
     task.defer(function()
