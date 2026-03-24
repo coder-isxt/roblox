@@ -3735,19 +3735,23 @@ function Window:CreateRemotesCategory(options)
             return nil, nil
         end
 
-        local cleaned, icon = byPrefix("[BE]", REMOTE_LOG_ICONS.BindableEvent)
+        --BE
+        local cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.BindableEvent)
         if icon then
             return cleaned, icon
         end
-        cleaned, icon = byPrefix("[BF]", REMOTE_LOG_ICONS.BindableFunction)
+        --BF
+        cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.BindableFunction)
         if icon then
             return cleaned, icon
         end
-        cleaned, icon = byPrefix("[E]", REMOTE_LOG_ICONS.RemoteEvent)
+        --E
+        cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.RemoteEvent)
         if icon then
             return cleaned, icon
         end
-        cleaned, icon = byPrefix("[F]", REMOTE_LOG_ICONS.RemoteFunction)
+        --F
+        cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.RemoteFunction)
         if icon then
             return cleaned, icon
         end
