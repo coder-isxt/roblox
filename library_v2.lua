@@ -3699,6 +3699,9 @@ function Window:CreateRemotesCategory(options)
     local selectedLabel = settingsSection:CreateLabel("Selected: None")
     local selectedMetaLabel = settingsSection:CreateLabel("Method: - | Time: -")
     local selectedTypeLabel = settingsSection:CreateLabel("Type: -")
+    local selectedRemoteName = nil
+    local selectedRemoteMethod = nil
+    local stopRemoteButton = nil
     local logsHintLabel = logsSection:CreateLabel("Select a log entry, then use Controls.")
     logsHintLabel.Frame.LayoutOrder = -1000000
     scriptSection:CreateLabel("Latest generated script for selected log.")
@@ -3873,6 +3876,22 @@ function Window:CreateRemotesCategory(options)
         cachedCode = current
         return current
     end
+    local function normalizeSelectedRemoteName(value)
+        local raw = tostring(value or "")
+        local trimmed = string.gsub(string.gsub(raw, "^%s+", ""), "%s+$", "")
+        local lower = string.lower(trimmed)
+        if trimmed == "" or lower == "none" or lower == "-" then
+            return nil
+        end
+        return trimmed
+    end
+    local function updateStopButtonVisibility()
+        if not stopRemoteButton or not stopRemoteButton.Frame then
+            return
+        end
+        local canStop = selectedRemoteName ~= nil and selectedRemoteMethod == "FireServer"
+        stopRemoteButton.Frame.Visible = canStop
+    end
     local function setSelectionText(text)
         local value = tostring(text or "None")
         if selectedLabel and selectedLabel.Set then
@@ -3884,6 +3903,15 @@ function Window:CreateRemotesCategory(options)
         if selectedTypeLabel and selectedTypeLabel.Set then
             selectedTypeLabel:Set("Type: -")
         end
+        local fallbackName, fallbackMethod = string.match(value, "^(.-)%s*%(([%w_]+)%)$")
+        if fallbackName and fallbackMethod then
+            selectedRemoteName = normalizeSelectedRemoteName(fallbackName)
+            selectedRemoteMethod = tostring(fallbackMethod)
+        else
+            selectedRemoteName = normalizeSelectedRemoteName(value)
+            selectedRemoteMethod = nil
+        end
+        updateStopButtonVisibility()
         local trimmed = string.gsub(string.gsub(value, "^%s+", ""), "%s+$", "")
         local lower = string.lower(trimmed)
         local hasSelection = trimmed ~= "" and lower ~= "none" and lower ~= "-"
@@ -3899,6 +3927,8 @@ function Window:CreateRemotesCategory(options)
         local method = tostring(info.Method or "-")
         local ts = tostring(info.Time or "-")
         local rtype = tostring(info.Type or "-")
+        selectedRemoteName = normalizeSelectedRemoteName(name)
+        selectedRemoteMethod = method
 
         if selectedLabel and selectedLabel.Set then
             selectedLabel:Set("Selected: " .. name)
@@ -3913,9 +3943,130 @@ function Window:CreateRemotesCategory(options)
         local lower = string.lower(trimmed)
         local hasSelection = trimmed ~= "" and lower ~= "none" and lower ~= "-"
         scriptSection.Frame.Visible = hasSelection
+        updateStopButtonVisibility()
     end
 
     local genv = (typeof(getgenv) == "function" and getgenv()) or _G
+    local remoteStopState = genv.__LibraryRemoteStopState
+    if type(remoteStopState) ~= "table" then
+        remoteStopState = {}
+        genv.__LibraryRemoteStopState = remoteStopState
+    end
+    if type(remoteStopState.BlockedNames) ~= "table" then
+        remoteStopState.BlockedNames = {}
+    end
+
+    local function ensureRemoteStopHook()
+        if remoteStopState.Hooked == true and type(remoteStopState.Namecall) == "function" then
+            return true
+        end
+
+        local wrapClosure = (type(newcclosure) == "function" and newcclosure) or function(fn)
+            return fn
+        end
+
+        local function hookedNamecall(handler)
+            return wrapClosure(function(self, ...)
+                local method = getnamecallmethod()
+                if method == "FireServer" and typeof(self) == "Instance" then
+                    if self:IsA("RemoteEvent") or self:IsA("UnreliableRemoteEvent") then
+                        local remoteName = tostring(self)
+                        local blockedNames = remoteStopState.BlockedNames
+                        if blockedNames[remoteName] == true or blockedNames[self.Name] == true then
+                            return nil
+                        end
+                    end
+                end
+                return handler(self, ...)
+            end)
+        end
+
+        if type(hookmetamethod) == "function" then
+            local oldNamecall = nil
+            local okHook, hookErr = pcall(function()
+                oldNamecall = hookmetamethod(game, "__namecall", hookedNamecall(function(self, ...)
+                    return oldNamecall(self, ...)
+                end))
+            end)
+            if okHook and type(oldNamecall) == "function" then
+                remoteStopState.Hooked = true
+                remoteStopState.Namecall = oldNamecall
+                remoteStopState.HookType = "hookmetamethod"
+                return true
+            end
+            if not okHook then
+                warn("[library_v2] hookmetamethod stop-hook failed:", hookErr)
+            end
+        end
+
+        if type(getrawmetatable) ~= "function" or type(getnamecallmethod) ~= "function" then
+            return false, "metatable hooks are unavailable in this executor"
+        end
+
+        local mt = getrawmetatable(game)
+        if type(mt) ~= "table" then
+            return false, "game metatable is unavailable"
+        end
+
+        local originalNamecall = mt.__namecall
+        if type(originalNamecall) ~= "function" then
+            return false, "__namecall is unavailable"
+        end
+
+        local setReadOnly = setreadonly
+        local makeWritable = make_writeable or makewriteable
+        local unlocked = false
+        if type(makeWritable) == "function" then
+            pcall(makeWritable, mt)
+            unlocked = true
+        elseif type(setReadOnly) == "function" then
+            pcall(setReadOnly, mt, false)
+            unlocked = true
+        end
+
+        local okHook, hookErr = pcall(function()
+            mt.__namecall = hookedNamecall(function(self, ...)
+                return originalNamecall(self, ...)
+            end)
+        end)
+
+        if type(setReadOnly) == "function" and unlocked then
+            pcall(setReadOnly, mt, true)
+        end
+
+        if not okHook then
+            return false, hookErr
+        end
+
+        remoteStopState.Hooked = true
+        remoteStopState.Namecall = originalNamecall
+        remoteStopState.HookType = "__namecall"
+        return true
+    end
+
+    stopRemoteButton = actionsSection:CreateButton("Stop", function()
+        if selectedRemoteName == nil or selectedRemoteMethod ~= "FireServer" then
+            return
+        end
+
+        local okHook, hookErr = ensureRemoteStopHook()
+        if not okHook then
+            UILibrary:NotifyError({
+                Title = "Remotes",
+                Content = "Stop failed: " .. tostring(hookErr or "unknown hook error"),
+                Duration = 4,
+            })
+            return
+        end
+
+        remoteStopState.BlockedNames[selectedRemoteName] = true
+        UILibrary:NotifyInfo({
+            Title = "Remotes",
+            Content = "Stopped RemoteEvent: " .. selectedRemoteName,
+            Duration = 2.5,
+        })
+    end)
+    stopRemoteButton.Frame.Visible = false
 
     if genv.SimpleSpyExecuted and type(genv.SimpleSpyShutdown) == "function" then
         pcall(genv.SimpleSpyShutdown)
