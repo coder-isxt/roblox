@@ -226,7 +226,7 @@ end
 
 local function isPersistentTabName(name)
     local n = string.lower(tostring(name or ""))
-    return n == "local" or n == "players" or n == "universal" or n == "remotes"
+    return n == "local" or n == "players" or n == "universal" or n == "remotes" or n == "scripts"
 end
 
 local function closeDropdowns(except)
@@ -4233,6 +4233,44 @@ function Window:CreateRemotesCategory(options)
 end
 
 -- UI Category Builders
+function Window:CreateScriptsCategory(options)
+    if self.ScriptsCategory then
+        return self.ScriptsCategory
+    end
+
+    options = options or {}
+    local scriptsTabIcon = options.TabIcon or options.Icon or "scripts"
+
+    local scriptsTab = nil
+    for _, existingTab in ipairs(self.Tabs) do
+        if existingTab.Name == "Scripts" then
+            scriptsTab = existingTab
+            break
+        end
+    end
+    if not scriptsTab then
+        scriptsTab = self:CreateTab({ Name = "Scripts", Icon = scriptsTabIcon })
+    elseif scriptsTab.SetIcon then
+        scriptsTab:SetIcon(scriptsTabIcon)
+    end
+
+    local scriptsSection = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
+    local statusSection = scriptsTab:CreateSection({ Name = "Status", Side = "Right" })
+
+    scriptsSection:CreateParagraph("Coming Soon", "Scripts tab is enabled. We can add script functionality next.")
+    statusSection:CreateLabel("Use Universal > Scripts toggle to show/hide this tab.")
+
+    self.ScriptsCategory = {
+        Tab = scriptsTab,
+        ScriptsSection = scriptsSection,
+        StatusSection = statusSection,
+        Options = options,
+    }
+
+    return self.ScriptsCategory
+end
+
+-- UI Category Builders
 function Window:CreateUniversalCategory(options)
     if self.UniversalCategory then
         return self.UniversalCategory
@@ -4257,8 +4295,11 @@ function Window:CreateUniversalCategory(options)
     local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
     local infoSection = universalTab:CreateSection({ Name = "Info", Side = "Right" })
     local developerEnabled = false
+    local scriptsEnabled = false
     local remotesAllowed = self._remotesAllowed ~= false
     local remotesOptions = self._remotesOptions or {}
+    local scriptsAllowed = self._scriptsAllowed ~= false
+    local scriptsOptions = self._scriptsOptions or {}
 
     local function notify(title, content, duration)
         UILibrary:Notify({
@@ -4316,6 +4357,15 @@ function Window:CreateUniversalCategory(options)
         self.RemotesCategory = nil
         removeTab(tabRef)
     end
+    local function removeScriptsTab()
+        local category = self.ScriptsCategory
+        if not category then
+            return
+        end
+        local tabRef = category.Tab
+        self.ScriptsCategory = nil
+        removeTab(tabRef)
+    end
 
     local function setDeveloperEnabled(state, silent)
         state = state == true
@@ -4337,10 +4387,33 @@ function Window:CreateUniversalCategory(options)
             notify("Developer", developerEnabled and "Enabled." or "Disabled.", 1.9)
         end
     end
+    local function setScriptsEnabled(state, silent)
+        state = state == true
+        if scriptsEnabled == state then
+            return
+        end
+        scriptsEnabled = state
+        self.LibrarySettings.ScriptsMode = state
+
+        if scriptsEnabled then
+            if scriptsAllowed then
+                self:CreateScriptsCategory(scriptsOptions)
+            end
+        else
+            removeScriptsTab()
+        end
+
+        if not silent then
+            notify("Scripts", scriptsEnabled and "Enabled." or "Disabled.", 1.9)
+        end
+    end
 
     local developerToggle = otherSection:CreateToggle("Remotes", function(v)
         setDeveloperEnabled(v, false)
     end, options.DeveloperEnabled == true)
+    local scriptsToggle = otherSection:CreateToggle("Scripts", function(v)
+        setScriptsEnabled(v, false)
+    end, options.ScriptsEnabled == true)
     local function runExternalLoader(name, url, useAsync)
         local ok, err = pcall(function()
             local source
@@ -4374,10 +4447,13 @@ function Window:CreateUniversalCategory(options)
 
     otherSection:CreateParagraph("Universal", "Persistent tab for cross-game tools.")
     otherSection:CreateLabel("Remotes tab is available only in Developer mode.")
+    otherSection:CreateLabel("Scripts tab can be toggled here.")
     infoSection:CreateParagraph("Developer Tabs", "Developer mode enables Remotes.")
+    infoSection:CreateParagraph("Scripts Tab", "Toggle Scripts on to show the Scripts tab.")
     infoSection:CreateLabel("Turn Developer on to use SimpleSpy remotes.")
 
     setDeveloperEnabled(options.DeveloperEnabled == true, true)
+    setScriptsEnabled(options.ScriptsEnabled == true, true)
 
     self.UniversalCategory = {
         Tab = universalTab,
@@ -4386,22 +4462,36 @@ function Window:CreateUniversalCategory(options)
         UniversalSection = otherSection,
         OtherSection = otherSection,
         DeveloperToggle = developerToggle,
+        ScriptsToggle = scriptsToggle,
         SetDeveloperEnabled = function(_, state)
             if developerToggle and developerToggle.Set then
                 developerToggle:Set(state == true, true)
             end
             setDeveloperEnabled(state == true, true)
         end,
+        SetScriptsEnabled = function(_, state)
+            if scriptsToggle and scriptsToggle.Set then
+                scriptsToggle:Set(state == true, true)
+            end
+            setScriptsEnabled(state == true, true)
+        end,
         GetDeveloperEnabled = function()
             return developerEnabled
         end,
+        GetScriptsEnabled = function()
+            return scriptsEnabled
+        end,
         GetDeveloperTabs = function()
             return self.RemotesCategory and self.RemotesCategory.Tab or nil
+        end,
+        GetScriptsTab = function()
+            return self.ScriptsCategory and self.ScriptsCategory.Tab or nil
         end,
         Options = options,
     }
 
     self.LibraryConfigItems.DeveloperMode = developerToggle
+    self.LibraryConfigItems.ScriptsMode = scriptsToggle
 
     return self.UniversalCategory
 end
@@ -5691,10 +5781,10 @@ function Window:CreateTab(a, iconMaybe)
         tabLayoutOrder = 20
     elseif tabNameLower == "universal" then
         tabLayoutOrder = 30
+    elseif tabNameLower == "scripts" then
+        tabLayoutOrder = 35
     elseif tabNameLower == "remotes" then
         tabLayoutOrder = 40
-    elseif tabNameLower == "scripts" then
-        tabLayoutOrder = 50
     else
         tabLayoutOrder = self.NextCustomTabOrder or 200
         self.NextCustomTabOrder = tabLayoutOrder + 1
@@ -6097,6 +6187,8 @@ function UILibrary:CreateWindow(arg)
     }, Window)
     w._remotesAllowed = o.IncludeRemotes ~= false
     w._remotesOptions = o.RemotesOptions or {}
+    w._scriptsAllowed = o.IncludeScripts ~= false
+    w._scriptsOptions = o.ScriptsOptions or {}
     local savedConfigState = w:ReadLibraryConfigState()
     w.AutoLoadPreviousConfig = savedConfigState.AutoLoadPreviousConfig == true
     w.LastLoadedConfigName = savedConfigState.LastLoadedConfig
@@ -6168,6 +6260,16 @@ function UILibrary:CreateWindow(arg)
             if w and not w.Destroyed then
                 pcall(function()
                     w:CreateRemotesCategory(o.RemotesOptions)
+                end)
+            end
+        end)
+    end
+
+    if o.IncludeScripts ~= false and o.IncludeUniversal == false then
+        task.defer(function()
+            if w and not w.Destroyed then
+                pcall(function()
+                    w:CreateScriptsCategory(o.ScriptsOptions)
                 end)
             end
         end)
