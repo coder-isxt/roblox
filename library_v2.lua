@@ -3702,6 +3702,7 @@ function Window:CreateRemotesCategory(options)
     local selectedRemoteName = nil
     local selectedRemoteMethod = nil
     local stopRemoteButton = nil
+    local remoteStopState = nil
     local logsHintLabel = logsSection:CreateLabel("Select a log entry, then use Controls.")
     logsHintLabel.Frame.LayoutOrder = -1000000
     scriptSection:CreateLabel("Latest generated script for selected log.")
@@ -3735,23 +3736,19 @@ function Window:CreateRemotesCategory(options)
             return nil, nil
         end
 
-        --BE
-        local cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.BindableEvent)
+        local cleaned, icon = byPrefix("[BE]", REMOTE_LOG_ICONS.BindableEvent)
         if icon then
             return cleaned, icon
         end
-        --BF
-        cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.BindableFunction)
+        cleaned, icon = byPrefix("[BF]", REMOTE_LOG_ICONS.BindableFunction)
         if icon then
             return cleaned, icon
         end
-        --E
-        cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.RemoteEvent)
+        cleaned, icon = byPrefix("[E]", REMOTE_LOG_ICONS.RemoteEvent)
         if icon then
             return cleaned, icon
         end
-        --F
-        cleaned, icon = byPrefix("", REMOTE_LOG_ICONS.RemoteFunction)
+        cleaned, icon = byPrefix("[F]", REMOTE_LOG_ICONS.RemoteFunction)
         if icon then
             return cleaned, icon
         end
@@ -3916,8 +3913,15 @@ function Window:CreateRemotesCategory(options)
         if not stopRemoteButton or not stopRemoteButton.Frame then
             return
         end
-        local canStop = selectedRemoteName ~= nil and selectedRemoteMethod == "FireServer"
+        local canStop = selectedRemoteName ~= nil and string.lower(tostring(selectedRemoteMethod or "")) == "fireserver"
         stopRemoteButton.Frame.Visible = canStop
+        if stopRemoteButton.SetText then
+            local isBlocked = false
+            if canStop and type(remoteStopState) == "table" and type(remoteStopState.BlockedNames) == "table" then
+                isBlocked = remoteStopState.BlockedNames[selectedRemoteName] == true
+            end
+            stopRemoteButton:SetText(isBlocked and "Start" or "Stop")
+        end
     end
     local function setSelectionText(text)
         local value = tostring(text or "None")
@@ -3974,7 +3978,7 @@ function Window:CreateRemotesCategory(options)
     end
 
     local genv = (typeof(getgenv) == "function" and getgenv()) or _G
-    local remoteStopState = genv.__LibraryRemoteStopState
+    remoteStopState = genv.__LibraryRemoteStopState
     if type(remoteStopState) ~= "table" then
         remoteStopState = {}
         genv.__LibraryRemoteStopState = remoteStopState
@@ -4072,26 +4076,40 @@ function Window:CreateRemotesCategory(options)
     end
 
     stopRemoteButton = actionsSection:CreateButton("Stop", function()
-        if selectedRemoteName == nil or selectedRemoteMethod ~= "FireServer" then
+        if selectedRemoteName == nil or string.lower(tostring(selectedRemoteMethod or "")) ~= "fireserver" then
             return
         end
 
-        local okHook, hookErr = ensureRemoteStopHook()
-        if not okHook then
-            UILibrary:NotifyError({
+        local wasBlocked = type(remoteStopState) == "table"
+            and type(remoteStopState.BlockedNames) == "table"
+            and remoteStopState.BlockedNames[selectedRemoteName] == true
+
+        if wasBlocked then
+            remoteStopState.BlockedNames[selectedRemoteName] = nil
+            UILibrary:NotifyInfo({
                 Title = "Remotes",
-                Content = "Stop failed: " .. tostring(hookErr or "unknown hook error"),
-                Duration = 4,
+                Content = "Started RemoteEvent: " .. selectedRemoteName,
+                Duration = 2.5,
             })
-            return
-        end
+        else
+            local okHook, hookErr = ensureRemoteStopHook()
+            if not okHook then
+                UILibrary:NotifyError({
+                    Title = "Remotes",
+                    Content = "Stop failed: " .. tostring(hookErr or "unknown hook error"),
+                    Duration = 4,
+                })
+                return
+            end
 
-        remoteStopState.BlockedNames[selectedRemoteName] = true
-        UILibrary:NotifyInfo({
-            Title = "Remotes",
-            Content = "Stopped RemoteEvent: " .. selectedRemoteName,
-            Duration = 2.5,
-        })
+            remoteStopState.BlockedNames[selectedRemoteName] = true
+            UILibrary:NotifyInfo({
+                Title = "Remotes",
+                Content = "Stopped RemoteEvent: " .. selectedRemoteName,
+                Duration = 2.5,
+            })
+        end
+        updateStopButtonVisibility()
     end)
     stopRemoteButton.Frame.Visible = false
 
