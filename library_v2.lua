@@ -2190,6 +2190,13 @@ function Window:CreateLocalCategory(options)
     local flySpeed = tonumber(options.FlySpeed) or 80
     flySpeed = math.clamp(flySpeed, 20, 250)
     local flyKey = keycode(options.FlyKey) or Enum.KeyCode.F
+    local sprintEnabled = options.SprintEnabled == true
+    local sprintSpeed = tonumber(options.SprintSpeed) or 32
+    sprintSpeed = math.clamp(sprintSpeed, 16, 120)
+    local sprintHoldKey = keycode(options.SprintHoldKey or options.SprintKey) or Enum.KeyCode.LeftShift
+    local sprintHolding = false
+    local sprintApplied = false
+    local sprintRestoreSpeed = nil
     local flyControls = {
         Forward = false,
         Back = false,
@@ -2213,6 +2220,7 @@ function Window:CreateLocalCategory(options)
     local flingProtectConnection = nil
 
     local flyToggleControl = nil
+    local sprintToggleControl = nil
     local fpsBoostToggle = nil
     local noShadowsToggle = nil
     local noCameraCollisionToggle = nil
@@ -2842,6 +2850,59 @@ function Window:CreateLocalCategory(options)
         return character and character:FindFirstChildOfClass("Humanoid")
     end
 
+    local function isKeyDownSafe(keyCode)
+        local ok, result = pcall(function()
+            return UIS:IsKeyDown(keyCode)
+        end)
+        return ok and result == true
+    end
+
+    local function updateSprintState()
+        local humanoid = getLocalHumanoid()
+        if not humanoid then
+            sprintApplied = false
+            sprintRestoreSpeed = nil
+            return
+        end
+
+        if sprintEnabled and sprintHolding then
+            if not sprintApplied then
+                sprintRestoreSpeed = tonumber(humanoid.WalkSpeed) or 16
+                sprintApplied = true
+            end
+            if math.abs((tonumber(humanoid.WalkSpeed) or 0) - sprintSpeed) > 0.01 then
+                humanoid.WalkSpeed = sprintSpeed
+            end
+            return
+        end
+
+        if sprintApplied then
+            humanoid.WalkSpeed = tonumber(sprintRestoreSpeed) or 16
+            sprintApplied = false
+            sprintRestoreSpeed = nil
+        end
+    end
+
+    local function setSprintEnabled(state, silent)
+        state = state == true
+        if state == sprintEnabled then
+            return
+        end
+
+        sprintEnabled = state
+        self.LibrarySettings.SprintEnabled = state
+        if sprintEnabled then
+            sprintHolding = isKeyDownSafe(sprintHoldKey)
+        else
+            sprintHolding = false
+        end
+        updateSprintState()
+
+        if not silent then
+            notify("Sprint", sprintEnabled and "Enabled." or "Disabled.", 1.8)
+        end
+    end
+
     local function refreshFlyPlatformStand()
         local humanoid = getLocalHumanoid()
         if humanoid then
@@ -3308,16 +3369,25 @@ function Window:CreateLocalCategory(options)
             end
             setFlyEnabled(newState, false)
         end
+        if key == sprintHoldKey then
+            sprintHolding = true
+            updateSprintState()
+        end
         setControlFromKey(key, true)
     end))
     flyInputConnectionEnded = track(self.Connections, UIS.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Keyboard then
+            if input.KeyCode == sprintHoldKey then
+                sprintHolding = false
+                updateSprintState()
+            end
             setControlFromKey(input.KeyCode, false)
         end
     end))
 
     flyVelocityConnection = track(self.Connections, RunService.Heartbeat:Connect(function()
         updateFlyVelocity()
+        updateSprintState()
     end))
 
     flyCharacterAddedConnection = track(self.Connections, localPlayer.CharacterAdded:Connect(function()
@@ -3325,6 +3395,8 @@ function Window:CreateLocalCategory(options)
             if flyEnabled then
                 startFly()
             end
+            sprintHolding = sprintEnabled and isKeyDownSafe(sprintHoldKey)
+            updateSprintState()
             if spinFlingEnabled then
                 task.wait(0.1)
                 setSpinFlingCharacterCollision(true)
@@ -3432,6 +3504,32 @@ function Window:CreateLocalCategory(options)
     self.LibraryConfigItems.FlySpeed = flySpeedSlider
     flySection:CreateLabel("Fly controls: WASD + Space/Ctrl")
 
+    sprintToggleControl = flySection:CreateToggle("Sprint", function(v)
+        setSprintEnabled(v, true)
+    end, sprintEnabled)
+    self.LibraryConfigItems.SprintEnabled = sprintToggleControl
+
+    local sprintKeybind = flySection:CreateKeybind("Sprint Hold Key", function(key, changed)
+        if changed then
+            sprintHoldKey = key
+            self.LibrarySettings.SprintHoldKey = key.Name
+            sprintHolding = sprintEnabled and isKeyDownSafe(sprintHoldKey)
+            updateSprintState()
+            notify("Sprint Keybind", "Set to " .. tostring(key.Name) .. ".", 1.8)
+        end
+    end, sprintHoldKey)
+    self.LibraryConfigItems.SprintHoldKey = sprintKeybind
+
+    local sprintSpeedSlider = flySection:CreateSlider("Sprint Speed", 16, 120, sprintSpeed, function(v)
+        sprintSpeed = math.clamp(tonumber(v) or sprintSpeed, 16, 120)
+        self.LibrarySettings.SprintSpeed = sprintSpeed
+        updateSprintState()
+    end)
+    self.LibraryConfigItems.SprintSpeed = sprintSpeedSlider
+    flySection:CreateLabel("Hold sprint key to sprint.")
+    sprintHolding = sprintEnabled and isKeyDownSafe(sprintHoldKey)
+    updateSprintState()
+
     fpsBoostToggle = visualsSection:CreateToggle("FPS Boost", function(v)
         setFpsBoostEnabled(v, false)
     end, false)
@@ -3516,6 +3614,7 @@ function Window:CreateLocalCategory(options)
 
     self:OnClose(function()
         setFlyEnabled(false, true)
+        setSprintEnabled(false, true)
         setFpsBoostEnabled(false, true)
         setNoShadowsEnabled(false, true)
         setNoCameraCollisionEnabled(false, true)
@@ -3533,6 +3632,8 @@ function Window:CreateLocalCategory(options)
         flyControls.Right = false
         flyControls.Up = false
         flyControls.Down = false
+        sprintHolding = false
+        updateSprintState()
     end)
 
     self.LocalCategory = {
@@ -3555,6 +3656,22 @@ function Window:CreateLocalCategory(options)
         end,
         GetFlySpeed = function()
             return flySpeed
+        end,
+        SetSprintEnabled = function(_, state)
+            if sprintToggleControl and sprintToggleControl.Set then
+                sprintToggleControl:Set(state == true, true)
+            end
+            setSprintEnabled(state == true, true)
+        end,
+        GetSprintEnabled = function()
+            return sprintEnabled
+        end,
+        SetSprintSpeed = function(_, speed)
+            sprintSpeed = math.clamp(tonumber(speed) or sprintSpeed, 16, 120)
+            updateSprintState()
+        end,
+        GetSprintSpeed = function()
+            return sprintSpeed
         end,
         SetFpsBoost = function(_, state)
             if fpsBoostToggle and fpsBoostToggle.Set then
