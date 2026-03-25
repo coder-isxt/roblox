@@ -2192,7 +2192,7 @@ function Window:CreateLocalCategory(options)
     local flyKey = keycode(options.FlyKey) or Enum.KeyCode.F
     local sprintEnabled = options.SprintEnabled == true
     local sprintSpeed = tonumber(options.SprintSpeed) or 32
-    sprintSpeed = math.clamp(sprintSpeed, 16, 120)
+    sprintSpeed = math.clamp(sprintSpeed, 16, 250)
     local sprintHoldKey = keycode(options.SprintHoldKey or options.SprintKey) or Enum.KeyCode.LeftShift
     local sprintHolding = false
     local sprintApplied = false
@@ -3520,8 +3520,8 @@ function Window:CreateLocalCategory(options)
     end, sprintHoldKey)
     self.LibraryConfigItems.SprintHoldKey = sprintKeybind
 
-    local sprintSpeedSlider = flySection:CreateSlider("Sprint Speed", 16, 120, sprintSpeed, function(v)
-        sprintSpeed = math.clamp(tonumber(v) or sprintSpeed, 16, 120)
+    local sprintSpeedSlider = flySection:CreateSlider("Sprint Speed", 16, 250, sprintSpeed, function(v)
+        sprintSpeed = math.clamp(tonumber(v) or sprintSpeed, 16, 250)
         self.LibrarySettings.SprintSpeed = sprintSpeed
         updateSprintState()
     end)
@@ -3667,7 +3667,7 @@ function Window:CreateLocalCategory(options)
             return sprintEnabled
         end,
         SetSprintSpeed = function(_, speed)
-            sprintSpeed = math.clamp(tonumber(speed) or sprintSpeed, 16, 120)
+            sprintSpeed = math.clamp(tonumber(speed) or sprintSpeed, 16, 250)
             updateSprintState()
         end,
         GetSprintSpeed = function()
