@@ -3787,6 +3787,27 @@ function Window:CreateRemotesCategory(options)
         __index = logsSection,
     })
     local newestLogOrder = 0
+    local function adaptLogControlForIcons(control)
+        if not control then
+            return control
+        end
+        if type(control.SetText) == "function" then
+            local originalSetText = control.SetText
+            control.SetText = function(ctrl, nextText)
+                local raw = tostring(nextText or "")
+                local prefix = ""
+                local body = raw
+                local startTwo = string.sub(raw, 1, 2)
+                if startTwo == "> " or startTwo == "  " then
+                    prefix = startTwo
+                    body = string.sub(raw, 3)
+                end
+                local mappedText = iconizeRemoteLabel(body)
+                return originalSetText(ctrl, prefix .. mappedText)
+            end
+        end
+        return control
+    end
     local function applyNewestTopOrder(control)
         newestLogOrder -= 1
         if control and control.Frame then
@@ -3810,15 +3831,17 @@ function Window:CreateRemotesCategory(options)
             end
             payload.Icon = mappedIcon or payload.Icon
             payload.TextXAlignment = payload.TextXAlignment or Enum.TextXAlignment.Left
-            return applyNewestTopOrder(logsSection:CreateButton(payload, b))
+            local control = logsSection:CreateButton(payload, b)
+            return applyNewestTopOrder(adaptLogControlForIcons(control))
         end
         local mappedText, mappedIcon = iconizeRemoteLabel(a)
-        return applyNewestTopOrder(logsSection:CreateButton({
+        local control = logsSection:CreateButton({
             Name = mappedText,
             Icon = mappedIcon,
             TextXAlignment = Enum.TextXAlignment.Left,
             Callback = b,
-        }))
+        })
+        return applyNewestTopOrder(adaptLogControlForIcons(control))
     end
 
     local scriptShell = mk("Frame", {
