@@ -33,23 +33,23 @@ local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
 local BUILTIN_ICON_ALIASES = {
     ["local"] = {
-        Image = "rbxasset://textures/ui/Settings/MenuBarIcons/GameSettingsTab.png",
+        Image = "fa:settings",
         Fallback = "L",
     },
     ["players"] = {
-        Image = "rbxasset://textures/ui/Settings/MenuBarIcons/PlayersTabIcon.png",
+        Image = "fa:user",
         Fallback = "P",
     },
     ["config"] = {
-        Image = "rbxasset://textures/ui/Settings/icon_localization-16.png",
+        Image = "fa:cog",
         Fallback = "C",
     },
     ["universal"] = {
-        Image = "rbxasset://textures/ui/Settings/MenuBarIcons/HomeTab.png",
+        Image = "fa:home",
         Fallback = "U",
     },
     ["scripts"] = {
-        Image = "rbxasset://textures/ui/TopBar/coloredlogo.png",
+        Image = "fa:code",
         Fallback = "S",
     },
 }
@@ -148,8 +148,32 @@ local function resolveIconSpec(iconSpec, depth)
         end
 
         if string.find(raw, "rbxassetid://", 1, true) or string.find(raw, "rbxasset://", 1, true)
-            or string.find(raw, "http://", 1, true) or string.find(raw, "https://", 1, true) then
+            or string.find(raw, "http://", 1, true) or string.find(raw, "https://", 1, true)
+            or string.find(raw, "rbxthumb://", 1, true) then
             return raw, nil
+        end
+
+        local lowerRaw = string.lower(raw)
+        if string.sub(lowerRaw, 1, 5) == "user:" then
+            local id = string.sub(raw, 6)
+            return "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=48&h=48", nil
+        elseif string.sub(lowerRaw, 1, 6) == "group:" then
+            local id = string.sub(raw, 7)
+            return "rbxthumb://type=GroupIcon&id=" .. id .. "&w=150&h=150", nil
+        end
+
+        local prefixEnd = string.find(raw, ":", 1, true)
+        if prefixEnd and prefixEnd > 1 then
+            local prefix = string.lower(string.sub(raw, 1, prefixEnd - 1))
+            local name = string.sub(raw, prefixEnd + 1)
+            local iconSets = UILibrary.IconSets or {}
+            local set = iconSets[prefix]
+            if set then
+                local found = set[name] or set[normalizeIconKey(name)]
+                if found then
+                    return resolveIconSpec(found, depth)
+                end
+            end
         end
 
         local numeric = tonumber(raw)
@@ -160,6 +184,14 @@ local function resolveIconSpec(iconSpec, depth)
         local key = normalizeIconKey(raw)
         local iconAliases = UILibrary.Icons or {}
         local aliasSpec = iconAliases[raw] or iconAliases[key] or BUILTIN_ICON_ALIASES[key]
+
+        if aliasSpec == nil and UILibrary.IconResolver then
+            local ok, result = pcall(UILibrary.IconResolver, raw)
+            if ok and result ~= nil then
+                aliasSpec = result
+            end
+        end
+
         if aliasSpec ~= nil then
             return resolveIconSpec(aliasSpec, depth)
         end
@@ -397,6 +429,67 @@ function UILibrary:GetIcon(name)
     local iconAliases = self.Icons or {}
     return iconAliases[name] or iconAliases[key] or BUILTIN_ICON_ALIASES[key]
 end
+
+function UILibrary:SetIconResolver(callback)
+    self.IconResolver = (type(callback) == "function") and callback or nil
+end
+
+function UILibrary:SetIconAPI(templateUrl)
+    if type(templateUrl) ~= "string" or templateUrl == "" then
+        self.IconResolver = nil
+        return
+    end
+    self.IconResolver = function(name)
+        return string.gsub(templateUrl, "{name}", name)
+    end
+end
+
+function UILibrary:RegisterIconSet(prefix, iconMap)
+    if type(prefix) ~= "string" or type(iconMap) ~= "table" then
+        return false
+    end
+    local p = string.lower(prefix)
+    self.IconSets = self.IconSets or {}
+    self.IconSets[p] = iconMap
+    return true
+end
+
+-- Pre-filled common Icon Sets
+UILibrary.IconSets = {
+    lucide = {
+        ["home"] = 10734898156,
+        ["settings"] = 10734950309,
+        ["user"] = 10747373176,
+        ["search"] = 10723414444,
+        ["folder"] = 10734882102,
+        ["file"] = 10723340573,
+        ["edit"] = 10734883446,
+        ["trash"] = 10734951280,
+        ["code"] = 10723346958,
+        ["terminal"] = 10734951126,
+        ["plus"] = 10734944510,
+        ["minus"] = 10734944436,
+        ["check"] = 10734895698,
+        ["x"] = 10734950309,
+    },
+    fa = {
+        ["home"] = 6031229717,
+        ["user"] = 6031230153,
+        ["settings"] = 6031280882,
+        ["cog"] = 6031280882,
+        ["search"] = 6031154743,
+        ["bell"] = 6034710139,
+        ["trash"] = 6023426915,
+        ["edit"] = 6034824361,
+        ["plus"] = 6031091000,
+        ["minus"] = 6031090957,
+        ["check"] = 6031068800,
+        ["times"] = 6031068832,
+        ["code"] = 6034824361,
+        ["terminal"] = 6031280882,
+    },
+}
+UILibrary.IconSets.fontawesome = UILibrary.IconSets.fa
 
 function Window:IsVisible()
     return self.VisibleState == true
