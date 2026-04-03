@@ -223,6 +223,14 @@ local function resolveIconSpec(iconSpec, depth)
             if asNumber then
                 return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias
             end
+
+            local resolvedFromImage, textFromImage = resolveIconSpec(raw, depth)
+            if resolvedFromImage then
+                return resolvedFromImage, fallbackText or textFromImage or textFromAlias
+            end
+            if fallbackText == nil and textFromImage ~= nil then
+                fallbackText = textFromImage
+            end
         end
 
         if typeof(directId) == "number" then
@@ -235,6 +243,14 @@ local function resolveIconSpec(iconSpec, depth)
             end
             if string.find(directId, "rbxassetid://", 1, true) or string.find(directId, "rbxasset://", 1, true) then
                 return directId, fallbackText or textFromAlias
+            end
+
+            local resolvedFromId, textFromId = resolveIconSpec(directId, depth)
+            if resolvedFromId then
+                return resolvedFromId, fallbackText or textFromId or textFromAlias
+            end
+            if fallbackText == nil and textFromId ~= nil then
+                fallbackText = textFromId
             end
         end
 
