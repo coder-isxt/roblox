@@ -33,205 +33,21 @@ local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
 local BUILTIN_ICON_ALIASES = {
     ["local"] = {
-        Image = "lucide:settings",
         Fallback = "L",
     },
     ["players"] = {
-        Image = "lucide:users",
         Fallback = "P",
     },
     ["config"] = {
-        Image = "lucide:cog",
         Fallback = "C",
     },
     ["universal"] = {
-        Image = "lucide:home",
         Fallback = "U",
     },
     ["scripts"] = {
-        Image = "lucide:code-2",
         Fallback = "S",
     },
 }
-
-local DEFAULT_LUCIDE_CATALOG_URL = "https://raw.githubusercontent.com/latte-soft/lucide-roblox/master/lib/Icons.luau"
-local DEFAULT_LUCIDE_ICON_SIZE = 48
-local LUCIDE_SOURCE_ATTEMPTED = false
-local LUCIDE_SOURCE_TEXT = nil
-local LUCIDE_SECTION_CACHE = {}
-local LUCIDE_ICON_CACHE = {}
-local FA_TO_LUCIDE = {
-    ["home"] = "home",
-    ["house"] = "home",
-    ["user"] = "user",
-    ["users"] = "users",
-    ["profile"] = "user",
-    ["settings"] = "settings",
-    ["cog"] = "cog",
-    ["search"] = "search",
-    ["bell"] = "bell",
-    ["trash"] = "trash-2",
-    ["delete"] = "trash-2",
-    ["edit"] = "square-pen",
-    ["pen"] = "pen",
-    ["pencil"] = "pencil",
-    ["plus"] = "plus",
-    ["minus"] = "minus",
-    ["check"] = "check",
-    ["times"] = "x",
-    ["close"] = "x",
-    ["xmark"] = "x",
-    ["code"] = "code-2",
-    ["terminal"] = "terminal-square",
-    ["folder"] = "folder",
-    ["file"] = "file",
-    ["play"] = "play",
-    ["pause"] = "pause",
-    ["stop"] = "square",
-    ["lock"] = "lock",
-    ["unlock"] = "unlock",
-    ["eye"] = "eye",
-    ["eyeslash"] = "eye-off",
-    ["eyeoff"] = "eye-off",
-    ["save"] = "save",
-    ["download"] = "download",
-    ["upload"] = "upload",
-    ["globe"] = "globe",
-    ["map"] = "map",
-    ["heart"] = "heart",
-    ["star"] = "star",
-    ["info"] = "info",
-    ["question"] = "circle-help",
-    ["warning"] = "triangle-alert",
-    ["music"] = "music",
-    ["video"] = "video",
-    ["camera"] = "camera",
-    ["image"] = "image",
-    ["chat"] = "message-circle",
-    ["comment"] = "message-square",
-    ["list"] = "list",
-    ["menu"] = "menu",
-    ["bars"] = "menu",
-    ["wrench"] = "wrench",
-    ["shield"] = "shield",
-    ["bolt"] = "zap",
-    ["chart"] = "bar-chart",
-    ["barchart"] = "bar-chart",
-    ["dashboard"] = "layout-dashboard",
-    ["layoutdashboard"] = "layout-dashboard",
-    ["gamepad"] = "gamepad-2",
-    ["gamepad2"] = "gamepad-2",
-    ["sword"] = "sword",
-    ["crosshair"] = "crosshair",
-    ["target"] = "target",
-    ["sun"] = "sun",
-    ["moon"] = "moon",
-    ["anchor"] = "anchor",
-    ["link"] = "link",
-    ["copy"] = "copy",
-    ["paste"] = "clipboard-paste",
-    ["clipboardpaste"] = "clipboard-paste",
-    ["undo"] = "undo",
-    ["redo"] = "redo",
-    ["filter"] = "filter",
-    ["tag"] = "tag",
-    ["tags"] = "tags",
-    ["key"] = "key",
-    ["bug"] = "bug",
-    ["rocket"] = "rocket",
-    ["fire"] = "flame",
-    ["gift"] = "gift",
-    ["shop"] = "store",
-    ["cart"] = "shopping-cart",
-    ["shoppingcart"] = "shopping-cart",
-    ["terminalsquare"] = "terminal-square",
-    ["trash2"] = "trash-2",
-    ["code2"] = "code-2",
-    ["messagecircle"] = "message-circle",
-    ["messagesquare"] = "message-square",
-    ["circlehelp"] = "circle-help",
-    ["trianglealert"] = "triangle-alert",
-    ["wallet"] = "wallet",
-    ["trophy"] = "trophy",
-    ["flag"] = "flag",
-    ["inbox"] = "inbox",
-}
-local LUCIDE_FALLBACK_ICONS = {
-    ["home"] = {16898613509, 820, 147},
-    ["settings"] = {16898613777, 771, 257},
-    ["users"] = {16898613869, 967, 98},
-    ["user"] = {16898613869, 661, 869},
-    ["cog"] = {16898613044, 918, 563},
-    ["code-2"] = {16898613044, 453, 771},
-    ["search"] = {16898613699, 918, 857},
-    ["folder"] = {16898613353, 404, 967},
-    ["file"] = {16898613353, 820, 661},
-    ["trash-2"] = {16898613869, 257, 918},
-    ["plus"] = {16898613699, 257, 918},
-    ["minus"] = {16898613613, 771, 196},
-    ["check"] = {16898612819, 710, 869},
-    ["x"] = {16898613869, 869, 906},
-    ["terminal-square"] = {16898613869, 0, 820},
-    ["bell"] = {16898612819, 820, 257},
-    ["shield"] = {16898613777, 869, 0},
-    ["star"] = {16898613777, 967, 147},
-    ["heart"] = {16898613509, 661, 771},
-    ["music"] = {16898613613, 967, 563},
-    ["camera"] = {16898612819, 967, 563},
-    ["image"] = {16898613509, 306, 918},
-    ["map"] = {16898613613, 306, 771},
-    ["globe"] = {16898613509, 771, 563},
-    ["lock"] = {16898613509, 918, 857},
-    ["unlock"] = {16898613869, 771, 710},
-    ["eye"] = {16898613353, 771, 563},
-    ["eye-off"] = {16898613353, 820, 514},
-    ["wrench"] = {16898613869, 820, 906},
-    ["zap"] = {16898613869, 918, 906},
-    ["bar-chart"] = {16898612629, 967, 759},
-    ["layout-dashboard"] = {16898613509, 967, 355},
-    ["gamepad-2"] = {16898613353, 710, 967},
-    ["sword"] = {16898613777, 710, 967},
-    ["crosshair"] = {16898613044, 453, 869},
-    ["target"] = {16898613869, 514, 771},
-    ["sun"] = {16898613777, 967, 453},
-    ["moon"] = {16898613613, 306, 918},
-    ["anchor"] = {16898612629, 306, 869},
-    ["link"] = {16898613509, 918, 453},
-    ["copy"] = {16898613044, 918, 612},
-    ["clipboard-paste"] = {16898613044, 514, 869},
-    ["undo"] = {16898613869, 404, 820},
-    ["redo"] = {16898613699, 918, 355},
-    ["filter"] = {16898613353, 612, 869},
-    ["tag"] = {16898613777, 967, 906},
-    ["bug"] = {16898612819, 257, 967},
-    ["rocket"] = {16898613699, 918, 147},
-    ["flame"] = {16898613353, 967, 306},
-    ["gift"] = {16898613353, 820, 955},
-    ["store"] = {16898613777, 404, 967},
-    ["shopping-cart"] = {16898613777, 869, 257},
-    ["wallet"] = {16898613869, 147, 967},
-    ["trophy"] = {16898613869, 820, 147},
-    ["flag"] = {16898613353, 98, 918},
-    ["inbox"] = {16898613509, 918, 563},
-    ["circle-help"] = {16898613044, 820, 257},
-    ["triangle-alert"] = {16898613869, 967, 0},
-    ["message-circle"] = {16898613613, 563, 820},
-    ["message-square"] = {16898613613, 355, 820},
-    ["menu"] = {16898613613, 49, 820},
-}
-
-local function resetLucideCache()
-    LUCIDE_SOURCE_ATTEMPTED = false
-    LUCIDE_SOURCE_TEXT = nil
-    LUCIDE_SECTION_CACHE = {}
-    LUCIDE_ICON_CACHE = {}
-end
-
-for faName, lucideName in pairs(FA_TO_LUCIDE) do
-    if BUILTIN_ICON_ALIASES[faName] == nil then
-        BUILTIN_ICON_ALIASES[faName] = "lucide:" .. lucideName
-    end
-end
 
 local C = {
     Main = Color3.fromRGB(10, 14, 21),
@@ -309,161 +125,6 @@ local function normalizeIconKey(v)
     return key
 end
 
-local function sanitizeLucideIconName(v)
-    if type(v) ~= "string" then
-        return nil
-    end
-    local name = string.lower(v)
-    name = string.match(name, "^%s*(.-)%s*$") or ""
-    name = string.gsub(name, "[_%.%s]+", "-")
-    name = string.gsub(name, "%-+", "-")
-    return name
-end
-
-local function escapePattern(v)
-    return (string.gsub(v, "([^%w])", "%%%1"))
-end
-
-local function getLucideSizeKey()
-    local size = tonumber(UILibrary.LucideIconSize) or DEFAULT_LUCIDE_ICON_SIZE
-    return (size <= 48) and "48px" or "256px"
-end
-
-local function fetchLucideSource()
-    if LUCIDE_SOURCE_ATTEMPTED then
-        return LUCIDE_SOURCE_TEXT
-    end
-    LUCIDE_SOURCE_ATTEMPTED = true
-
-    local url = UILibrary.LucideCatalogUrl or DEFAULT_LUCIDE_CATALOG_URL
-    if type(url) ~= "string" or url == "" then
-        return nil
-    end
-
-    local ok, text = pcall(function()
-        return game:HttpGet(url)
-    end)
-    if ok and type(text) == "string" and text ~= "" then
-        LUCIDE_SOURCE_TEXT = text
-    end
-    return LUCIDE_SOURCE_TEXT
-end
-
-local function getLucideSection(sizeKey)
-    if LUCIDE_SECTION_CACHE[sizeKey] ~= nil then
-        return LUCIDE_SECTION_CACHE[sizeKey] or nil
-    end
-
-    local source = fetchLucideSource()
-    if type(source) ~= "string" then
-        LUCIDE_SECTION_CACHE[sizeKey] = false
-        return nil
-    end
-
-    local marker = "[\"" .. sizeKey .. "\"]={"
-    local sectionStart = string.find(source, marker, 1, true)
-    if not sectionStart then
-        LUCIDE_SECTION_CACHE[sizeKey] = false
-        return nil
-    end
-    sectionStart = sectionStart + #marker
-
-    local nextMarker = (sizeKey == "48px") and "[\"256px\"]={" or nil
-    local sectionEnd = nil
-    if nextMarker then
-        local nextStart = string.find(source, nextMarker, sectionStart, true)
-        if nextStart then
-            sectionEnd = nextStart - 2
-        end
-    end
-
-    local section = (sectionEnd and string.sub(source, sectionStart, sectionEnd)) or string.sub(source, sectionStart)
-    LUCIDE_SECTION_CACHE[sizeKey] = section
-    return section
-end
-
-local function parseLucideEntry(section, iconName)
-    if type(section) ~= "string" or section == "" or type(iconName) ~= "string" or iconName == "" then
-        return nil
-    end
-
-    local escaped = escapePattern(iconName)
-    local quotedPattern = "%[\"" .. escaped .. "\"%]%s*=%s*{%s*(%d+)%s*,%s*{(%d+),(%d+)}%s*,%s*{(%d+),(%d+)}%s*}"
-    local id, w, h, x, y = string.match(section, quotedPattern)
-
-    if not id and string.match(iconName, "^[%a_][%w_]*$") then
-        local barePattern = "%f[%w_]" .. escaped .. "%f[^%w_]%s*=%s*{%s*(%d+)%s*,%s*{(%d+),(%d+)}%s*,%s*{(%d+),(%d+)}%s*}"
-        id, w, h, x, y = string.match(section, barePattern)
-    end
-
-    if not id then
-        return nil
-    end
-
-    local idNum = tonumber(id)
-    local wNum, hNum = tonumber(w), tonumber(h)
-    local xNum, yNum = tonumber(x), tonumber(y)
-    if not (idNum and wNum and hNum and xNum and yNum) then
-        return nil
-    end
-
-    return {
-        Id = idNum,
-        RectSize = Vector2.new(wNum, hNum),
-        RectOffset = Vector2.new(xNum, yNum),
-    }
-end
-
-local function resolveLucideIconSpec(iconName)
-    local sanitized = sanitizeLucideIconName(iconName)
-    if not sanitized or sanitized == "" then
-        return nil
-    end
-
-    local sizeKey = getLucideSizeKey()
-    local cacheKey = sizeKey .. ":" .. sanitized
-    if LUCIDE_ICON_CACHE[cacheKey] ~= nil then
-        return LUCIDE_ICON_CACHE[cacheKey] or nil
-    end
-
-    if sizeKey == "48px" then
-        local fallbackEntry = LUCIDE_FALLBACK_ICONS[sanitized]
-        if type(fallbackEntry) == "table" then
-            local fallbackSpec = {
-                Id = fallbackEntry[1],
-                RectSize = Vector2.new(48, 48),
-                RectOffset = Vector2.new(fallbackEntry[2], fallbackEntry[3]),
-            }
-            LUCIDE_ICON_CACHE[cacheKey] = fallbackSpec
-            return fallbackSpec
-        end
-    end
-
-    local section = getLucideSection(sizeKey)
-    if not section then
-        LUCIDE_ICON_CACHE[cacheKey] = false
-        return nil
-    end
-
-    local parsed = parseLucideEntry(section, sanitized)
-    if not parsed and string.find(sanitized, "-", 1, true) then
-        parsed = parseLucideEntry(section, string.gsub(sanitized, "%-", ""))
-    end
-
-    LUCIDE_ICON_CACHE[cacheKey] = parsed or false
-    return parsed
-end
-
-local function makeRectMeta(rectSize, rectOffset)
-    if typeof(rectSize) == "Vector2" and typeof(rectOffset) == "Vector2" then
-        return {
-            RectSize = rectSize,
-            RectOffset = rectOffset,
-        }
-    end
-    return nil
-end
-
 local function resolveIconSpec(iconSpec, depth)
     depth = (depth or 0) + 1
     if depth > 5 then
@@ -481,19 +142,8 @@ local function resolveIconSpec(iconSpec, depth)
             return nil, nil
         end
 
-        if string.find(raw, "rbxassetid://", 1, true) or string.find(raw, "rbxasset://", 1, true)
-            or string.find(raw, "http://", 1, true) or string.find(raw, "https://", 1, true)
-            or string.find(raw, "rbxthumb://", 1, true) then
+        if string.match(raw, "^rbxassetid://%d+$") then
             return raw, nil
-        end
-
-        local lowerRaw = string.lower(raw)
-        if string.sub(lowerRaw, 1, 5) == "user:" then
-            local id = string.sub(raw, 6)
-            return "rbxthumb://type=AvatarHeadShot&id=" .. id .. "&w=48&h=48", nil
-        elseif string.sub(lowerRaw, 1, 6) == "group:" then
-            local id = string.sub(raw, 7)
-            return "rbxthumb://type=GroupIcon&id=" .. id .. "&w=150&h=150", nil
         end
 
         local prefixEnd = string.find(raw, ":", 1, true)
@@ -506,26 +156,6 @@ local function resolveIconSpec(iconSpec, depth)
                 local found = set[name] or set[normalizeIconKey(name)]
                 if found then
                     return resolveIconSpec(found, depth)
-                end
-            end
-
-            if prefix == "lucide" then
-                local lucideIcon = resolveLucideIconSpec(name)
-                if lucideIcon then
-                    return resolveIconSpec(lucideIcon, depth)
-                end
-            elseif prefix == "fa" or prefix == "fontawesome" then
-                local faKey = normalizeIconKey(name)
-                local lucideName = faKey and FA_TO_LUCIDE[faKey] or nil
-                if not lucideName then
-                    lucideName = sanitizeLucideIconName(name)
-                end
-                if type(lucideName) == "string" and lucideName ~= "" then
-                    local lucideIcon = resolveLucideIconSpec(lucideName)
-                    if lucideIcon then
-                        return resolveIconSpec(lucideIcon, depth)
-                    end
-                    return resolveIconSpec("lucide:" .. lucideName, depth)
                 end
             end
         end
@@ -559,31 +189,27 @@ local function resolveIconSpec(iconSpec, depth)
     if iconType == "table" then
         local directImage = iconSpec.Image or iconSpec.Url or iconSpec.Source
         local directId = iconSpec.Id or iconSpec.AssetId or iconSpec.ImageId
-        local directRectSize = iconSpec.ImageRectSize or iconSpec.RectSize
-        local directRectOffset = iconSpec.ImageRectOffset or iconSpec.RectOffset
-        local directRectMeta = makeRectMeta(directRectSize, directRectOffset)
         local fallbackText = iconSpec.Text or iconSpec.Fallback or iconSpec.Glyph
         local aliasName = iconSpec.Alias or iconSpec.Name or iconSpec.IconName
 
-        local imageFromAlias, textFromAlias, rectFromAlias = nil, nil, nil
+        local imageFromAlias, textFromAlias = nil, nil
         if aliasName then
-            imageFromAlias, textFromAlias, rectFromAlias = resolveIconSpec(aliasName, depth)
+            imageFromAlias, textFromAlias = resolveIconSpec(aliasName, depth)
         end
 
         if typeof(directImage) == "string" and directImage ~= "" then
             local raw = directImage
-            if string.find(raw, "rbxassetid://", 1, true) or string.find(raw, "rbxasset://", 1, true)
-                or string.find(raw, "http://", 1, true) or string.find(raw, "https://", 1, true) then
-                return raw, fallbackText or textFromAlias, directRectMeta or rectFromAlias
+            if string.match(raw, "^rbxassetid://%d+$") then
+                return raw, fallbackText or textFromAlias
             end
             local asNumber = tonumber(raw)
             if asNumber then
-                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias, directRectMeta or rectFromAlias
+                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias
             end
 
-            local resolvedFromImage, textFromImage, rectFromImage = resolveIconSpec(raw, depth)
+            local resolvedFromImage, textFromImage = resolveIconSpec(raw, depth)
             if resolvedFromImage then
-                return resolvedFromImage, fallbackText or textFromImage or textFromAlias, directRectMeta or rectFromImage
+                return resolvedFromImage, fallbackText or textFromImage or textFromAlias
             end
             if fallbackText == nil and textFromImage ~= nil then
                 fallbackText = textFromImage
@@ -591,20 +217,20 @@ local function resolveIconSpec(iconSpec, depth)
         end
 
         if typeof(directId) == "number" then
-            return "rbxassetid://" .. tostring(directId), fallbackText or textFromAlias, directRectMeta or rectFromAlias
+            return "rbxassetid://" .. tostring(directId), fallbackText or textFromAlias
         end
         if typeof(directId) == "string" and directId ~= "" then
             local asNumber = tonumber(directId)
             if asNumber then
-                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias, directRectMeta or rectFromAlias
+                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias
             end
-            if string.find(directId, "rbxassetid://", 1, true) or string.find(directId, "rbxasset://", 1, true) then
-                return directId, fallbackText or textFromAlias, directRectMeta or rectFromAlias
+            if string.match(directId, "^rbxassetid://%d+$") then
+                return directId, fallbackText or textFromAlias
             end
 
-            local resolvedFromId, textFromId, rectFromId = resolveIconSpec(directId, depth)
+            local resolvedFromId, textFromId = resolveIconSpec(directId, depth)
             if resolvedFromId then
-                return resolvedFromId, fallbackText or textFromId or textFromAlias, directRectMeta or rectFromId
+                return resolvedFromId, fallbackText or textFromId or textFromAlias
             end
             if fallbackText == nil and textFromId ~= nil then
                 fallbackText = textFromId
@@ -612,7 +238,7 @@ local function resolveIconSpec(iconSpec, depth)
         end
 
         if imageFromAlias then
-            return imageFromAlias, fallbackText or textFromAlias, directRectMeta or rectFromAlias
+            return imageFromAlias, fallbackText or textFromAlias
         end
         if typeof(fallbackText) == "string" and fallbackText ~= "" then
             return nil, string.sub(fallbackText, 1, 3)
@@ -817,27 +443,6 @@ function UILibrary:SetIconAPI(templateUrl)
     end
 end
 
-function UILibrary:SetLucideCatalog(url, iconSize)
-    if url == nil then
-        self.LucideCatalogUrl = DEFAULT_LUCIDE_CATALOG_URL
-    elseif type(url) == "string" and url ~= "" then
-        self.LucideCatalogUrl = url
-    end
-
-    if iconSize ~= nil then
-        local numericSize = tonumber(iconSize)
-        if numericSize then
-            self.LucideIconSize = (numericSize <= 48) and 48 or 256
-        end
-    end
-
-    resetLucideCache()
-end
-
-function UILibrary:GetLucideIcon(name)
-    return resolveLucideIconSpec(name)
-end
-
 function UILibrary:RegisterIconSet(prefix, iconMap)
     if type(prefix) ~= "string" or type(iconMap) ~= "table" then
         return false
@@ -849,28 +454,11 @@ function UILibrary:RegisterIconSet(prefix, iconMap)
 end
 
 -- Pre-filled common Icon Sets
-local faIconSet = {}
-for faName, lucideName in pairs(FA_TO_LUCIDE) do
-    faIconSet[faName] = "lucide:" .. lucideName
-end
-
 UILibrary.IconSets = {
-    lucide = {
-        ["main"] = "lucide:home",
-        ["config"] = "lucide:settings",
-        ["player"] = "lucide:user",
-        ["players"] = "lucide:users",
-        ["scripts"] = "lucide:code-2",
-        ["script"] = "lucide:code-2",
-        ["delete"] = "lucide:trash-2",
-        ["logout"] = "lucide:log-out",
-        ["login"] = "lucide:log-in",
-    },
-    fa = faIconSet,
+    lucide = {},
+    fa = {},
 }
 UILibrary.IconSets.fontawesome = UILibrary.IconSets.fa
-UILibrary.LucideCatalogUrl = DEFAULT_LUCIDE_CATALOG_URL
-UILibrary.LucideIconSize = DEFAULT_LUCIDE_ICON_SIZE
 
 function Window:IsVisible()
     return self.VisibleState == true
@@ -1307,9 +895,9 @@ function Window:CreatePlayersCategory(options)
         end
     end
     if not playersTab then
-        playersTab = self:CreateTab({ Name = "Players", Icon = "fa:users" })
+        playersTab = self:CreateTab({ Name = "Players", Icon = "players" })
     elseif playersTab.SetIcon then
-        playersTab:SetIcon("fa:users")
+        playersTab:SetIcon("players")
     end
 
     local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
@@ -6583,24 +6171,14 @@ function Window:CreateTab(a, iconMaybe)
     corner(iconDot, 99)
 
     local function applyIcon(iconSpec)
-        local resolvedImage, resolvedFallback, resolvedMeta = resolveIconSpec(iconSpec)
+        local resolvedImage, resolvedFallback = resolveIconSpec(iconSpec)
 
         iconImageLabel.Visible = false
         iconTextLabel.Visible = false
         iconDot.Visible = false
-        iconImageLabel.ImageRectSize = Vector2.new(0, 0)
-        iconImageLabel.ImageRectOffset = Vector2.new(0, 0)
 
         if resolvedImage then
             iconImageLabel.Image = resolvedImage
-            if type(resolvedMeta) == "table" then
-                if typeof(resolvedMeta.RectSize) == "Vector2" then
-                    iconImageLabel.ImageRectSize = resolvedMeta.RectSize
-                end
-                if typeof(resolvedMeta.RectOffset) == "Vector2" then
-                    iconImageLabel.ImageRectOffset = resolvedMeta.RectOffset
-                end
-            end
             iconImageLabel.Visible = true
         elseif typeof(resolvedFallback) == "string" and resolvedFallback ~= "" then
             iconTextLabel.Text = string.sub(string.upper(resolvedFallback), 1, 3)
