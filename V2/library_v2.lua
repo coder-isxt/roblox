@@ -351,6 +351,42 @@ function UILibrary:GetIcon(name)
     return iconAliases[name] or iconAliases[key]
 end
 
+local function compactIconFallbackText(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+
+    local text = tostring(value)
+    text = string.gsub(text, "^%s+", "")
+    text = string.gsub(text, "%s+$", "")
+    if text == "" then
+        return nil
+    end
+
+    if string.find(text, "rbxassetid://", 1, true)
+        or string.find(text, "rbxasset://", 1, true)
+        or string.find(text, "http://", 1, true)
+        or string.find(text, "https://", 1, true) then
+        return nil
+    end
+
+    if string.match(text, "^[%w%s_%-]+$") then
+        return nil
+    end
+
+    local maxChars = 3
+    if utf8 and type(utf8.len) == "function" then
+        local len = utf8.len(text)
+        if len and len > maxChars then
+            return nil
+        end
+    elseif #text > maxChars then
+        return nil
+    end
+
+    return text
+end
+
 function UILibrary:SetIconResolver(callback)
     self.IconResolver = (type(callback) == "function") and callback or nil
 end
@@ -805,7 +841,7 @@ function Window:CreatePlayersCategory(options)
     if not localPlayer then
         return nil
     end
-    local playersTabIcon = options.TabIcon or options.Icon or "players"
+    local playersTabIcon = options.TabIcon or options.Icon or "👥"
 
     local playersTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -815,9 +851,9 @@ function Window:CreatePlayersCategory(options)
         end
     end
     if not playersTab then
-        playersTab = self:CreateTab({ Name = "Players", Icon = "players" })
+        playersTab = self:CreateTab({ Name = "Players", Icon = playersTabIcon })
     elseif playersTab.SetIcon then
-        playersTab:SetIcon("players")
+        playersTab:SetIcon(playersTabIcon)
     end
 
     local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
@@ -2268,7 +2304,7 @@ function Window:CreateLocalCategory(options)
     if not localPlayer then
         return nil
     end
-    local localTabIcon = options.TabIcon or options.Icon or "local"
+    local localTabIcon = options.TabIcon or options.Icon or "🏠"
 
     local localTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -3885,7 +3921,7 @@ function Window:CreateRemotesCategory(options)
     end
 
     options = options or {}
-    local remotesTabIcon = "scripts"
+    local remotesTabIcon = options.TabIcon or options.Icon or "📡"
     local defaultSourceUrl = "https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/simplespy.lua"
     local sourcePath = tostring(options.SourcePath or options.Source or defaultSourceUrl)
     local sourceUrl = options.SourceUrl or options.Url
@@ -4460,7 +4496,7 @@ function Window:CreateScriptsCategory(options)
     end
 
     options = options or {}
-    local scriptsTabIcon = options.TabIcon or options.Icon or "scripts"
+    local scriptsTabIcon = options.TabIcon or options.Icon or "📜"
 
     local scriptsTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -4498,7 +4534,7 @@ function Window:CreateUniversalCategory(options)
     end
 
     options = options or {}
-    local universalTabIcon = options.TabIcon or options.Icon or "universal"
+    local universalTabIcon = options.TabIcon or options.Icon or "🌐"
 
     local universalTab = nil
     for _, existingTab in ipairs(self.Tabs) do
@@ -4724,7 +4760,7 @@ function Window:CreateConfigCategory(options)
     end
 
     options = options or {}
-    local configTab = self:CreateTab({ Name = "Config", Icon = "config", LayoutOrder = 25 })
+    local configTab = self:CreateTab({ Name = "Config", Icon = options.TabIcon or options.Icon or "⚙", LayoutOrder = 25 })
     local managementSection = configTab:CreateSection({ Name = "Management", Side = "Left" })
     local listSection = configTab:CreateSection({ Name = "Configs", Side = "Right" })
 
@@ -6092,6 +6128,7 @@ function Window:CreateTab(a, iconMaybe)
 
     local function applyIcon(iconSpec)
         local resolvedImage, resolvedFallback = resolveIconSpec(iconSpec)
+        local compactFallback = compactIconFallbackText(resolvedFallback)
 
         iconImageLabel.Visible = false
         iconTextLabel.Visible = false
@@ -6100,8 +6137,8 @@ function Window:CreateTab(a, iconMaybe)
         if resolvedImage then
             iconImageLabel.Image = resolvedImage
             iconImageLabel.Visible = true
-        elseif typeof(resolvedFallback) == "string" and resolvedFallback ~= "" then
-            iconTextLabel.Text = resolvedFallback
+        elseif compactFallback then
+            iconTextLabel.Text = compactFallback
             iconTextLabel.Visible = true
         else
             iconDot.Visible = true
