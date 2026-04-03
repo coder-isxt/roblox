@@ -31,19 +31,6 @@ local TextService = Services.TextService
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
-local EMOJI_ICON_FALLBACKS = {
-    local = "🏠",
-    home = "🏠",
-    player = "👤",
-    players = "👥",
-    config = "⚙",
-    settings = "⚙",
-    universal = "🌐",
-    script = "📜",
-    scripts = "📜",
-    remote = "📡",
-    remotes = "📡",
-}
 
 local C = {
     Main = Color3.fromRGB(10, 14, 21),
@@ -109,79 +96,6 @@ local function roundStep(v, s)
         return v
     end
     return math.floor((v / s) + 0.5) * s
-end
-
-local function normalizeIconKey(v)
-    if type(v) ~= "string" then
-        return nil
-    end
-    local key = string.lower(v)
-    key = string.gsub(key, "%s+", "")
-    key = string.gsub(key, "[_%-./]", "")
-    return key
-end
-
-local function resolveIconSpec(iconSpec, depth)
-    depth = (depth or 0) + 1
-    if depth > 5 then
-        return nil, nil
-    end
-
-    local iconType = typeof(iconSpec)
-    if iconType == "string" then
-        local raw = tostring(iconSpec)
-        if raw == "" then
-            return nil, nil
-        end
-
-        local prefixEnd = string.find(raw, ":", 1, true)
-        if prefixEnd and prefixEnd > 1 then
-            local prefix = string.lower(string.sub(raw, 1, prefixEnd - 1))
-            local name = string.sub(raw, prefixEnd + 1)
-            local iconSets = UILibrary.IconSets or {}
-            local set = iconSets[prefix]
-            if set then
-                local found = set[name] or set[normalizeIconKey(name)]
-                if found then
-                    return resolveIconSpec(found, depth)
-                end
-            end
-        end
-
-        local key = normalizeIconKey(raw)
-        local iconAliases = UILibrary.Icons or {}
-        local aliasSpec = iconAliases[raw] or iconAliases[key]
-
-        if aliasSpec == nil and UILibrary.IconResolver then
-            local ok, result = pcall(UILibrary.IconResolver, raw)
-            if ok and result ~= nil then
-                aliasSpec = result
-            end
-        end
-
-        if aliasSpec ~= nil then
-            return resolveIconSpec(aliasSpec, depth)
-        end
-
-        return nil, raw
-    end
-
-    if iconType == "table" then
-        local fallbackText = iconSpec.Text or iconSpec.Fallback or iconSpec.Glyph
-        local aliasName = iconSpec.Alias or iconSpec.Name or iconSpec.IconName
-
-        local _, textFromAlias = nil, nil
-        if aliasName then
-            _, textFromAlias = resolveIconSpec(aliasName, depth)
-        end
-
-        if typeof(fallbackText) == "string" and fallbackText ~= "" then
-            return nil, fallbackText
-        end
-        return nil, textFromAlias
-    end
-
-    return nil, nil
 end
 
 local function normalizeSectionSide(side)
@@ -341,102 +255,25 @@ function UILibrary:IsFlingProtectSuspended()
     return os.clock() < (self._suspendFlingProtectUntil or 0)
 end
 
-function UILibrary:RegisterIcon(name, iconSpec)
-    if type(name) ~= "string" or name == "" then
-        return false
-    end
-    local key = normalizeIconKey(name)
-    if not key or key == "" then
-        return false
-    end
-    self.Icons = self.Icons or {}
-    self.Icons[key] = iconSpec
-    self.Icons[name] = iconSpec
-    return true
+function UILibrary:RegisterIcon()
+    return false
 end
 
-function UILibrary:GetIcon(name)
-    if type(name) ~= "string" or name == "" then
-        return nil
-    end
-    local key = normalizeIconKey(name)
-    local iconAliases = self.Icons or {}
-    return iconAliases[name] or iconAliases[key]
+function UILibrary:GetIcon()
+    return nil
 end
 
-local function compactIconFallbackText(value)
-    if type(value) ~= "string" then
-        return nil
-    end
-
-    local text = tostring(value)
-    text = string.gsub(text, "^%s+", "")
-    text = string.gsub(text, "%s+$", "")
-    if text == "" then
-        return nil
-    end
-
-    if string.find(text, "rbxassetid://", 1, true)
-        or string.find(text, "rbxasset://", 1, true)
-        or string.find(text, "http://", 1, true)
-        or string.find(text, "https://", 1, true) then
-        return nil
-    end
-
-    local key = normalizeIconKey(text)
-    if key and EMOJI_ICON_FALLBACKS[key] then
-        return EMOJI_ICON_FALLBACKS[key]
-    end
-
-    if string.match(text, "^[%w%s_%-]+$") then
-        local first = string.match(text, "[%a%d]")
-        if first then
-            return string.upper(first)
-        end
-        return nil
-    end
-
-    local maxChars = 3
-    if utf8 and type(utf8.len) == "function" then
-        local len = utf8.len(text)
-        if len and len > maxChars then
-            return nil
-        end
-    elseif #text > maxChars then
-        return nil
-    end
-
-    return text
+function UILibrary:SetIconResolver()
+    self.IconResolver = nil
 end
 
-function UILibrary:SetIconResolver(callback)
-    self.IconResolver = (type(callback) == "function") and callback or nil
+function UILibrary:SetIconAPI()
+    self.IconResolver = nil
 end
 
-function UILibrary:SetIconAPI(templateUrl)
-    if type(templateUrl) ~= "string" or templateUrl == "" then
-        self.IconResolver = nil
-        return
-    end
-    self.IconResolver = function(name)
-        return string.gsub(templateUrl, "{name}", name)
-    end
+function UILibrary:RegisterIconSet()
+    return false
 end
-
-function UILibrary:RegisterIconSet(prefix, iconMap)
-    if type(prefix) ~= "string" or type(iconMap) ~= "table" then
-        return false
-    end
-    local p = string.lower(prefix)
-    self.IconSets = self.IconSets or {}
-    self.IconSets[p] = iconMap
-    return true
-end
-
--- Pre-filled common Icon Sets
-UILibrary.IconSets = {
-    default = {},
-}
 
 function Window:IsVisible()
     return self.VisibleState == true
@@ -830,15 +667,8 @@ function Window:SelectTab(tabOrName)
         t.Indicator.BackgroundTransparency = active and 0 or 1
         t.ButtonBack.BackgroundTransparency = active and 0.2 or 1
         t.Label.TextColor3 = active and C.Text or C.SubText
-        local iconColor = active and C.Text or C.SubText
-        if t.IconImageLabel then
-            t.IconImageLabel.ImageColor3 = iconColor
-        end
-        if t.IconTextLabel then
-            t.IconTextLabel.TextColor3 = iconColor
-        end
         if t.IconDot then
-            t.IconDot.BackgroundColor3 = iconColor
+            t.IconDot.BackgroundColor3 = active and C.Text or C.SubText
         end
     end
     return picked
@@ -863,8 +693,6 @@ function Window:CreatePlayersCategory(options)
     if not localPlayer then
         return nil
     end
-    local playersTabIcon = options.TabIcon or options.Icon or "👥"
-
     local playersTab = nil
     for _, existingTab in ipairs(self.Tabs) do
         if existingTab.Name == "Players" then
@@ -873,9 +701,7 @@ function Window:CreatePlayersCategory(options)
         end
     end
     if not playersTab then
-        playersTab = self:CreateTab({ Name = "Players", Icon = playersTabIcon })
-    elseif playersTab.SetIcon then
-        playersTab:SetIcon(playersTabIcon)
+        playersTab = self:CreateTab({ Name = "Players" })
     end
 
     local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
@@ -2326,8 +2152,6 @@ function Window:CreateLocalCategory(options)
     if not localPlayer then
         return nil
     end
-    local localTabIcon = options.TabIcon or options.Icon or "🏠"
-
     local localTab = nil
     for _, existingTab in ipairs(self.Tabs) do
         if existingTab.Name == "Local" then
@@ -2336,9 +2160,7 @@ function Window:CreateLocalCategory(options)
         end
     end
     if not localTab then
-        localTab = self:CreateTab({ Name = "Local", Icon = localTabIcon })
-    elseif localTab.SetIcon then
-        localTab:SetIcon(localTabIcon)
+        localTab = self:CreateTab({ Name = "Local" })
     end
 
     local flySection = localTab:CreateSection({ Name = "Fly", Side = "Left" })
@@ -3943,7 +3765,6 @@ function Window:CreateRemotesCategory(options)
     end
 
     options = options or {}
-    local remotesTabIcon = options.TabIcon or options.Icon or "📡"
     local defaultSourceUrl = "https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/simplespy.lua"
     local sourcePath = tostring(options.SourcePath or options.Source or defaultSourceUrl)
     local sourceUrl = options.SourceUrl or options.Url
@@ -3962,9 +3783,7 @@ function Window:CreateRemotesCategory(options)
         end
     end
     if not remotesTab then
-        remotesTab = self:CreateTab({ Name = "Remotes", Icon = remotesTabIcon })
-    elseif remotesTab.SetIcon then
-        remotesTab:SetIcon(remotesTabIcon)
+        remotesTab = self:CreateTab({ Name = "Remotes" })
     end
 
     local logsSection = remotesTab:CreateSection({ Name = "Logs", Side = "Left" })
@@ -3993,7 +3812,7 @@ function Window:CreateRemotesCategory(options)
         BindableFunction = "rbxassetid://4229807624",
     }
 
-    local function iconizeRemoteLabel(text)
+    local function iconizeRemoteLogLabel(text)
         local value = tostring(text or "")
         local noRich = string.gsub(value, "<.->", "")
         local trimmed = string.gsub(noRich, "^%s+", "")
@@ -4056,14 +3875,51 @@ function Window:CreateRemotesCategory(options)
             return trimmed, REMOTE_LOG_ICONS.RemoteEvent
         end
 
-        return trimmed, nil
+        return stripLeadingToken(trimmed), nil
+    end
+
+    local function attachRemoteLogIcon(control, iconImage)
+        if not (control and control.Button and control.Button:IsA("TextButton")) then
+            return
+        end
+
+        local button = control.Button
+        local iconLabel = button:FindFirstChild("RemoteLogIcon")
+        if not iconLabel then
+            iconLabel = mk("ImageLabel", {
+                Parent = button,
+                Name = "RemoteLogIcon",
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Size = UDim2.fromOffset(14, 14),
+                Position = UDim2.new(0, 8, 0.5, -7),
+                ImageColor3 = Color3.new(1, 1, 1),
+                Visible = false,
+            })
+        end
+
+        local hasIcon = type(iconImage) == "string" and iconImage ~= ""
+        iconLabel.Visible = hasIcon
+        if hasIcon then
+            iconLabel.Image = iconImage
+        end
+
+        control._RemoteLogHasIcon = hasIcon
+    end
+
+    local function formatRemoteLogText(text, hasIcon)
+        local body = tostring(text or "")
+        if hasIcon then
+            return "      " .. body
+        end
+        return body
     end
 
     local hostLogSection = setmetatable({}, {
         __index = logsSection,
     })
     local newestLogOrder = 0
-    local function adaptLogControlForIcons(control)
+    local function adaptLogControlLabels(control)
         if not control then
             return control
         end
@@ -4078,8 +3934,10 @@ function Window:CreateRemotesCategory(options)
                     prefix = startTwo
                     body = string.sub(raw, 3)
                 end
-                local mappedText = iconizeRemoteLabel(body)
-                return originalSetText(ctrl, prefix .. mappedText)
+                local mappedText, mappedIcon = iconizeRemoteLogLabel(body)
+                attachRemoteLogIcon(control, mappedIcon)
+                local formatted = formatRemoteLogText(mappedText, control._RemoteLogHasIcon == true)
+                return originalSetText(ctrl, prefix .. formatted)
             end
         end
         return control
@@ -4098,28 +3956,28 @@ function Window:CreateRemotesCategory(options)
                 payload[k] = v
             end
             local sourceLabel = payload.Name or payload.Text
-            local mappedText, mappedIcon = iconizeRemoteLabel(sourceLabel)
+            local mappedText, mappedIcon = iconizeRemoteLogLabel(sourceLabel)
             if payload.Name then
-                payload.Name = mappedText
+                payload.Name = formatRemoteLogText(mappedText, mappedIcon ~= nil)
             end
             if payload.Text then
-                payload.Text = mappedText
+                payload.Text = formatRemoteLogText(mappedText, mappedIcon ~= nil)
             end
-            payload.Icon = mappedIcon or payload.Icon
             payload.TextXAlignment = payload.TextXAlignment or Enum.TextXAlignment.Left
             local control = logsSection:CreateButton(payload, b)
-            return applyNewestTopOrder(adaptLogControlForIcons(control))
+            attachRemoteLogIcon(control, mappedIcon)
+            return applyNewestTopOrder(adaptLogControlLabels(control))
         end
-        local mappedText, mappedIcon = iconizeRemoteLabel(a)
+
+        local mappedText, mappedIcon = iconizeRemoteLogLabel(a)
         local control = logsSection:CreateButton({
-            Name = mappedText,
-            Icon = mappedIcon,
+            Name = formatRemoteLogText(mappedText, mappedIcon ~= nil),
             TextXAlignment = Enum.TextXAlignment.Left,
             Callback = b,
         })
-        return applyNewestTopOrder(adaptLogControlForIcons(control))
+        attachRemoteLogIcon(control, mappedIcon)
+        return applyNewestTopOrder(adaptLogControlLabels(control))
     end
-
     local scriptShell = mk("Frame", {
         Parent = scriptSection.Content,
         BackgroundColor3 = Color3.fromRGB(8, 12, 20),
@@ -4518,8 +4376,6 @@ function Window:CreateScriptsCategory(options)
     end
 
     options = options or {}
-    local scriptsTabIcon = options.TabIcon or options.Icon or "📜"
-
     local scriptsTab = nil
     for _, existingTab in ipairs(self.Tabs) do
         if existingTab.Name == "Scripts" then
@@ -4528,9 +4384,7 @@ function Window:CreateScriptsCategory(options)
         end
     end
     if not scriptsTab then
-        scriptsTab = self:CreateTab({ Name = "Scripts", Icon = scriptsTabIcon })
-    elseif scriptsTab.SetIcon then
-        scriptsTab:SetIcon(scriptsTabIcon)
+        scriptsTab = self:CreateTab({ Name = "Scripts" })
     end
 
     local scriptsSection = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
@@ -4556,8 +4410,6 @@ function Window:CreateUniversalCategory(options)
     end
 
     options = options or {}
-    local universalTabIcon = options.TabIcon or options.Icon or "🌐"
-
     local universalTab = nil
     for _, existingTab in ipairs(self.Tabs) do
         if existingTab.Name == "Universal" then
@@ -4566,9 +4418,7 @@ function Window:CreateUniversalCategory(options)
         end
     end
     if not universalTab then
-        universalTab = self:CreateTab({ Name = "Universal", Icon = universalTabIcon })
-    elseif universalTab.SetIcon then
-        universalTab:SetIcon(universalTabIcon)
+        universalTab = self:CreateTab({ Name = "Universal" })
     end
 
     local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
@@ -4782,7 +4632,7 @@ function Window:CreateConfigCategory(options)
     end
 
     options = options or {}
-    local configTab = self:CreateTab({ Name = "Config", Icon = options.TabIcon or options.Icon or "⚙", LayoutOrder = 25 })
+    local configTab = self:CreateTab({ Name = "Config", LayoutOrder = 25 })
     local managementSection = configTab:CreateSection({ Name = "Management", Side = "Left" })
     local listSection = configTab:CreateSection({ Name = "Configs", Side = "Right" })
 
@@ -5096,11 +4946,10 @@ local function asOptions(list)
 end
 
 function Section:CreateButton(a, b)
-    local text, cb, iconImage, textAlign, tooltipText
+    local text, cb, textAlign, tooltipText
     if typeof(a) == "table" then
         text = tostring(a.Name or a.Text or "Button")
         cb = a.Callback or b
-        iconImage = a.Icon or a.Image or a.IconImage
         textAlign = a.TextXAlignment
         tooltipText = a.Tooltip or a.Description or a.Hint
     else
@@ -5108,13 +4957,8 @@ function Section:CreateButton(a, b)
         cb = b
     end
 
-    local hasIcon = type(iconImage) == "string" and iconImage ~= ""
     local function renderButtonText(value)
-        local base = tostring(value or "")
-        if hasIcon then
-            return "      " .. base
-        end
-        return base
+        return tostring(value or "")
     end
 
     local shell = controlShell(self, 34)
@@ -5127,22 +4971,11 @@ function Section:CreateButton(a, b)
         Font = FONT,
         TextSize = 13,
         TextColor3 = C.Text,
-        TextXAlignment = textAlign or (hasIcon and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center),
+        TextXAlignment = textAlign or Enum.TextXAlignment.Center,
         Text = renderButtonText(text),
     })
     corner(btn, 4)
     stroke(btn, C.Stroke, 0.55)
-    if hasIcon then
-        mk("ImageLabel", {
-            Parent = btn,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2.fromOffset(16, 16),
-            Position = UDim2.new(0, 8, 0.5, -8),
-            Image = iconImage,
-            ImageColor3 = Color3.new(1, 1, 1),
-        })
-    end
 
     track(self.Window.Connections, btn.MouseEnter:Connect(function()
         tw(btn, 0.1, { BackgroundColor3 = C.ControlHover }):Play()
@@ -6041,28 +5874,22 @@ function Tab:CreateKeybind(...)
     return self:_def():CreateKeybind(...)
 end
 
-function Tab:SetIcon(iconSpec)
-    self.Icon = iconSpec
-    if self._ApplyIcon then
-        self:_ApplyIcon(iconSpec)
-    end
+function Tab:SetIcon()
     return self
 end
 
 function Tab:GetIcon()
-    return self.Icon
+    return nil
 end
 
 -- UI Core Builder
-function Window:CreateTab(a, iconMaybe)
-    local name, icon, requestedLayoutOrder = "Tab", nil, nil
+function Window:CreateTab(a, _iconMaybe)
+    local name, requestedLayoutOrder = "Tab", nil
     if typeof(a) == "table" then
         name = tostring(a.Name or a.Title or "Tab")
-        icon = a.Icon
         requestedLayoutOrder = tonumber(a.LayoutOrder)
     else
         name = tostring(a or "Tab")
-        icon = iconMaybe
     end
     local tabNameLower = string.lower(name)
     local tabLayoutOrder = nil
@@ -6120,23 +5947,6 @@ function Window:CreateTab(a, iconMaybe)
         Size = UDim2.new(0, 14, 0, 14),
         Position = UDim2.new(0, 10, 0.5, -7),
     })
-    local iconImageLabel = mk("ImageLabel", {
-        Parent = iconHolder,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        ImageColor3 = C.SubText,
-        Visible = false,
-    })
-    local iconTextLabel = mk("TextLabel", {
-        Parent = iconHolder,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Font = FONT,
-        TextSize = 11,
-        TextColor3 = C.SubText,
-        Text = "",
-        Visible = false,
-    })
     local iconDot = mk("Frame", {
         Parent = iconHolder,
         AnchorPoint = Vector2.new(0.5, 0.5),
@@ -6144,27 +5954,12 @@ function Window:CreateTab(a, iconMaybe)
         Size = UDim2.new(0, 6, 0, 6),
         BackgroundColor3 = C.SubText,
         BorderSizePixel = 0,
-        Visible = false,
+        Visible = true,
     })
     corner(iconDot, 99)
 
-    local function applyIcon(iconSpec)
-        local resolvedImage, resolvedFallback = resolveIconSpec(iconSpec)
-        local compactFallback = compactIconFallbackText(resolvedFallback)
-
-        iconImageLabel.Visible = false
-        iconTextLabel.Visible = false
-        iconDot.Visible = false
-
-        if resolvedImage then
-            iconImageLabel.Image = resolvedImage
-            iconImageLabel.Visible = true
-        elseif compactFallback then
-            iconTextLabel.Text = compactFallback
-            iconTextLabel.Visible = true
-        else
-            iconDot.Visible = true
-        end
+    local function applyIcon()
+        iconDot.Visible = true
     end
 
     local lbl = mk("TextLabel", {
@@ -6221,24 +6016,20 @@ function Window:CreateTab(a, iconMaybe)
 
     local tab = setmetatable({
         Name = name,
-        Icon = nil,
         Window = self,
         Button = btn,
         ButtonBack = back,
         Indicator = ind,
         Label = lbl,
         IconHolder = iconHolder,
-        IconImageLabel = iconImageLabel,
-        IconTextLabel = iconTextLabel,
         IconDot = iconDot,
         Page = page,
         Left = left,
         Right = right,
         Sections = {},
         DefaultSection = nil,
-        _ApplyIcon = applyIcon,
     }, Tab)
-    tab:SetIcon(icon)
+    applyIcon()
 
     table.insert(self.Tabs, tab)
     track(self.Connections, btn.MouseButton1Click:Connect(function()
