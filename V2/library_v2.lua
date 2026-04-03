@@ -2181,6 +2181,7 @@ function Window:CreateLocalCategory(options)
     local sprintHolding = false
     local sprintApplied = false
     local sprintRestoreSpeed = nil
+    local sprintBaseSpeed = nil
     local flyControls = {
         Forward = false,
         Back = false,
@@ -2846,24 +2847,50 @@ function Window:CreateLocalCategory(options)
         if not humanoid then
             sprintApplied = false
             sprintRestoreSpeed = nil
+            sprintBaseSpeed = nil
             return
         end
 
+        local currentWalkSpeed = tonumber(humanoid.WalkSpeed) or 16
+
         if sprintEnabled and sprintHolding then
             if not sprintApplied then
-                sprintRestoreSpeed = tonumber(humanoid.WalkSpeed) or 16
+                if sprintBaseSpeed == nil then
+                    sprintBaseSpeed = currentWalkSpeed
+                end
+                sprintRestoreSpeed = tonumber(sprintBaseSpeed) or currentWalkSpeed or 16
                 sprintApplied = true
             end
-            if math.abs((tonumber(humanoid.WalkSpeed) or 0) - sprintSpeed) > 0.01 then
+            if math.abs(currentWalkSpeed - sprintSpeed) > 0.01 then
                 humanoid.WalkSpeed = sprintSpeed
             end
             return
         end
 
         if sprintApplied then
-            humanoid.WalkSpeed = tonumber(sprintRestoreSpeed) or 16
+            local restoreSpeed = tonumber(sprintRestoreSpeed) or tonumber(sprintBaseSpeed) or 16
+            if math.abs(currentWalkSpeed - restoreSpeed) > 0.01 then
+                humanoid.WalkSpeed = restoreSpeed
+                currentWalkSpeed = restoreSpeed
+            end
             sprintApplied = false
             sprintRestoreSpeed = nil
+        end
+
+        if (not sprintEnabled) and (not sprintHolding) and (not sprintApplied) then
+            local expectedBase = tonumber(sprintBaseSpeed) or 16
+            if math.abs(currentWalkSpeed - sprintSpeed) <= 0.01 and math.abs(currentWalkSpeed - expectedBase) > 0.01 then
+                humanoid.WalkSpeed = expectedBase
+                currentWalkSpeed = expectedBase
+            end
+        end
+
+        if not sprintHolding then
+            if math.abs(currentWalkSpeed - sprintSpeed) > 0.01 then
+                sprintBaseSpeed = currentWalkSpeed
+            elseif sprintBaseSpeed == nil then
+                sprintBaseSpeed = 16
+            end
         end
     end
 
@@ -3371,6 +3398,12 @@ function Window:CreateLocalCategory(options)
 
     flyVelocityConnection = track(self.Connections, RunService.Heartbeat:Connect(function()
         updateFlyVelocity()
+        if sprintEnabled then
+            local nowHolding = isKeyDownSafe(sprintHoldKey)
+            if nowHolding ~= sprintHolding then
+                sprintHolding = nowHolding
+            end
+        end
         updateSprintState()
     end))
 
@@ -3379,6 +3412,9 @@ function Window:CreateLocalCategory(options)
             if flyEnabled then
                 startFly()
             end
+            sprintApplied = false
+            sprintRestoreSpeed = nil
+            sprintBaseSpeed = nil
             sprintHolding = sprintEnabled and isKeyDownSafe(sprintHoldKey)
             updateSprintState()
             if spinFlingEnabled then
@@ -3511,6 +3547,9 @@ function Window:CreateLocalCategory(options)
     end)
     self.LibraryConfigItems.SprintSpeed = sprintSpeedSlider
     flySection:CreateLabel("Hold sprint key to sprint.")
+    sprintApplied = false
+    sprintRestoreSpeed = nil
+    sprintBaseSpeed = nil
     sprintHolding = sprintEnabled and isKeyDownSafe(sprintHoldKey)
     updateSprintState()
 
@@ -3617,6 +3656,9 @@ function Window:CreateLocalCategory(options)
         flyControls.Up = false
         flyControls.Down = false
         sprintHolding = false
+        sprintApplied = false
+        sprintRestoreSpeed = nil
+        sprintBaseSpeed = nil
         updateSprintState()
     end)
 
