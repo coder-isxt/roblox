@@ -942,9 +942,9 @@ function Window:CreatePlayersCategory(options)
         end
     end
     if not playersTab then
-        playersTab = self:CreateTab({ Name = "Players", Icon = playersTabIcon })
+        playersTab = self:CreateTab({ Name = "Players", Icon = "fa:user" })
     elseif playersTab.SetIcon then
-        playersTab:SetIcon(playersTabIcon)
+        playersTab:SetIcon("fa:user")
     end
 
     local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
