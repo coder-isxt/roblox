@@ -33,11 +33,11 @@ local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
 local BUILTIN_ICON_ALIASES = {
     ["local"] = {
-        Image = "settings",
+        Image = "users",
         Fallback = "L",
     },
     ["players"] = {
-        Image = "users",
+        Image = "players",
         Fallback = "P",
     },
     ["config"] = {
