@@ -37,7 +37,7 @@ local BUILTIN_ICON_ALIASES = {
         Fallback = "L",
     },
     ["players"] = {
-        Image = "fa:user",
+        Image = "fa:users",
         Fallback = "P",
     },
     ["config"] = {
@@ -942,9 +942,9 @@ function Window:CreatePlayersCategory(options)
         end
     end
     if not playersTab then
-        playersTab = self:CreateTab({ Name = "Playerss", Icon = "fa:user" })
+        playersTab = self:CreateTab({ Name = "Players", Icon = "fa:users" })
     elseif playersTab.SetIcon then
-        playersTab:SetIcon("fa:user")
+        playersTab:SetIcon("fa:users")
     end
 
     local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
