@@ -31,106 +31,6 @@ local TextService = Services.TextService
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
-local BUILTIN_ICON_ALIASES = {
-    ["local"] = {
-        Image = "users",
-        Fallback = "L",
-    },
-    ["players"] = {
-        Image = "players",
-        Fallback = "P",
-    },
-    ["config"] = {
-        Image = "settings",
-        Fallback = "C",
-    },
-    ["universal"] = {
-        Image = "home",
-        Fallback = "U",
-    },
-    ["scripts"] = {
-        Image = "code",
-        Fallback = "S",
-    },
-}
-
--- Curated built-in icon IDs (aliases included for convenience).
--- Note: several names intentionally map to the same ID.
-local BUILTIN_ICON_IDS = {
-    home = 10734898156,
-    house = 10734898156,
-    dashboard = 10734898156,
-    main = 10734898156,
-    settings = 10734950309,
-    setting = 10734950309,
-    config = 10734950309,
-    gear = 10734950309,
-    cog = 10734950309,
-    user = 10747373176,
-    profile = 10747373176,
-    account = 10747373176,
-    person = 10747373176,
-    players = 10747373176,
-    users = 10747373176,
-    search = 10723414444,
-    find = 10723414444,
-    magnify = 10723414444,
-    folder = 10734882102,
-    directory = 10734882102,
-    files = 10734882102,
-    file = 10723340573,
-    document = 10723340573,
-    doc = 10723340573,
-    edit = 10734883446,
-    pencil = 10734883446,
-    pen = 10734883446,
-    write = 10734883446,
-    rename = 10734883446,
-    trash = 10734951280,
-    delete = 10734951280,
-    remove = 10734951280,
-    bin = 10734951280,
-    code = 10723346958,
-    script = 10723346958,
-    scripts = 10723346958,
-    terminal = 10734951126,
-    console = 10734951126,
-    cmd = 10734951126,
-    plus = 10734944510,
-    add = 10734944510,
-    create = 10734944510,
-    new = 10734944510,
-    minus = 10734944436,
-    sub = 10734944436,
-    subtract = 10734944436,
-    check = 10734895698,
-    checkmark = 10734895698,
-    tick = 10734895698,
-    done = 10734895698,
-    success = 10734895698,
-    ok = 10734895698,
-    close = 10734950309,
-    cancel = 10734950309,
-    x = 10734950309,
-    times = 10734950309,
-    open = 10734882102,
-    save = 10723340573,
-    load = 10723340573,
-    import = 10734882102,
-    export = 10723340573,
-    tools = 10734951126,
-    utility = 10734951126,
-    dev = 10723346958,
-    developer = 10723346958,
-    menu = 10734951126,
-    list = 10734951126,
-    play = 10734944510,
-    stop = 10734944436,
-    apply = 10734895698,
-    confirm = 10734895698,
-    warning = 10734950309,
-    alert = 10734950309,
-}
 
 local C = {
     Main = Color3.fromRGB(10, 14, 21),
@@ -215,18 +115,10 @@ local function resolveIconSpec(iconSpec, depth)
     end
 
     local iconType = typeof(iconSpec)
-    if iconType == "number" then
-        return "rbxassetid://" .. tostring(iconSpec), nil
-    end
-
     if iconType == "string" then
         local raw = tostring(iconSpec)
         if raw == "" then
             return nil, nil
-        end
-
-        if string.match(raw, "^rbxassetid://%d+$") then
-            return raw, nil
         end
 
         local prefixEnd = string.find(raw, ":", 1, true)
@@ -243,15 +135,9 @@ local function resolveIconSpec(iconSpec, depth)
             end
         end
 
-        local numeric = tonumber(raw)
-        if numeric then
-            return "rbxassetid://" .. tostring(numeric), nil
-        end
-
         local key = normalizeIconKey(raw)
         local iconAliases = UILibrary.Icons or {}
-        local aliasSpec = iconAliases[raw] or iconAliases[key] or BUILTIN_ICON_IDS[raw] or BUILTIN_ICON_IDS[key]
-            or BUILTIN_ICON_ALIASES[key]
+        local aliasSpec = iconAliases[raw] or iconAliases[key]
 
         if aliasSpec == nil and UILibrary.IconResolver then
             local ok, result = pcall(UILibrary.IconResolver, raw)
@@ -264,68 +150,20 @@ local function resolveIconSpec(iconSpec, depth)
             return resolveIconSpec(aliasSpec, depth)
         end
 
-        if #raw <= 3 then
-            return nil, string.upper(raw)
-        end
-        return nil, nil
+        return nil, raw
     end
 
     if iconType == "table" then
-        local directImage = iconSpec.Image or iconSpec.Url or iconSpec.Source
-        local directId = iconSpec.Id or iconSpec.AssetId or iconSpec.ImageId
         local fallbackText = iconSpec.Text or iconSpec.Fallback or iconSpec.Glyph
         local aliasName = iconSpec.Alias or iconSpec.Name or iconSpec.IconName
 
-        local imageFromAlias, textFromAlias = nil, nil
+        local _, textFromAlias = nil, nil
         if aliasName then
-            imageFromAlias, textFromAlias = resolveIconSpec(aliasName, depth)
+            _, textFromAlias = resolveIconSpec(aliasName, depth)
         end
 
-        if typeof(directImage) == "string" and directImage ~= "" then
-            local raw = directImage
-            if string.match(raw, "^rbxassetid://%d+$") then
-                return raw, fallbackText or textFromAlias
-            end
-            local asNumber = tonumber(raw)
-            if asNumber then
-                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias
-            end
-
-            local resolvedFromImage, textFromImage = resolveIconSpec(raw, depth)
-            if resolvedFromImage then
-                return resolvedFromImage, fallbackText or textFromImage or textFromAlias
-            end
-            if fallbackText == nil and textFromImage ~= nil then
-                fallbackText = textFromImage
-            end
-        end
-
-        if typeof(directId) == "number" then
-            return "rbxassetid://" .. tostring(directId), fallbackText or textFromAlias
-        end
-        if typeof(directId) == "string" and directId ~= "" then
-            local asNumber = tonumber(directId)
-            if asNumber then
-                return "rbxassetid://" .. tostring(asNumber), fallbackText or textFromAlias
-            end
-            if string.match(directId, "^rbxassetid://%d+$") then
-                return directId, fallbackText or textFromAlias
-            end
-
-            local resolvedFromId, textFromId = resolveIconSpec(directId, depth)
-            if resolvedFromId then
-                return resolvedFromId, fallbackText or textFromId or textFromAlias
-            end
-            if fallbackText == nil and textFromId ~= nil then
-                fallbackText = textFromId
-            end
-        end
-
-        if imageFromAlias then
-            return imageFromAlias, fallbackText or textFromAlias
-        end
         if typeof(fallbackText) == "string" and fallbackText ~= "" then
-            return nil, string.sub(fallbackText, 1, 3)
+            return nil, fallbackText
         end
         return nil, textFromAlias
     end
@@ -510,8 +348,7 @@ function UILibrary:GetIcon(name)
     end
     local key = normalizeIconKey(name)
     local iconAliases = self.Icons or {}
-    return iconAliases[name] or iconAliases[key] or BUILTIN_ICON_IDS[name] or BUILTIN_ICON_IDS[key]
-        or BUILTIN_ICON_ALIASES[key]
+    return iconAliases[name] or iconAliases[key]
 end
 
 function UILibrary:SetIconResolver(callback)
@@ -540,7 +377,7 @@ end
 
 -- Pre-filled common Icon Sets
 UILibrary.IconSets = {
-    default = BUILTIN_ICON_IDS,
+    default = {},
 }
 
 function Window:IsVisible()
@@ -6264,7 +6101,7 @@ function Window:CreateTab(a, iconMaybe)
             iconImageLabel.Image = resolvedImage
             iconImageLabel.Visible = true
         elseif typeof(resolvedFallback) == "string" and resolvedFallback ~= "" then
-            iconTextLabel.Text = string.sub(string.upper(resolvedFallback), 1, 3)
+            iconTextLabel.Text = resolvedFallback
             iconTextLabel.Visible = true
         else
             iconDot.Visible = true
