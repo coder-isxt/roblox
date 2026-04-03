@@ -31,6 +31,19 @@ local TextService = Services.TextService
 local FONT = Enum.Font.Gotham
 local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
+local EMOJI_ICON_FALLBACKS = {
+    local = "🏠",
+    home = "🏠",
+    player = "👤",
+    players = "👥",
+    config = "⚙",
+    settings = "⚙",
+    universal = "🌐",
+    script = "📜",
+    scripts = "📜",
+    remote = "📡",
+    remotes = "📡",
+}
 
 local C = {
     Main = Color3.fromRGB(10, 14, 21),
@@ -370,7 +383,16 @@ local function compactIconFallbackText(value)
         return nil
     end
 
+    local key = normalizeIconKey(text)
+    if key and EMOJI_ICON_FALLBACKS[key] then
+        return EMOJI_ICON_FALLBACKS[key]
+    end
+
     if string.match(text, "^[%w%s_%-]+$") then
+        local first = string.match(text, "[%a%d]")
+        if first then
+            return string.upper(first)
+        end
         return nil
     end
 
