@@ -33,20 +33,103 @@ local GUI_NAME = "LimboLibrary"
 local OPEN_DROPDOWNS = {}
 local BUILTIN_ICON_ALIASES = {
     ["local"] = {
+        Image = "settings",
         Fallback = "L",
     },
     ["players"] = {
+        Image = "users",
         Fallback = "P",
     },
     ["config"] = {
+        Image = "settings",
         Fallback = "C",
     },
     ["universal"] = {
+        Image = "home",
         Fallback = "U",
     },
     ["scripts"] = {
+        Image = "code",
         Fallback = "S",
     },
+}
+
+-- Curated built-in icon IDs (aliases included for convenience).
+-- Note: several names intentionally map to the same ID.
+local BUILTIN_ICON_IDS = {
+    home = 10734898156,
+    house = 10734898156,
+    dashboard = 10734898156,
+    main = 10734898156,
+    settings = 10734950309,
+    setting = 10734950309,
+    config = 10734950309,
+    gear = 10734950309,
+    cog = 10734950309,
+    user = 10747373176,
+    profile = 10747373176,
+    account = 10747373176,
+    person = 10747373176,
+    players = 10747373176,
+    users = 10747373176,
+    search = 10723414444,
+    find = 10723414444,
+    magnify = 10723414444,
+    folder = 10734882102,
+    directory = 10734882102,
+    files = 10734882102,
+    file = 10723340573,
+    document = 10723340573,
+    doc = 10723340573,
+    edit = 10734883446,
+    pencil = 10734883446,
+    pen = 10734883446,
+    write = 10734883446,
+    rename = 10734883446,
+    trash = 10734951280,
+    delete = 10734951280,
+    remove = 10734951280,
+    bin = 10734951280,
+    code = 10723346958,
+    script = 10723346958,
+    scripts = 10723346958,
+    terminal = 10734951126,
+    console = 10734951126,
+    cmd = 10734951126,
+    plus = 10734944510,
+    add = 10734944510,
+    create = 10734944510,
+    new = 10734944510,
+    minus = 10734944436,
+    sub = 10734944436,
+    subtract = 10734944436,
+    check = 10734895698,
+    checkmark = 10734895698,
+    tick = 10734895698,
+    done = 10734895698,
+    success = 10734895698,
+    ok = 10734895698,
+    close = 10734950309,
+    cancel = 10734950309,
+    x = 10734950309,
+    times = 10734950309,
+    open = 10734882102,
+    save = 10723340573,
+    load = 10723340573,
+    import = 10734882102,
+    export = 10723340573,
+    tools = 10734951126,
+    utility = 10734951126,
+    dev = 10723346958,
+    developer = 10723346958,
+    menu = 10734951126,
+    list = 10734951126,
+    play = 10734944510,
+    stop = 10734944436,
+    apply = 10734895698,
+    confirm = 10734895698,
+    warning = 10734950309,
+    alert = 10734950309,
 }
 
 local C = {
@@ -167,7 +250,8 @@ local function resolveIconSpec(iconSpec, depth)
 
         local key = normalizeIconKey(raw)
         local iconAliases = UILibrary.Icons or {}
-        local aliasSpec = iconAliases[raw] or iconAliases[key] or BUILTIN_ICON_ALIASES[key]
+        local aliasSpec = iconAliases[raw] or iconAliases[key] or BUILTIN_ICON_IDS[raw] or BUILTIN_ICON_IDS[key]
+            or BUILTIN_ICON_ALIASES[key]
 
         if aliasSpec == nil and UILibrary.IconResolver then
             local ok, result = pcall(UILibrary.IconResolver, raw)
@@ -426,7 +510,8 @@ function UILibrary:GetIcon(name)
     end
     local key = normalizeIconKey(name)
     local iconAliases = self.Icons or {}
-    return iconAliases[name] or iconAliases[key] or BUILTIN_ICON_ALIASES[key]
+    return iconAliases[name] or iconAliases[key] or BUILTIN_ICON_IDS[name] or BUILTIN_ICON_IDS[key]
+        or BUILTIN_ICON_ALIASES[key]
 end
 
 function UILibrary:SetIconResolver(callback)
@@ -455,10 +540,8 @@ end
 
 -- Pre-filled common Icon Sets
 UILibrary.IconSets = {
-    lucide = {},
-    fa = {},
+    default = BUILTIN_ICON_IDS,
 }
-UILibrary.IconSets.fontawesome = UILibrary.IconSets.fa
 
 function Window:IsVisible()
     return self.VisibleState == true
