@@ -108,7 +108,7 @@ end
 
 local function isPersistentTabName(name)
     local n = string.lower(tostring(name or ""))
-    return n == "local" or n == "players" or n == "universal" or n == "remotes" or n == "scripts"
+    return n == "local" or n == "players" or n == "universal" or n == "remotes" or n == "scripts" or n == "config"
 end
 
 local function closeDropdowns(except)
@@ -4561,6 +4561,9 @@ function Window:CreateUniversalCategory(options)
         if tabRef.Button and tabRef.Button.Parent then
             tabRef.Button:Destroy()
         end
+        if tabRef.Separator and tabRef.Separator.Parent then
+            tabRef.Separator:Destroy()
+        end
         if tabRef.Page and tabRef.Page.Parent then
             tabRef.Page:Destroy()
         end
@@ -4574,6 +4577,7 @@ function Window:CreateUniversalCategory(options)
                 end
             end
             self.SectionsLabel.Visible = hasCustom
+            self.SectionsLabel.Size = hasCustom and UDim2.new(1, 0, 0, 26) or UDim2.new(1, 0, 0, 0)
         end
     end
 
@@ -5029,16 +5033,46 @@ local function controlShell(section, h)
     })
 end
 
+local CONTROL_SURFACE = Color3.fromRGB(37, 43, 55)
+local CONTROL_SURFACE_HOVER = Color3.fromRGB(43, 49, 63)
+local CONTROL_SURFACE_PRESS = Color3.fromRGB(51, 58, 74)
+local CONTROL_FIELD = Color3.fromRGB(28, 33, 43)
+local CONTROL_FIELD_HOVER = Color3.fromRGB(33, 39, 50)
+local CONTROL_OPTION_ACTIVE = Color3.fromRGB(47, 59, 86)
+local CONTROL_STROKE_TRANSPARENCY = 0.6
+local CONTROL_DIVIDER_TRANSPARENCY = 0.48
+
 local function controlBack(parent, h)
     local b = mk("Frame", {
         Parent = parent,
-        BackgroundColor3 = Color3.fromRGB(13, 19, 31),
+        BackgroundColor3 = CONTROL_SURFACE,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, h),
     })
-    corner(b, 4)
-    stroke(b, C.Stroke, 0.72)
+    corner(b, 5)
+    stroke(b, C.Stroke, CONTROL_STROKE_TRANSPARENCY)
     return b
+end
+
+local function bindSurfaceHover(window, gui, baseColor, hoverColor)
+    track(window.Connections, gui.MouseEnter:Connect(function()
+        tw(gui, 0.1, { BackgroundColor3 = hoverColor or CONTROL_SURFACE_HOVER }):Play()
+    end))
+    track(window.Connections, gui.MouseLeave:Connect(function()
+        tw(gui, 0.1, { BackgroundColor3 = baseColor or CONTROL_SURFACE }):Play()
+    end))
+end
+
+local function addControlDivider(parent)
+    return mk("Frame", {
+        Parent = parent,
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 0, 1, 0),
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = C.Stroke,
+        BorderSizePixel = 0,
+        BackgroundTransparency = CONTROL_DIVIDER_TRANSPARENCY,
+    })
 end
 
 local function asOptions(list)
@@ -5065,10 +5099,10 @@ function Section:CreateButton(a, b)
         return tostring(value or "")
     end
 
-    local shell = controlShell(self, 34)
-    local buttonBaseColor = Color3.fromRGB(13, 19, 31)
-    local buttonHoverColor = Color3.fromRGB(17, 24, 38)
-    local buttonPressColor = Color3.fromRGB(23, 33, 49)
+    local shell = controlShell(self, 36)
+    local buttonBaseColor = CONTROL_SURFACE
+    local buttonHoverColor = CONTROL_SURFACE_HOVER
+    local buttonPressColor = CONTROL_SURFACE_PRESS
     local btn = mk("TextButton", {
         Parent = shell,
         BackgroundColor3 = buttonBaseColor,
@@ -5081,8 +5115,8 @@ function Section:CreateButton(a, b)
         TextXAlignment = textAlign or Enum.TextXAlignment.Center,
         Text = renderButtonText(text),
     })
-    corner(btn, 4)
-    stroke(btn, C.Stroke, 0.55)
+    corner(btn, 5)
+    stroke(btn, C.Stroke, CONTROL_STROKE_TRANSPARENCY)
 
     track(self.Window.Connections, btn.MouseEnter:Connect(function()
         tw(btn, 0.1, { BackgroundColor3 = buttonHoverColor }):Play()
@@ -5096,6 +5130,7 @@ function Section:CreateButton(a, b)
     track(self.Window.Connections, btn.MouseButton1Click:Connect(function()
         safe(cb)
     end))
+    addControlDivider(shell)
 
     local controller = {
         Frame = shell,
@@ -5126,20 +5161,13 @@ function Section:CreateToggle(a, b, c)
 
     local value = default
     local shell = controlShell(self, 36)
-    local back = mk("Frame", {
-        Parent = shell,
-        BackgroundColor3 = Color3.fromRGB(13, 19, 31),
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
-    })
-    corner(back, 3)
-    stroke(back, C.Stroke, 0.72)
+    local back = controlBack(shell, 36)
 
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 0),
-        Size = UDim2.new(1, -40, 1, 0),
+        Size = UDim2.new(1, -58, 1, 0),
         Font = FONT,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -5147,15 +5175,24 @@ function Section:CreateToggle(a, b, c)
         Text = text,
     })
 
-    local box = mk("Frame", {
+    local switch = mk("Frame", {
         Parent = back,
-        Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(1, -24, 0.5, -8),
-        BackgroundColor3 = Color3.fromRGB(23, 33, 49),
+        Size = UDim2.new(0, 34, 0, 18),
+        Position = UDim2.new(1, -44, 0.5, -9),
+        BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
     })
-    corner(box, 4)
-    stroke(box, C.Stroke, 0.5)
+    corner(switch, 99)
+    stroke(switch, C.Stroke, 0.68)
+    local knob = mk("Frame", {
+        Parent = switch,
+        Size = UDim2.new(0, 12, 0, 12),
+        Position = UDim2.new(0, 3, 0.5, -6),
+        BackgroundColor3 = Color3.fromRGB(238, 242, 255),
+        BorderSizePixel = 0,
+    })
+    corner(knob, 99)
+    stroke(knob, Color3.fromRGB(24, 31, 43), 0.5)
 
     local hit = mk("TextButton", {
         Parent = back,
@@ -5164,21 +5201,15 @@ function Section:CreateToggle(a, b, c)
         Text = "",
         AutoButtonColor = false,
     })
-
-    local divider = mk("Frame", {
-        Parent = shell,
-        AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 0, 1, 0),
-        Size = UDim2.new(1, 0, 0, 1),
-        BackgroundColor3 = Color3.fromRGB(35, 47, 69),
-        BorderSizePixel = 0,
-        BackgroundTransparency = 0.45,
-    })
+    addControlDivider(shell)
 
     local controller = { Frame = shell }
     function controller:Set(v, skip)
         value = v == true
-        tw(box, 0.1, { BackgroundColor3 = value and C.Accent or Color3.fromRGB(23, 33, 49) }):Play()
+        tw(switch, 0.12, { BackgroundColor3 = value and C.Accent or CONTROL_FIELD }):Play()
+        tw(knob, 0.12, {
+            Position = value and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6),
+        }):Play()
         if not skip then
             safe(cb, value)
         end
@@ -5190,12 +5221,7 @@ function Section:CreateToggle(a, b, c)
     track(self.Window.Connections, hit.MouseButton1Click:Connect(function()
         controller:Set(not value)
     end))
-    track(self.Window.Connections, back.MouseEnter:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(17, 24, 38) }):Play()
-    end))
-    track(self.Window.Connections, back.MouseLeave:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(13, 19, 31) }):Play()
-    end))
+    bindSurfaceHover(self.Window, back, CONTROL_SURFACE, CONTROL_SURFACE_HOVER)
 
     controller:Set(value, true)
     return attachControlTooltip(self, controller, hit, tooltipText)
@@ -5230,32 +5256,34 @@ function Section:CreateSlider(a, b, c, d, e)
     end
     local value = roundStep(clamp(defV, minV, maxV), step)
 
-    local shell = controlShell(self, 64)
-    local back = mk("Frame", {
-        Parent = shell,
-        BackgroundColor3 = Color3.fromRGB(13, 19, 31),
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
-    })
-    corner(back, 3)
-    stroke(back, C.Stroke, 0.72)
+    local shell = controlShell(self, 66)
+    local back = controlBack(shell, 66)
 
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, 6),
-        Size = UDim2.new(1, -56, 0, 18),
+        Size = UDim2.new(1, -90, 0, 18),
         Font = FONT,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
         Text = name,
     })
-    local val = mk("TextBox", {
+    local valBack = mk("Frame", {
         Parent = back,
+        BackgroundColor3 = CONTROL_FIELD,
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -76, 0, 5),
+        Size = UDim2.new(0, 66, 0, 22),
+    })
+    corner(valBack, 4)
+    stroke(valBack, C.Stroke, 0.68)
+    local val = mk("TextBox", {
+        Parent = valBack,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -68, 0, 4),
-        Size = UDim2.new(0, 60, 0, 22),
+        Position = UDim2.new(0, 6, 0, 0),
+        Size = UDim2.new(1, -12, 1, 0),
         Font = FONT,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -5268,12 +5296,13 @@ function Section:CreateSlider(a, b, c, d, e)
 
     local bar = mk("Frame", {
         Parent = back,
-        BackgroundColor3 = Color3.fromRGB(29, 39, 57),
+        BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
         Position = UDim2.new(0, 10, 0, 40),
-        Size = UDim2.new(1, -20, 0, 3),
+        Size = UDim2.new(1, -20, 0, 6),
     })
     corner(bar, 99)
+    stroke(bar, C.Stroke, 0.78)
     local fill = mk("Frame", {
         Parent = bar,
         BackgroundColor3 = C.Accent,
@@ -5287,7 +5316,7 @@ function Section:CreateSlider(a, b, c, d, e)
         BorderSizePixel = 0,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0, 0, 0.5, 0),
-        Size = UDim2.new(0, 12, 0, 12),
+        Size = UDim2.new(0, 13, 0, 13),
     })
     corner(knob, 99)
     stroke(knob, Color3.fromRGB(25, 33, 48), 0.35)
@@ -5301,15 +5330,7 @@ function Section:CreateSlider(a, b, c, d, e)
         AutoButtonColor = false,
     })
 
-    local divider = mk("Frame", {
-        Parent = shell,
-        AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 0, 1, 0),
-        Size = UDim2.new(1, 0, 0, 1),
-        BackgroundColor3 = Color3.fromRGB(35, 47, 69),
-        BorderSizePixel = 0,
-        BackgroundTransparency = 0.45,
-    })
+    addControlDivider(shell)
 
     local drag = false
     local editingValue = false
@@ -5341,7 +5362,7 @@ function Section:CreateSlider(a, b, c, d, e)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
             drag = true
             at(i.Position.X)
-            tw(knob, 0.08, { Size = UDim2.new(0, 13, 0, 13) }):Play()
+            tw(knob, 0.08, { Size = UDim2.new(0, 14, 0, 14) }):Play()
         end
     end))
     track(self.Window.Connections, UIS.InputChanged:Connect(function(i)
@@ -5352,11 +5373,12 @@ function Section:CreateSlider(a, b, c, d, e)
     track(self.Window.Connections, UIS.InputEnded:Connect(function(i)
         if i.UserInputType == Enum.UserInputType.MouseButton1 then
             drag = false
-            tw(knob, 0.08, { Size = UDim2.new(0, 12, 0, 12) }):Play()
+            tw(knob, 0.08, { Size = UDim2.new(0, 13, 0, 13) }):Play()
         end
     end))
     track(self.Window.Connections, val.Focused:Connect(function()
         editingValue = true
+        tw(valBack, 0.1, { BackgroundColor3 = CONTROL_FIELD_HOVER }):Play()
     end))
     track(self.Window.Connections, val.FocusLost:Connect(function()
         local text = tostring(val.Text or "")
@@ -5373,13 +5395,9 @@ function Section:CreateSlider(a, b, c, d, e)
         else
             draw()
         end
+        tw(valBack, 0.1, { BackgroundColor3 = CONTROL_FIELD }):Play()
     end))
-    track(self.Window.Connections, back.MouseEnter:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(17, 24, 38) }):Play()
-    end))
-    track(self.Window.Connections, back.MouseLeave:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(13, 19, 31) }):Play()
-    end))
+    bindSurfaceHover(self.Window, back, CONTROL_SURFACE, CONTROL_SURFACE_HOVER)
     draw()
     return attachControlTooltip(self, controller, back, tooltipText)
 end
@@ -5406,14 +5424,7 @@ function Section:CreateDropdown(a, b, c, d)
     local map = {}
     local shell = controlShell(self, 38)
     shell.ClipsDescendants = true
-    local back = mk("Frame", {
-        Parent = shell,
-        BackgroundColor3 = Color3.fromRGB(13, 19, 31),
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 38),
-    })
-    corner(back, 3)
-    stroke(back, C.Stroke, 0.72)
+    local back = controlBack(shell, 38)
 
     mk("TextLabel", {
         Parent = back,
@@ -5457,14 +5468,14 @@ function Section:CreateDropdown(a, b, c, d)
     })
     local menu = mk("Frame", {
         Parent = shell,
-        BackgroundColor3 = Color3.fromRGB(15, 22, 35),
+        BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
         Position = UDim2.new(0, 0, 0, 42),
         Size = UDim2.new(1, 0, 0, 0),
         Visible = false,
     })
     corner(menu, 4)
-    stroke(menu, C.Stroke, 0.68)
+    stroke(menu, C.Stroke, 0.7)
     mk("UIPadding", {
         Parent = menu,
         PaddingTop = UDim.new(0, 4),
@@ -5479,15 +5490,7 @@ function Section:CreateDropdown(a, b, c, d)
         Padding = UDim.new(0, 3),
     })
 
-    local divider = mk("Frame", {
-        Parent = shell,
-        AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 0, 1, 0),
-        Size = UDim2.new(1, 0, 0, 1),
-        BackgroundColor3 = Color3.fromRGB(35, 47, 69),
-        BorderSizePixel = 0,
-        BackgroundTransparency = 0.45,
-    })
+    addControlDivider(shell)
 
     local controller = { Frame = shell, Open = false }
     local function multiList()
@@ -5522,7 +5525,7 @@ function Section:CreateDropdown(a, b, c, d)
         for i, o in ipairs(opts) do
             local btt = mk("TextButton", {
                 Parent = menu,
-                BackgroundColor3 = Color3.fromRGB(19, 28, 43),
+                BackgroundColor3 = CONTROL_SURFACE,
                 BorderSizePixel = 0,
                 Size = UDim2.new(1, 0, 0, 24),
                 AutoButtonColor = false,
@@ -5534,7 +5537,7 @@ function Section:CreateDropdown(a, b, c, d)
                 LayoutOrder = i,
             })
             corner(btt, 4)
-            stroke(btt, C.Stroke, 0.72)
+            stroke(btt, C.Stroke, 0.7)
             mk("UIPadding", {
                 Parent = btt,
                 PaddingLeft = UDim.new(0, 8),
@@ -5542,12 +5545,12 @@ function Section:CreateDropdown(a, b, c, d)
             })
             local function paint()
                 local on = multi and map[o] or (chosen == o)
-                btt.BackgroundColor3 = on and Color3.fromRGB(29, 43, 65) or Color3.fromRGB(19, 28, 43)
+                btt.BackgroundColor3 = on and CONTROL_OPTION_ACTIVE or CONTROL_SURFACE
             end
             paint()
             track(self.Window.Connections, btt.MouseEnter:Connect(function()
                 if not (multi and map[o]) and chosen ~= o then
-                    tw(btt, 0.08, { BackgroundColor3 = Color3.fromRGB(24, 35, 53) }):Play()
+                    tw(btt, 0.08, { BackgroundColor3 = CONTROL_SURFACE_HOVER }):Play()
                 end
             end))
             track(self.Window.Connections, btt.MouseLeave:Connect(function()
@@ -5659,12 +5662,7 @@ function Section:CreateDropdown(a, b, c, d)
     track(self.Window.Connections, hit.MouseButton1Click:Connect(function()
         controller:SetOpen(not controller.Open)
     end))
-    track(self.Window.Connections, back.MouseEnter:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(17, 24, 38) }):Play()
-    end))
-    track(self.Window.Connections, back.MouseLeave:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(13, 19, 31) }):Play()
-    end))
+    bindSurfaceHover(self.Window, back, CONTROL_SURFACE, CONTROL_SURFACE_HOVER)
 
     rebuild()
     if multi then
@@ -5701,8 +5699,8 @@ function Section:CreateInput(a, b, c)
         clear = false
     end
 
-    local shell = controlShell(self, 34)
-    local back = controlBack(shell, 34)
+    local shell = controlShell(self, 36)
+    local back = controlBack(shell, 36)
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
@@ -5716,13 +5714,13 @@ function Section:CreateInput(a, b, c)
     })
     local inBack = mk("Frame", {
         Parent = back,
-        BackgroundColor3 = Color3.fromRGB(23, 33, 49),
+        BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
         Position = UDim2.new(0.48, 0, 0.5, -11),
         Size = UDim2.new(0.52, -10, 0, 22),
     })
     corner(inBack, 3)
-    stroke(inBack, C.Stroke, 0.6)
+    stroke(inBack, C.Stroke, 0.68)
     local box = mk("TextBox", {
         Parent = inBack,
         BackgroundTransparency = 1,
@@ -5749,18 +5747,18 @@ function Section:CreateInput(a, b, c)
     end
     controller.Set = controller.SetValue
     controller.Get = controller.GetValue
+    track(self.Window.Connections, box.Focused:Connect(function()
+        tw(inBack, 0.1, { BackgroundColor3 = CONTROL_FIELD_HOVER }):Play()
+    end))
     track(self.Window.Connections, box.FocusLost:Connect(function(enter)
         safe(cb, box.Text, enter)
         if clear then
             box.Text = ""
         end
+        tw(inBack, 0.1, { BackgroundColor3 = CONTROL_FIELD }):Play()
     end))
-    track(self.Window.Connections, back.MouseEnter:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(17, 24, 38) }):Play()
-    end))
-    track(self.Window.Connections, back.MouseLeave:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(13, 19, 31) }):Play()
-    end))
+    bindSurfaceHover(self.Window, back, CONTROL_SURFACE, CONTROL_SURFACE_HOVER)
+    addControlDivider(shell)
     return attachControlTooltip(self, controller, back, tooltipText)
 end
 
@@ -5784,8 +5782,8 @@ function Section:CreateKeybind(a, b, c)
     local bound = def or Enum.KeyCode.Unknown
     local listening = false
 
-    local shell = controlShell(self, 34)
-    local back = controlBack(shell, 34)
+    local shell = controlShell(self, 36)
+    local back = controlBack(shell, 36)
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
@@ -5799,7 +5797,7 @@ function Section:CreateKeybind(a, b, c)
     })
     local btn = mk("TextButton", {
         Parent = back,
-        BackgroundColor3 = Color3.fromRGB(23, 33, 49),
+        BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
         Position = UDim2.new(1, -124, 0.5, -11),
         Size = UDim2.new(0, 114, 0, 22),
@@ -5810,7 +5808,7 @@ function Section:CreateKeybind(a, b, c)
         Text = "",
     })
     corner(btn, 3)
-    stroke(btn, C.Stroke, 0.6)
+    stroke(btn, C.Stroke, 0.68)
 
     local function keyText(k)
         return (k == Enum.KeyCode.Unknown) and "None" or k.Name
@@ -5838,6 +5836,7 @@ function Section:CreateKeybind(a, b, c)
     track(self.Window.Connections, btn.MouseButton1Click:Connect(function()
         listening = true
         btn.Text = "..."
+        tw(btn, 0.1, { BackgroundColor3 = CONTROL_FIELD_HOVER }):Play()
     end))
     track(self.Window.Connections, UIS.InputBegan:Connect(function(i, gpe)
         if gpe or i.UserInputType ~= Enum.UserInputType.Keyboard then
@@ -5846,18 +5845,15 @@ function Section:CreateKeybind(a, b, c)
         if listening then
             listening = false
             controller:SetValue(i.KeyCode, false)
+            tw(btn, 0.1, { BackgroundColor3 = CONTROL_FIELD }):Play()
             return
         end
         if bound ~= Enum.KeyCode.Unknown and i.KeyCode == bound then
             safe(cb, bound, false)
         end
     end))
-    track(self.Window.Connections, back.MouseEnter:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(17, 24, 38) }):Play()
-    end))
-    track(self.Window.Connections, back.MouseLeave:Connect(function()
-        tw(back, 0.1, { BackgroundColor3 = Color3.fromRGB(13, 19, 31) }):Play()
-    end))
+    bindSurfaceHover(self.Window, back, CONTROL_SURFACE, CONTROL_SURFACE_HOVER)
+    addControlDivider(shell)
     return attachControlTooltip(self, controller, back, tooltipText)
 end
 
@@ -5914,13 +5910,13 @@ function Section:CreateParagraph(a, b)
 
     local shell = mk("Frame", {
         Parent = self.Content,
-        BackgroundColor3 = Color3.fromRGB(13, 19, 31),
+        BackgroundColor3 = CONTROL_SURFACE,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
     })
-    corner(shell, 4)
-    stroke(shell, C.Stroke, 0.55)
+    corner(shell, 5)
+    stroke(shell, C.Stroke, CONTROL_STROKE_TRANSPARENCY)
     mk("UIPadding", {
         Parent = shell,
         PaddingTop = UDim.new(0, 6),
@@ -5976,6 +5972,75 @@ end
 
 function Section:GetSide()
     return self.RequestedSide or self.Side or "Left", self.ResolvedSide
+end
+
+local function createSectionForSubTab(tab, subTab, a, b)
+    local name, side
+    if typeof(a) == "table" then
+        name = tostring(a.Name or a.Title or "Section")
+        side = tostring(a.Side or "Left")
+    else
+        name = tostring(a or "Section")
+        side = tostring(b or "Left")
+    end
+    local requestedSide = normalizeSectionSide(side)
+    local column = (requestedSide == "Right") and subTab.Right or subTab.Left
+    local resolvedSide = requestedSide
+
+    local frame = mk("Frame", {
+        Name = name .. "_Section",
+        Parent = column,
+        BackgroundColor3 = C.PanelInset,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+    })
+    corner(frame, 5)
+    stroke(frame, C.Stroke, 0.35)
+    mk("UIPadding", {
+        Parent = frame,
+        PaddingTop = UDim.new(0, 12),
+        PaddingBottom = UDim.new(0, 12),
+        PaddingLeft = UDim.new(0, 12),
+        PaddingRight = UDim.new(0, 12),
+    })
+    mk("TextLabel", {
+        Parent = frame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 22),
+        Font = FONT,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = C.Text,
+        Text = name,
+    })
+    local content = mk("Frame", {
+        Parent = frame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 28),
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+    })
+    mk("UIListLayout", {
+        Parent = content,
+        FillDirection = Enum.FillDirection.Vertical,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 8),
+    })
+    local sec = setmetatable({
+        Name = name,
+        Window = tab.Window,
+        Tab = tab,
+        SubTab = subTab,
+        Frame = frame,
+        Content = content,
+        RequestedSide = requestedSide,
+        Side = requestedSide,
+        ResolvedSide = resolvedSide,
+    }, Section)
+    table.insert(tab.Sections, sec)
+    table.insert(subTab.Sections, sec)
+    return sec
 end
 
 function Tab:_ensureDefaultSubTab()
@@ -6105,6 +6170,7 @@ function Tab:CreateSubTab(a)
         Left = left,
         Right = right,
         Sections = {},
+        DefaultSection = nil,
         IsDefault = isDefault,
     }, SubTab)
 
@@ -6164,73 +6230,48 @@ function Tab:GetSubTabs()
     return self.SubTabs or {}
 end
 
-function Tab:CreateSection(a, b)
-    local name, side
-    if typeof(a) == "table" then
-        name = tostring(a.Name or a.Title or "Section")
-        side = tostring(a.Side or "Left")
-    else
-        name = tostring(a or "Section")
-        side = tostring(b or "Left")
-    end
-    local requestedSide = normalizeSectionSide(side)
-    local column, resolvedSide = self:_column(requestedSide)
-    local subTab = self:_currentSubTab()
+function SubTab:CreateSection(a, b)
+    return createSectionForSubTab(self.Tab, self, a, b)
+end
 
-    local frame = mk("Frame", {
-        Name = name .. "_Section",
-        Parent = column,
-        BackgroundColor3 = C.PanelInset,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-    })
-    corner(frame, 5)
-    stroke(frame, C.Stroke, 0.35)
-    mk("UIPadding", {
-        Parent = frame,
-        PaddingTop = UDim.new(0, 12),
-        PaddingBottom = UDim.new(0, 12),
-        PaddingLeft = UDim.new(0, 12),
-        PaddingRight = UDim.new(0, 12),
-    })
-    mk("TextLabel", {
-        Parent = frame,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 22),
-        Font = FONT,
-        TextSize = 14,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextColor3 = C.Text,
-        Text = name,
-    })
-    local content = mk("Frame", {
-        Parent = frame,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 28),
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-    })
-    mk("UIListLayout", {
-        Parent = content,
-        FillDirection = Enum.FillDirection.Vertical,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 8),
-    })
-    local sec = setmetatable({
-        Name = name,
-        Window = self.Window,
-        Tab = self,
-        SubTab = subTab,
-        Frame = frame,
-        Content = content,
-        RequestedSide = requestedSide,
-        Side = requestedSide,
-        ResolvedSide = resolvedSide,
-    }, Section)
-    table.insert(self.Sections, sec)
-    table.insert(subTab.Sections, sec)
-    return sec
+function SubTab:_def()
+    if not self.DefaultSection then
+        self.DefaultSection = self:CreateSection(self.Name, "Left")
+    end
+    return self.DefaultSection
+end
+
+function SubTab:CreateButton(...)
+    return self:_def():CreateButton(...)
+end
+function SubTab:CreateToggle(...)
+    return self:_def():CreateToggle(...)
+end
+function SubTab:CreateSlider(...)
+    return self:_def():CreateSlider(...)
+end
+function SubTab:CreateDropdown(...)
+    return self:_def():CreateDropdown(...)
+end
+function SubTab:CreateInput(...)
+    return self:_def():CreateInput(...)
+end
+function SubTab:CreateTextbox(...)
+    return self:_def():CreateTextbox(...)
+end
+function SubTab:CreateLabel(...)
+    return self:_def():CreateLabel(...)
+end
+function SubTab:CreateParagraph(...)
+    return self:_def():CreateParagraph(...)
+end
+function SubTab:CreateKeybind(...)
+    return self:_def():CreateKeybind(...)
+end
+
+function Tab:CreateSection(a, b)
+    local subTab = self:_currentSubTab()
+    return createSectionForSubTab(self, subTab, a, b)
 end
 
 function Tab:_def()
@@ -6305,7 +6346,28 @@ function Window:CreateTab(a, _iconMaybe)
         self.NextCustomTabOrder = tabLayoutOrder + 1
         if self.SectionsLabel then
             self.SectionsLabel.Visible = true
+            self.SectionsLabel.Size = UDim2.new(1, 0, 0, 26)
         end
+    end
+
+    local separator = nil
+    if isPersistentTabName(name) and tabLayoutOrder > 10 then
+        separator = mk("Frame", {
+            Parent = self.TabList,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 0, 10),
+            LayoutOrder = tabLayoutOrder - 1,
+        })
+        mk("Frame", {
+            Parent = separator,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 8, 0.5, 0),
+            Size = UDim2.new(1, -16, 0, 1),
+            BackgroundColor3 = C.Stroke,
+            BorderSizePixel = 0,
+            BackgroundTransparency = 0.55,
+        })
     end
 
     local btn = mk("TextButton", {
@@ -6397,6 +6459,7 @@ function Window:CreateTab(a, _iconMaybe)
     local tab = setmetatable({
         Name = name,
         Window = self,
+        Separator = separator,
         Button = btn,
         ButtonBack = back,
         Indicator = ind,
@@ -6591,11 +6654,35 @@ function UILibrary:CreateWindow(arg)
         SortOrder = Enum.SortOrder.LayoutOrder,
         Padding = UDim.new(0, 8),
     })
-    local sectionsLabel = mk("TextLabel", {
+    local sectionsLabel = mk("Frame", {
         Parent = tabList,
         BackgroundTransparency = 1,
+        BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 0),
+        LayoutOrder = 150,
         Visible = false,
+    })
+    mk("Frame", {
+        Parent = sectionsLabel,
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 8, 0.5, 0),
+        Size = UDim2.new(1, -16, 0, 1),
+        BackgroundColor3 = C.Stroke,
+        BorderSizePixel = 0,
+        BackgroundTransparency = 0.55,
+    })
+    mk("TextLabel", {
+        Parent = sectionsLabel,
+        BackgroundColor3 = C.Sidebar,
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 16, 0.5, 0),
+        Size = UDim2.new(0, 78, 0, 18),
+        Font = FONT,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextColor3 = C.SubText,
+        Text = "Custom Tabs",
     })
 
     local content = mk("Frame", {
