@@ -111,6 +111,36 @@ local function isPersistentTabName(name)
     return n == "local" or n == "players" or n == "universal" or n == "remotes" or n == "scripts" or n == "config"
 end
 
+local function tabIsPersistent(tabOrName)
+    if typeof(tabOrName) == "table" then
+        if tabOrName.IsPersistent == true then
+            return true
+        end
+        return isPersistentTabName(tabOrName.Name)
+    end
+    return isPersistentTabName(tabOrName)
+end
+
+local function getBuiltInLayoutOrder(name)
+    local n = string.lower(tostring(name or ""))
+    if n == "home" then
+        return 10
+    elseif n == "local" then
+        return 10
+    elseif n == "players" then
+        return 20
+    elseif n == "config" then
+        return 25
+    elseif n == "universal" then
+        return 30
+    elseif n == "scripts" then
+        return 35
+    elseif n == "remotes" then
+        return 40
+    end
+    return nil
+end
+
 local function closeDropdowns(except)
     for d in pairs(OPEN_DROPDOWNS) do
         if d ~= except and d.SetOpen then
@@ -701,13 +731,33 @@ end
 
 function Window:SelectTab(tabOrName)
     local picked = nil
+    local pickedSubTab = nil
     if typeof(tabOrName) == "table" then
-        picked = tabOrName
+        if tabOrName.IsSubTab == true then
+            pickedSubTab = tabOrName
+            picked = tabOrName.Tab
+        else
+            picked = tabOrName
+        end
     else
         for _, t in ipairs(self.Tabs) do
             if t.Name == tostring(tabOrName) then
                 picked = t
                 break
+            end
+        end
+        if not picked then
+            for _, t in ipairs(self.Tabs) do
+                for _, subTab in ipairs(t.SubTabs or {}) do
+                    if subTab.Name == tostring(tabOrName) then
+                        picked = t
+                        pickedSubTab = subTab
+                        break
+                    end
+                end
+                if picked then
+                    break
+                end
             end
         end
     end
@@ -731,7 +781,14 @@ function Window:SelectTab(tabOrName)
             end
         end
     end
-    picked:SelectSubTab(picked.ActiveSubTab or picked.DefaultSubTab or picked:_ensureDefaultSubTab())
+    local targetSubTab = pickedSubTab
+        or picked.ActiveSubTab
+        or picked.DefaultSubTab
+        or picked:_firstSubTab()
+        or ((picked.AutoCreateDefaultSubTab ~= false) and picked:_ensureDefaultSubTab() or nil)
+    if targetSubTab then
+        picked:SelectSubTab(targetSubTab)
+    end
     self:UpdateHeader()
     return picked
 end
@@ -742,6 +799,157 @@ end
 
 function Window:GetTabs()
     return self.Tabs
+end
+
+function Window:_findTabByName(name)
+    local targetName = tostring(name or "")
+    for _, existingTab in ipairs(self.Tabs) do
+        if existingTab.Name == targetName then
+            return existingTab
+        end
+    end
+    return nil
+end
+
+function Window:_usesBuiltInHost()
+    return self.GroupBuiltInTabs == true
+end
+
+function Window:GetBuiltInHostTab()
+    if not self:_usesBuiltInHost() then
+        return nil
+    end
+
+    local hostName = tostring(self.BuiltInHostTabName or "Home")
+    local existingHost = self.BuiltInHostTab
+    if existingHost and existingHost.Button and existingHost.Button.Parent then
+        return existingHost
+    end
+
+    existingHost = self:_findTabByName(hostName)
+    if existingHost then
+        self.BuiltInHostTab = existingHost
+        return existingHost
+    end
+
+    local createArgs = {
+        Name = hostName,
+        LayoutOrder = getBuiltInLayoutOrder(hostName) or 10,
+        Persistent = true,
+        NoDefaultSubTab = true,
+    }
+    self.BuiltInHostTab = self:CreateTab(createArgs)
+    return self.BuiltInHostTab
+end
+
+function Window:ResolveBuiltInContainer(name)
+    local categoryName = tostring(name or "BuiltIn")
+    if self:_usesBuiltInHost() then
+        local hostTab = self:GetBuiltInHostTab()
+        local subTab = hostTab:CreateSubTab({
+            Name = categoryName,
+            LayoutOrder = getBuiltInLayoutOrder(categoryName),
+        })
+        return subTab, hostTab, subTab
+    end
+
+    local tab = self:_findTabByName(categoryName)
+    if not tab then
+        local createArgs = {
+            Name = categoryName,
+            Persistent = true,
+        }
+        local layoutOrder = getBuiltInLayoutOrder(categoryName)
+        if layoutOrder then
+            createArgs.LayoutOrder = layoutOrder
+        end
+        tab = self:CreateTab(createArgs)
+    end
+
+    return tab, tab, (tab.ActiveSubTab or tab.DefaultSubTab or tab:_firstSubTab() or tab:_ensureDefaultSubTab())
+end
+
+function Window:_selectCategoryContainer(container, hostTab)
+    if typeof(container) ~= "table" then
+        return nil
+    end
+    if container.IsSubTab == true then
+        local ownerTab = hostTab or container.Tab
+        if not ownerTab then
+            return nil
+        end
+        self:SelectTab(ownerTab)
+        ownerTab:SelectSubTab(container)
+        return ownerTab
+    end
+    return self:SelectTab(container)
+end
+
+function Window:_refreshCustomSectionsLabel()
+    if not self.SectionsLabel then
+        return
+    end
+
+    local hasCustom = false
+    for _, t in ipairs(self.Tabs) do
+        if not tabIsPersistent(t) then
+            hasCustom = true
+            break
+        end
+    end
+
+    self.SectionsLabel.Visible = hasCustom
+    self.SectionsLabel.Size = hasCustom and UDim2.new(1, 0, 0, 26) or UDim2.new(1, 0, 0, 0)
+end
+
+function Window:_removeCategoryContainer(container, hostTab, fallbackContainer, fallbackHostTab)
+    if typeof(container) ~= "table" then
+        return false
+    end
+
+    if container.IsSubTab == true then
+        local ownerTab = hostTab or container.Tab
+        if ownerTab and self.ActiveTab == ownerTab and ownerTab.ActiveSubTab == container and fallbackContainer then
+            self:_selectCategoryContainer(fallbackContainer, fallbackHostTab)
+        end
+        if ownerTab and ownerTab.RemoveSubTab then
+            return ownerTab:RemoveSubTab(container)
+        end
+        return false
+    end
+
+    if self.ActiveTab == container then
+        if fallbackContainer then
+            self:_selectCategoryContainer(fallbackContainer, fallbackHostTab)
+        else
+            for _, nextTab in ipairs(self.Tabs) do
+                if nextTab ~= container then
+                    self:SelectTab(nextTab)
+                    break
+                end
+            end
+        end
+    end
+
+    for i = #self.Tabs, 1, -1 do
+        if self.Tabs[i] == container then
+            table.remove(self.Tabs, i)
+            break
+        end
+    end
+
+    if container.Button and container.Button.Parent then
+        container.Button:Destroy()
+    end
+    if container.Separator and container.Separator.Parent then
+        container.Separator:Destroy()
+    end
+    if container.Page and container.Page.Parent then
+        container.Page:Destroy()
+    end
+
+    self:_refreshCustomSectionsLabel()
+    return true
 end
 
 -- UI Category Builders
@@ -755,16 +963,7 @@ function Window:CreatePlayersCategory(options)
     if not localPlayer then
         return nil
     end
-    local playersTab = nil
-    for _, existingTab in ipairs(self.Tabs) do
-        if existingTab.Name == "Players" then
-            playersTab = existingTab
-            break
-        end
-    end
-    if not playersTab then
-        playersTab = self:CreateTab({ Name = "Players" })
-    end
+    local playersTab, playersHostTab, playersSubTab = self:ResolveBuiltInContainer("Players")
 
     local listSection = playersTab:CreateSection({ Name = "Player List", Side = "Left" })
     local optionsSection = playersTab:CreateSection({ Name = "Player Options", Side = "Right" })
@@ -2162,6 +2361,8 @@ function Window:CreatePlayersCategory(options)
 
     self.PlayerCategory = {
         Tab = playersTab,
+        HostTab = playersHostTab,
+        SubTab = playersSubTab,
         PlayerListSection = listSection,
         OptionsSection = optionsSection,
         RefreshPlayerList = refreshPlayerList,
@@ -2214,16 +2415,7 @@ function Window:CreateLocalCategory(options)
     if not localPlayer then
         return nil
     end
-    local localTab = nil
-    for _, existingTab in ipairs(self.Tabs) do
-        if existingTab.Name == "Local" then
-            localTab = existingTab
-            break
-        end
-    end
-    if not localTab then
-        localTab = self:CreateTab({ Name = "Local" })
-    end
+    local localTab, localHostTab, localSubTab = self:ResolveBuiltInContainer("Local")
 
     local flySection = localTab:CreateSection({ Name = "Fly", Side = "Left" })
     local visualsSection = localTab:CreateSection({ Name = "Visuals", Side = "Left" })
@@ -3726,6 +3918,8 @@ function Window:CreateLocalCategory(options)
 
     self.LocalCategory = {
         Tab = localTab,
+        HostTab = localHostTab,
+        SubTab = localSubTab,
         FlySection = flySection,
         VisualsSection = visualsSection,
         FunSection = funSection,
@@ -3879,16 +4073,7 @@ function Window:CreateRemotesCategory(options)
         sourceUrl = sourcePath
     end
 
-    local remotesTab = nil
-    for _, existingTab in ipairs(self.Tabs) do
-        if existingTab.Name == "Remotes" then
-            remotesTab = existingTab
-            break
-        end
-    end
-    if not remotesTab then
-        remotesTab = self:CreateTab({ Name = "Remotes" })
-    end
+    local remotesTab, remotesHostTab, remotesSubTab = self:ResolveBuiltInContainer("Remotes")
 
     local logsSection = remotesTab:CreateSection({ Name = "Logs", Side = "Left" })
     local actionsSection = remotesTab:CreateSection({ Name = "Controls", Side = "Right" })
@@ -4456,6 +4641,8 @@ function Window:CreateRemotesCategory(options)
 
     self.RemotesCategory = {
         Tab = remotesTab,
+        HostTab = remotesHostTab,
+        SubTab = remotesSubTab,
         LogsSection = logsSection,
         ActionsSection = actionsSection,
         SettingsSection = settingsSection,
@@ -4480,16 +4667,7 @@ function Window:CreateScriptsCategory(options)
     end
 
     options = options or {}
-    local scriptsTab = nil
-    for _, existingTab in ipairs(self.Tabs) do
-        if existingTab.Name == "Scripts" then
-            scriptsTab = existingTab
-            break
-        end
-    end
-    if not scriptsTab then
-        scriptsTab = self:CreateTab({ Name = "Scripts" })
-    end
+    local scriptsTab, scriptsHostTab, scriptsSubTab = self:ResolveBuiltInContainer("Scripts")
 
     local scriptsSection = scriptsTab:CreateSection({ Name = "Scripts", Side = "Left" })
     local statusSection = scriptsTab:CreateSection({ Name = "Status", Side = "Right" })
@@ -4499,6 +4677,8 @@ function Window:CreateScriptsCategory(options)
 
     self.ScriptsCategory = {
         Tab = scriptsTab,
+        HostTab = scriptsHostTab,
+        SubTab = scriptsSubTab,
         ScriptsSection = scriptsSection,
         StatusSection = statusSection,
         Options = options,
@@ -4514,16 +4694,7 @@ function Window:CreateUniversalCategory(options)
     end
 
     options = options or {}
-    local universalTab = nil
-    for _, existingTab in ipairs(self.Tabs) do
-        if existingTab.Name == "Universal" then
-            universalTab = existingTab
-            break
-        end
-    end
-    if not universalTab then
-        universalTab = self:CreateTab({ Name = "Universal" })
-    end
+    local universalTab, universalHostTab, universalSubTab = self:ResolveBuiltInContainer("Universal")
 
     local otherSection = universalTab:CreateSection({ Name = "Other", Side = "Left" })
     local infoSection = universalTab:CreateSection({ Name = "Info", Side = "Right" })
@@ -4542,66 +4713,25 @@ function Window:CreateUniversalCategory(options)
         })
     end
 
-    local function removeTab(tabRef)
-        if not tabRef then
-            return
-        end
-
-        if self.ActiveTab == tabRef then
-            self:SelectTab(universalTab)
-        end
-
-        for i = #self.Tabs, 1, -1 do
-            if self.Tabs[i] == tabRef then
-                table.remove(self.Tabs, i)
-                break
-            end
-        end
-
-        if tabRef.Button and tabRef.Button.Parent then
-            tabRef.Button:Destroy()
-        end
-        if tabRef.Separator and tabRef.Separator.Parent then
-            tabRef.Separator:Destroy()
-        end
-        if tabRef.Page and tabRef.Page.Parent then
-            tabRef.Page:Destroy()
-        end
-
-        if self.SectionsLabel then
-            local hasCustom = false
-            for _, t in ipairs(self.Tabs) do
-                if not isPersistentTabName(t.Name) then
-                    hasCustom = true
-                    break
-                end
-            end
-            self.SectionsLabel.Visible = hasCustom
-            self.SectionsLabel.Size = hasCustom and UDim2.new(1, 0, 0, 26) or UDim2.new(1, 0, 0, 0)
-        end
-    end
-
     local function removeRemotesTab()
         local category = self.RemotesCategory
         if not category then
             return
         end
-        local tabRef = category.Tab
         local genv = (typeof(getgenv) == "function" and getgenv()) or _G
         if genv.SimpleSpyExecuted and type(genv.SimpleSpyShutdown) == "function" then
             pcall(genv.SimpleSpyShutdown)
         end
         self.RemotesCategory = nil
-        removeTab(tabRef)
+        self:_removeCategoryContainer(category.Tab, category.HostTab, universalTab, universalHostTab)
     end
     local function removeScriptsTab()
         local category = self.ScriptsCategory
         if not category then
             return
         end
-        local tabRef = category.Tab
         self.ScriptsCategory = nil
-        removeTab(tabRef)
+        self:_removeCategoryContainer(category.Tab, category.HostTab, universalTab, universalHostTab)
     end
 
     local function setDeveloperEnabled(state, silent)
@@ -4694,6 +4824,8 @@ function Window:CreateUniversalCategory(options)
 
     self.UniversalCategory = {
         Tab = universalTab,
+        HostTab = universalHostTab,
+        SubTab = universalSubTab,
         InfoSection = infoSection,
         DeveloperSection = infoSection,
         UniversalSection = otherSection,
@@ -4719,10 +4851,10 @@ function Window:CreateUniversalCategory(options)
             return scriptsEnabled
         end,
         GetDeveloperTabs = function()
-            return self.RemotesCategory and self.RemotesCategory.Tab or nil
+            return self.RemotesCategory and (self.RemotesCategory.SubTab or self.RemotesCategory.Tab) or nil
         end,
         GetScriptsTab = function()
-            return self.ScriptsCategory and self.ScriptsCategory.Tab or nil
+            return self.ScriptsCategory and (self.ScriptsCategory.SubTab or self.ScriptsCategory.Tab) or nil
         end,
         Options = options,
     }
@@ -4740,7 +4872,7 @@ function Window:CreateConfigCategory(options)
     end
 
     options = options or {}
-    local configTab = self:CreateTab({ Name = "Config", LayoutOrder = 25 })
+    local configTab, configHostTab, configSubTab = self:ResolveBuiltInContainer("Config")
     local managementSection = configTab:CreateSection({ Name = "Management", Side = "Left" })
     local listSection = configTab:CreateSection({ Name = "Configs", Side = "Right" })
 
@@ -4811,6 +4943,8 @@ function Window:CreateConfigCategory(options)
 
     self.ConfigCategory = {
         Tab = configTab,
+        HostTab = configHostTab,
+        SubTab = configSubTab,
         ManagementSection = managementSection,
         ListSection = listSection,
         RefreshList = refreshConfigList,
@@ -6050,21 +6184,29 @@ function Tab:_ensureDefaultSubTab()
     return self.DefaultSubTab
 end
 
+function Tab:_firstSubTab()
+    return (self.SubTabs and self.SubTabs[1]) or nil
+end
+
 function Tab:_currentSubTab()
-    return self.ActiveSubTab or self.DefaultSubTab or self:_ensureDefaultSubTab()
+    return self.ActiveSubTab
+        or self.DefaultSubTab
+        or self:_firstSubTab()
+        or ((self.AutoCreateDefaultSubTab ~= false) and self:_ensureDefaultSubTab() or nil)
 end
 
 function Tab:_column(side)
     local requested = normalizeSectionSide(side)
-    local currentSubTab = self:_currentSubTab()
+    local currentSubTab = self:_currentSubTab() or self:_ensureDefaultSubTab()
     return (requested == "Right") and currentSubTab.Right or currentSubTab.Left, requested
 end
 
 function Tab:CreateSubTab(a)
-    local name, isDefault = "SubTab", false
+    local name, isDefault, requestedLayoutOrder = "SubTab", false, nil
     if typeof(a) == "table" then
         name = tostring(a.Name or a.Title or "SubTab")
         isDefault = a.Default == true
+        requestedLayoutOrder = tonumber(a.LayoutOrder)
     else
         name = tostring(a or "SubTab")
     end
@@ -6081,6 +6223,7 @@ function Tab:CreateSubTab(a)
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Size = UDim2.fromOffset(buttonWidth, 30),
+        LayoutOrder = requestedLayoutOrder or ((#(self.SubTabs or {}) + 1) * 10),
         AutoButtonColor = false,
         Text = "",
     })
@@ -6163,6 +6306,8 @@ function Tab:CreateSubTab(a)
     local subTab = setmetatable({
         Name = name,
         Tab = self,
+        IsSubTab = true,
+        LayoutOrder = btn.LayoutOrder,
         Button = btn,
         Label = label,
         Underline = underline,
@@ -6230,6 +6375,56 @@ function Tab:GetSubTabs()
     return self.SubTabs or {}
 end
 
+function Tab:RemoveSubTab(subTabOrName)
+    local picked = nil
+    if typeof(subTabOrName) == "table" then
+        picked = subTabOrName
+    else
+        for _, subTab in ipairs(self.SubTabs or {}) do
+            if subTab.Name == tostring(subTabOrName) then
+                picked = subTab
+                break
+            end
+        end
+    end
+    if not picked then
+        return false
+    end
+
+    local wasActive = self.ActiveSubTab == picked
+    local wasDefault = self.DefaultSubTab == picked
+
+    for i = #self.SubTabs, 1, -1 do
+        if self.SubTabs[i] == picked then
+            table.remove(self.SubTabs, i)
+            break
+        end
+    end
+
+    if picked.Button and picked.Button.Parent then
+        picked.Button:Destroy()
+    end
+    if picked.Page and picked.Page.Parent then
+        picked.Page:Destroy()
+    end
+
+    if wasDefault then
+        self.DefaultSubTab = nil
+    end
+    if wasActive then
+        self.ActiveSubTab = nil
+    end
+
+    local nextSubTab = self.ActiveSubTab or self.DefaultSubTab or self:_firstSubTab()
+    if nextSubTab then
+        self:SelectSubTab(nextSubTab)
+    elseif self.Window and self.Window.ActiveTab == self then
+        self.Window:UpdateHeader()
+    end
+
+    return true
+end
+
 function SubTab:CreateSection(a, b)
     return createSectionForSubTab(self.Tab, self, a, b)
 end
@@ -6270,7 +6465,7 @@ function SubTab:CreateKeybind(...)
 end
 
 function Tab:CreateSection(a, b)
-    local subTab = self:_currentSubTab()
+    local subTab = self:_currentSubTab() or self:_ensureDefaultSubTab()
     return createSectionForSubTab(self, subTab, a, b)
 end
 
@@ -6320,21 +6515,30 @@ end
 -- UI Core Builder
 function Window:CreateTab(a, _iconMaybe)
     local name, requestedLayoutOrder = "Tab", nil
+    local explicitPersistent = false
+    local autoCreateDefaultSubTab = true
     if typeof(a) == "table" then
         name = tostring(a.Name or a.Title or "Tab")
         requestedLayoutOrder = tonumber(a.LayoutOrder)
+        explicitPersistent = a.Persistent == true
+        autoCreateDefaultSubTab = not (a.NoDefaultSubTab == true or a.CreateDefaultSubTab == false)
     else
         name = tostring(a or "Tab")
     end
     local tabNameLower = string.lower(name)
     local tabLayoutOrder = nil
+    local isPersistent = explicitPersistent or isPersistentTabName(name)
 
     if requestedLayoutOrder then
         tabLayoutOrder = requestedLayoutOrder
+    elseif tabNameLower == "home" and isPersistent then
+        tabLayoutOrder = 10
     elseif tabNameLower == "local" then
         tabLayoutOrder = 10
     elseif tabNameLower == "players" then
         tabLayoutOrder = 20
+    elseif tabNameLower == "config" then
+        tabLayoutOrder = 25
     elseif tabNameLower == "universal" then
         tabLayoutOrder = 30
     elseif tabNameLower == "scripts" then
@@ -6344,14 +6548,10 @@ function Window:CreateTab(a, _iconMaybe)
     else
         tabLayoutOrder = self.NextCustomTabOrder or 200
         self.NextCustomTabOrder = tabLayoutOrder + 1
-        if self.SectionsLabel then
-            self.SectionsLabel.Visible = true
-            self.SectionsLabel.Size = UDim2.new(1, 0, 0, 26)
-        end
     end
 
     local separator = nil
-    if isPersistentTabName(name) and tabLayoutOrder > 10 then
+    if isPersistent and tabLayoutOrder > 10 then
         separator = mk("Frame", {
             Parent = self.TabList,
             BackgroundTransparency = 1,
@@ -6472,12 +6672,19 @@ function Window:CreateTab(a, _iconMaybe)
         SubTabs = {},
         DefaultSubTab = nil,
         ActiveSubTab = nil,
+        IsPersistent = isPersistent,
+        AutoCreateDefaultSubTab = autoCreateDefaultSubTab,
         Sections = {},
         DefaultSection = nil,
     }, Tab)
-    tab:_ensureDefaultSubTab()
+    if autoCreateDefaultSubTab then
+        tab:_ensureDefaultSubTab()
+    end
 
     table.insert(self.Tabs, tab)
+    if not isPersistent then
+        self:_refreshCustomSectionsLabel()
+    end
     track(self.Connections, btn.MouseButton1Click:Connect(function()
         self:SelectTab(tab)
     end))
@@ -6846,6 +7053,9 @@ function UILibrary:CreateWindow(arg)
         AutoLoadPreviousConfig = false,
         LastLoadedConfigName = nil,
         _startupAutoLoadConfigDone = false,
+        GroupBuiltInTabs = o.GroupBuiltInTabs ~= false,
+        BuiltInHostTabName = tostring(o.BuiltInHostTabName or "Home"),
+        BuiltInHostTab = nil,
         TooltipFrame = tooltipFrame,
         TooltipTextLabel = tooltipText,
         TooltipVisible = false,
