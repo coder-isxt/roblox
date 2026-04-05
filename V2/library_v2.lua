@@ -2436,6 +2436,7 @@ function Window:CreateLocalCategory(options)
     local sprintApplied = false
     local sprintRestoreSpeed = nil
     local sprintBaseSpeed = nil
+    local sprintLastInputAt = 0
     local flyControls = {
         Forward = false,
         Back = false,
@@ -2446,6 +2447,9 @@ function Window:CreateLocalCategory(options)
     }
     local flyBV = nil
     local flyBG = nil
+    local flyRootPart = nil
+    local flyAutoRotateLocked = false
+    local flyAutoRotateWas = true
 
     local flingProtectEnabled = false
     local flingProtectSafeCFrame = nil
@@ -3096,7 +3100,18 @@ function Window:CreateLocalCategory(options)
         return ok and result == true
     end
 
-    local function updateSprintState()
+    local updateSprintState
+    local function setSprintHolding(state)
+        state = state == true
+        sprintLastInputAt = os.clock()
+        if sprintHolding == state then
+            return
+        end
+        sprintHolding = state
+        updateSprintState()
+    end
+
+    function updateSprintState()
         local humanoid = getLocalHumanoid()
         if not humanoid then
             sprintApplied = false
@@ -3109,13 +3124,13 @@ function Window:CreateLocalCategory(options)
 
         if sprintEnabled and sprintHolding then
             if not sprintApplied then
-                if sprintBaseSpeed == nil then
+                if sprintBaseSpeed == nil or math.abs(currentWalkSpeed - sprintSpeed) > 0.05 then
                     sprintBaseSpeed = currentWalkSpeed
                 end
                 sprintRestoreSpeed = tonumber(sprintBaseSpeed) or currentWalkSpeed or 16
                 sprintApplied = true
             end
-            if math.abs(currentWalkSpeed - sprintSpeed) > 0.01 then
+            if math.abs(currentWalkSpeed - sprintSpeed) > 0.05 then
                 humanoid.WalkSpeed = sprintSpeed
             end
             return
@@ -3123,28 +3138,20 @@ function Window:CreateLocalCategory(options)
 
         if sprintApplied then
             local restoreSpeed = tonumber(sprintRestoreSpeed) or tonumber(sprintBaseSpeed) or 16
-            if math.abs(currentWalkSpeed - restoreSpeed) > 0.01 then
+            if math.abs(currentWalkSpeed - restoreSpeed) > 0.05 then
                 humanoid.WalkSpeed = restoreSpeed
                 currentWalkSpeed = restoreSpeed
             end
             sprintApplied = false
             sprintRestoreSpeed = nil
+            sprintBaseSpeed = currentWalkSpeed
+            return
         end
 
-        if (not sprintEnabled) and (not sprintHolding) and (not sprintApplied) then
-            local expectedBase = tonumber(sprintBaseSpeed) or 16
-            if math.abs(currentWalkSpeed - sprintSpeed) <= 0.01 and math.abs(currentWalkSpeed - expectedBase) > 0.01 then
-                humanoid.WalkSpeed = expectedBase
-                currentWalkSpeed = expectedBase
-            end
-        end
-
-        if not sprintHolding then
-            if math.abs(currentWalkSpeed - sprintSpeed) > 0.01 then
-                sprintBaseSpeed = currentWalkSpeed
-            elseif sprintBaseSpeed == nil then
-                sprintBaseSpeed = 16
-            end
+        if math.abs(currentWalkSpeed - sprintSpeed) > 0.05 then
+            sprintBaseSpeed = currentWalkSpeed
+        elseif sprintBaseSpeed == nil then
+            sprintBaseSpeed = 16
         end
     end
 
@@ -3168,14 +3175,39 @@ function Window:CreateLocalCategory(options)
         end
     end
 
-    local function refreshFlyPlatformStand()
+    local function refreshFlyHumanoidState(enabled)
         local humanoid = getLocalHumanoid()
-        if humanoid then
-            humanoid.PlatformStand = flyEnabled
+        if not humanoid then
+            return
         end
+
+        if enabled == true then
+            if not flyAutoRotateLocked then
+                flyAutoRotateLocked = true
+                flyAutoRotateWas = humanoid.AutoRotate
+            end
+            humanoid.AutoRotate = false
+            humanoid.PlatformStand = false
+            pcall(function()
+                if humanoid:GetState() ~= Enum.HumanoidStateType.Physics then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                end
+            end)
+            return
+        end
+
+        if flyAutoRotateLocked then
+            humanoid.AutoRotate = flyAutoRotateWas
+        end
+        flyAutoRotateLocked = false
+        pcall(function()
+            humanoid.PlatformStand = false
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end)
     end
 
     local function stopFly()
+        local rootPart = getLocalRoot() or flyRootPart
         if flyBV then
             pcall(function()
                 flyBV:Destroy()
@@ -3190,7 +3222,14 @@ function Window:CreateLocalCategory(options)
             flyBG = nil
         end
 
-        refreshFlyPlatformStand()
+        if rootPart and rootPart.Parent then
+            pcall(function()
+                rootPart.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                rootPart.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            end)
+        end
+        flyRootPart = nil
+        refreshFlyHumanoidState(false)
     end
 
     local function startFly()
@@ -3209,20 +3248,23 @@ function Window:CreateLocalCategory(options)
             flyBG = nil
         end
 
+        flyRootPart = rootPart
         flyBG = Instance.new("BodyGyro")
         flyBG.Name = "LimboFlyBG"
         flyBG.P = 9e4
+        flyBG.D = 900
         flyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
         flyBG.CFrame = rootPart.CFrame
         flyBG.Parent = rootPart
 
         flyBV = Instance.new("BodyVelocity")
         flyBV.Name = "LimboFlyBV"
+        flyBV.P = 12500
         flyBV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
         flyBV.Velocity = Vector3.new(0, 0, 0)
         flyBV.Parent = rootPart
 
-        refreshFlyPlatformStand()
+        refreshFlyHumanoidState(true)
         return true
     end
 
@@ -3265,13 +3307,20 @@ function Window:CreateLocalCategory(options)
         return move
     end
 
-    local function updateFlyVelocity()
-        if not flyEnabled or not flyBV or not flyBG then
+    local function updateFlyVelocity(dt)
+        if not flyEnabled then
             return
         end
 
+        if not flyBV or not flyBG then
+            if not startFly() then
+                return
+            end
+        end
+
         local rootPart = getLocalRoot()
-        if not rootPart then
+        local humanoid = getLocalHumanoid()
+        if not rootPart or not humanoid then
             stopFly()
             flyEnabled = false
             if flyToggleControl and flyToggleControl.Set then
@@ -3280,17 +3329,38 @@ function Window:CreateLocalCategory(options)
             return
         end
 
+        if flyRootPart ~= rootPart or flyBV.Parent ~= rootPart or flyBG.Parent ~= rootPart then
+            if not startFly() then
+                stopFly()
+                flyEnabled = false
+                if flyToggleControl and flyToggleControl.Set then
+                    flyToggleControl:Set(false, true)
+                end
+                return
+            end
+        end
+
         local cam = workspace.CurrentCamera
         if not cam then
             return
         end
 
+        refreshFlyHumanoidState(true)
         local move = getFlyMoveDirection(cam)
+        local step = math.clamp(tonumber(dt) or (1 / 60), 1 / 240, 1 / 20)
 
         if move.Magnitude > 0 then
             move = move.Unit * flySpeed
+            pcall(function()
+                rootPart.CFrame = rootPart.CFrame + (move * step)
+            end)
+        else
+            move = Vector3.new(0, 0, 0)
         end
 
+        pcall(function()
+            rootPart.AssemblyLinearVelocity = move
+        end)
         flyBV.Velocity = move
         flyBG.CFrame = cam.CFrame
     end
@@ -3635,26 +3705,24 @@ function Window:CreateLocalCategory(options)
             setFlyEnabled(newState, false)
         end
         if key == sprintHoldKey then
-            sprintHolding = true
-            updateSprintState()
+            setSprintHolding(true)
         end
         setControlFromKey(key, true)
     end))
     flyInputConnectionEnded = track(self.Connections, UIS.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Keyboard then
             if input.KeyCode == sprintHoldKey then
-                sprintHolding = false
-                updateSprintState()
+                setSprintHolding(false)
             end
             setControlFromKey(input.KeyCode, false)
         end
     end))
 
-    flyVelocityConnection = track(self.Connections, RunService.Heartbeat:Connect(function()
-        updateFlyVelocity()
+    flyVelocityConnection = track(self.Connections, RunService.Heartbeat:Connect(function(dt)
+        updateFlyVelocity(dt)
         if sprintEnabled then
             local nowHolding = isKeyDownSafe(sprintHoldKey)
-            if nowHolding ~= sprintHolding then
+            if nowHolding ~= sprintHolding and (os.clock() - sprintLastInputAt) >= 0.08 then
                 sprintHolding = nowHolding
             end
         end
@@ -3664,8 +3732,12 @@ function Window:CreateLocalCategory(options)
     flyCharacterAddedConnection = track(self.Connections, localPlayer.CharacterAdded:Connect(function()
         task.defer(function()
             if flyEnabled then
+                task.wait(0.1)
                 startFly()
             end
+            flyAutoRotateLocked = false
+            flyAutoRotateWas = true
+            flyRootPart = getLocalRoot()
             sprintApplied = false
             sprintRestoreSpeed = nil
             sprintBaseSpeed = nil
