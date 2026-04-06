@@ -2437,6 +2437,9 @@ function Window:CreateLocalCategory(options)
     local sprintRestoreSpeed = nil
     local sprintBaseSpeed = nil
     local sprintLastInputAt = 0
+    local walkSpeedEnabled = false
+    local walkSpeedValue = tonumber(options.WalkSpeed) or 16
+    walkSpeedValue = math.clamp(walkSpeedValue, 0, 250)
     local flyControls = {
         Forward = false,
         Back = false,
@@ -2464,12 +2467,15 @@ function Window:CreateLocalCategory(options)
 
     local flyToggleControl = nil
     local sprintToggleControl = nil
+    local walkSpeedToggleControl = nil
     local fpsBoostToggle = nil
     local noShadowsToggle = nil
     local noCameraCollisionToggle = nil
     local noFogToggle = nil
     local fullBrightToggle = nil
     local xbox360Toggle = nil
+    local antiAfkEnabled = false
+    local antiAfkConnection = nil
     local killBrickEnabled = false
     local killBrickConnection = nil
     local unanchoredFlingEnabled = false
@@ -3116,7 +3122,6 @@ function Window:CreateLocalCategory(options)
         if not humanoid then
             sprintApplied = false
             sprintRestoreSpeed = nil
-            sprintBaseSpeed = nil
             return
         end
 
@@ -3124,34 +3129,17 @@ function Window:CreateLocalCategory(options)
 
         if sprintEnabled and sprintHolding then
             if not sprintApplied then
-                if sprintBaseSpeed == nil or math.abs(currentWalkSpeed - sprintSpeed) > 0.05 then
-                    sprintBaseSpeed = currentWalkSpeed
-                end
-                sprintRestoreSpeed = tonumber(sprintBaseSpeed) or currentWalkSpeed or 16
+                sprintRestoreSpeed = currentWalkSpeed
                 sprintApplied = true
             end
-            if math.abs(currentWalkSpeed - sprintSpeed) > 0.05 then
-                humanoid.WalkSpeed = sprintSpeed
-            end
+            humanoid.WalkSpeed = sprintSpeed
             return
         end
 
         if sprintApplied then
-            local restoreSpeed = tonumber(sprintRestoreSpeed) or tonumber(sprintBaseSpeed) or 16
-            if math.abs(currentWalkSpeed - restoreSpeed) > 0.05 then
-                humanoid.WalkSpeed = restoreSpeed
-                currentWalkSpeed = restoreSpeed
-            end
+            humanoid.WalkSpeed = tonumber(sprintRestoreSpeed) or 16
             sprintApplied = false
             sprintRestoreSpeed = nil
-            sprintBaseSpeed = currentWalkSpeed
-            return
-        end
-
-        if math.abs(currentWalkSpeed - sprintSpeed) > 0.05 then
-            sprintBaseSpeed = currentWalkSpeed
-        elseif sprintBaseSpeed == nil then
-            sprintBaseSpeed = 16
         end
     end
 
@@ -3175,6 +3163,38 @@ function Window:CreateLocalCategory(options)
         end
     end
 
+    local function updateWalkSpeedState()
+        if not walkSpeedEnabled then
+            return
+        end
+        if sprintApplied then
+            return
+        end
+        local humanoid = getLocalHumanoid()
+        if not humanoid then
+            return
+        end
+        humanoid.WalkSpeed = walkSpeedValue
+    end
+
+    local function setWalkSpeedEnabled(state, silent)
+        state = state == true
+        if state == walkSpeedEnabled then
+            return
+        end
+
+        walkSpeedEnabled = state
+        self.LibrarySettings.WalkSpeedEnabled = state
+
+        if walkSpeedEnabled then
+            updateWalkSpeedState()
+        end
+
+        if not silent then
+            notify("WalkSpeed", walkSpeedEnabled and ("Enabled (" .. tostring(walkSpeedValue) .. ").") or "Disabled.", 1.8)
+        end
+    end
+
     local function refreshFlyHumanoidState(enabled)
         local humanoid = getLocalHumanoid()
         if not humanoid then
@@ -3189,8 +3209,9 @@ function Window:CreateLocalCategory(options)
             humanoid.AutoRotate = false
             humanoid.PlatformStand = false
             pcall(function()
-                if humanoid:GetState() ~= Enum.HumanoidStateType.Physics then
-                    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                local currentState = humanoid:GetState()
+                if currentState ~= Enum.HumanoidStateType.Freefall and currentState ~= Enum.HumanoidStateType.Swimming then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Swimming)
                 end
             end)
             return
@@ -3347,20 +3368,13 @@ function Window:CreateLocalCategory(options)
 
         refreshFlyHumanoidState(true)
         local move = getFlyMoveDirection(cam)
-        local step = math.clamp(tonumber(dt) or (1 / 60), 1 / 240, 1 / 20)
 
         if move.Magnitude > 0 then
             move = move.Unit * flySpeed
-            pcall(function()
-                rootPart.CFrame = rootPart.CFrame + (move * step)
-            end)
         else
             move = Vector3.new(0, 0, 0)
         end
 
-        pcall(function()
-            rootPart.AssemblyLinearVelocity = move
-        end)
         flyBV.Velocity = move
         flyBG.CFrame = cam.CFrame
     end
@@ -3408,6 +3422,39 @@ function Window:CreateLocalCategory(options)
             resetFlingProtectState()
         end
         notify("Fling Protect", flingProtectEnabled and "Enabled." or "Disabled.", 1.8)
+    end
+
+    local function setAntiAfkEnabled(state, silent)
+        state = state == true
+        if antiAfkEnabled == state then
+            return
+        end
+
+        antiAfkEnabled = state
+        self.LibrarySettings.AntiAfk = state
+
+        if antiAfkConnection then
+            antiAfkConnection:Disconnect()
+            antiAfkConnection = nil
+        end
+
+        if antiAfkEnabled then
+            antiAfkConnection = track(self.Connections, localPlayer.Idled:Connect(function()
+                if not antiAfkEnabled then
+                    return
+                end
+                local VirtualUser = game:GetService("VirtualUser")
+                pcall(function()
+                    VirtualUser:Button2Down(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                    task.wait(0.1)
+                    VirtualUser:Button2Up(Vector2.new(0, 0), workspace.CurrentCamera.CFrame)
+                end)
+            end))
+        end
+
+        if not silent then
+            notify("Anti-AFK", antiAfkEnabled and "Enabled." or "Disabled.", 1.8)
+        end
     end
 
     local function runExternalLoader(name, url, useAsync, controlsHint)
@@ -3727,6 +3774,7 @@ function Window:CreateLocalCategory(options)
             end
         end
         updateSprintState()
+        updateWalkSpeedState()
     end))
 
     flyCharacterAddedConnection = track(self.Connections, localPlayer.CharacterAdded:Connect(function()
@@ -3879,6 +3927,19 @@ function Window:CreateLocalCategory(options)
     sprintHolding = sprintEnabled and isKeyDownSafe(sprintHoldKey)
     updateSprintState()
 
+    walkSpeedToggleControl = flySection:CreateToggle("WalkSpeed Override", function(v)
+        setWalkSpeedEnabled(v, true)
+    end, walkSpeedEnabled)
+    self.LibraryConfigItems.WalkSpeedEnabled = walkSpeedToggleControl
+
+    local walkSpeedSlider = flySection:CreateSlider("WalkSpeed", 0, 250, walkSpeedValue, function(v)
+        walkSpeedValue = math.clamp(tonumber(v) or walkSpeedValue, 0, 250)
+        self.LibrarySettings.WalkSpeed = walkSpeedValue
+        updateWalkSpeedState()
+    end)
+    self.LibraryConfigItems.WalkSpeed = walkSpeedSlider
+    flySection:CreateLabel("Overrides your walk speed continuously.")
+
     fpsBoostToggle = visualsSection:CreateToggle("FPS Boost", function(v)
         setFpsBoostEnabled(v, false)
     end, false)
@@ -3961,6 +4022,11 @@ function Window:CreateLocalCategory(options)
     end, false)
     self.LibraryConfigItems.FlingProtect = flingProtectToggle
 
+    local antiAfkToggle = otherSection:CreateToggle("Anti-AFK", function(v)
+        setAntiAfkEnabled(v, false)
+    end, false)
+    self.LibraryConfigItems.AntiAfk = antiAfkToggle
+
     self:OnClose(function()
         setFlyEnabled(false, true)
         setSprintEnabled(false, true)
@@ -3973,6 +4039,7 @@ function Window:CreateLocalCategory(options)
         setKillBrickEnabled(false, true)
         setUnanchoredPartFlingEnabled(false, true)
         setSpinFlingEnabled(false, true)
+        setAntiAfkEnabled(false, true)
         flingProtectEnabled = false
         resetFlingProtectState()
         flyControls.Forward = false
