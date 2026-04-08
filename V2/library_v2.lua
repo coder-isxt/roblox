@@ -6864,7 +6864,7 @@ function UILibrary:CreateWindow(arg)
     local title = tostring(o.Title or o.Name or "Untitled")
     local subtitle = tostring(o.Subtitle or o.SubTitle or "")
     local size = (typeof(o.Size) == "UDim2") and o.Size or UDim2.fromOffset(960, 560)
-    local toggleKey = Enum.KeyCode.Insert
+    local toggleKey = Enum.KeyCode.Home
     local parent = (typeof(o.Parent) == "Instance") and o.Parent or guiParent()
     if not parent then
         error("[library_v2] no ScreenGui parent")
