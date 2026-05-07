@@ -484,7 +484,7 @@ function Window:PlayInitializeAnimation()
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
-        Text = "Zyntra Interface",
+        Text = "Zyntra V2",
         TextTransparency = 1,
         ZIndex = 53,
     })
