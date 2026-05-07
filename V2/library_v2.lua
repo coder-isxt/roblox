@@ -29,29 +29,32 @@ local TextService = Services.TextService
 
 -- Definitions / Variables
 local FONT = Enum.Font.Gotham
+local FONT_BOLD = Enum.Font.GothamMedium
 local GUI_NAME = "ZyntraLibrary"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-    Main = Color3.fromRGB(17, 19, 24),
-    Top = Color3.fromRGB(24, 27, 34),
+    Main = Color3.fromRGB(11, 13, 17),
+    Top = Color3.fromRGB(18, 20, 26),
 
-    Sidebar = Color3.fromRGB(21, 24, 30),
-    SidebarActive = Color3.fromRGB(39, 46, 60),
+    Sidebar = Color3.fromRGB(15, 17, 22),
+    SidebarActive = Color3.fromRGB(28, 32, 42),
 
-    Panel = Color3.fromRGB(26, 29, 37),
-    PanelInset = Color3.fromRGB(32, 36, 45),
+    Panel = Color3.fromRGB(20, 22, 28),
+    PanelInset = Color3.fromRGB(25, 28, 35),
 
-    Control = Color3.fromRGB(41, 47, 59),
-    ControlHover = Color3.fromRGB(50, 57, 71),
-    ControlPress = Color3.fromRGB(62, 71, 88),
+    Control = Color3.fromRGB(32, 36, 45),
+    ControlHover = Color3.fromRGB(40, 45, 56),
+    ControlPress = Color3.fromRGB(48, 54, 68),
 
-    Stroke = Color3.fromRGB(70, 79, 98),
+    Stroke = Color3.fromRGB(50, 55, 70),
+    Accent = Color3.fromRGB(60, 125, 255),
 
-    Accent = Color3.fromRGB(96, 147, 255),
-
-    Text = Color3.fromRGB(245, 247, 255),
-    SubText = Color3.fromRGB(160, 168, 185),
+    Text = Color3.fromRGB(250, 252, 255),
+    SubText = Color3.fromRGB(150, 160, 180),
+    Success = Color3.fromRGB(75, 255, 150),
+    Warning = Color3.fromRGB(255, 200, 75),
+    Error = Color3.fromRGB(255, 100, 100),
 }
 
 -- Shared Helper Functions
@@ -65,22 +68,22 @@ end
 
 local function corner(x, r)
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, r or 4)
+    c.CornerRadius = UDim.new(0, r or 8)
     c.Parent = x
     return c
 end
 
-local function stroke(x, color, trans)
+local function stroke(x, color, trans, thick)
     local s = Instance.new("UIStroke")
     s.Color = color or C.Stroke
-    s.Thickness = 1
-    s.Transparency = trans or 0.5
+    s.Thickness = thick or 1
+    s.Transparency = trans or 0.6
     s.Parent = x
     return s
 end
 
-local function tw(x, t, p)
-    return TweenService:Create(x, TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), p)
+local function tw(x, t, p, style, dir)
+    return TweenService:Create(x, TweenInfo.new(t, style or Enum.EasingStyle.Quart, dir or Enum.EasingDirection.Out), p)
 end
 
 local function safe(cb, ...)
@@ -374,32 +377,32 @@ function Window:SetVisible(v)
     if shouldShow then
         self.Main.Visible = true
         if self.MainScale then
-            self.MainScale.Scale = 0.97
+            self.MainScale.Scale = 0.94
         end
         self.Main.BackgroundTransparency = 1
         if self.MainStroke then
             self.MainStroke.Transparency = 1
         end
 
-        self.AnimScaleTween = tw(self.MainScale, 0.16, { Scale = 1 })
-        self.AnimFadeTween = tw(self.Main, 0.16, { BackgroundTransparency = 0 })
-        self.AnimStrokeTween = tw(self.MainStroke, 0.16, { Transparency = 0.2 })
+        self.AnimScaleTween = tw(self.MainScale, 0.4, { Scale = 1 }, Enum.EasingStyle.Exponential)
+        self.AnimFadeTween = tw(self.Main, 0.3, { BackgroundTransparency = 0 })
+        self.AnimStrokeTween = tw(self.MainStroke, 0.3, { Transparency = 0.2 })
         self.AnimScaleTween:Play()
         self.AnimFadeTween:Play()
         self.AnimStrokeTween:Play()
-        task.delay(0.17, function()
+        task.delay(0.4, function()
             if self and self.Main and self.VisibleState then
                 self.Animating = false
             end
         end)
     else
-        self.AnimScaleTween = tw(self.MainScale, 0.14, { Scale = 0.97 })
-        self.AnimFadeTween = tw(self.Main, 0.14, { BackgroundTransparency = 1 })
-        self.AnimStrokeTween = tw(self.MainStroke, 0.14, { Transparency = 1 })
+        self.AnimScaleTween = tw(self.MainScale, 0.3, { Scale = 0.94 }, Enum.EasingStyle.Exponential)
+        self.AnimFadeTween = tw(self.Main, 0.25, { BackgroundTransparency = 1 })
+        self.AnimStrokeTween = tw(self.MainStroke, 0.25, { Transparency = 1 })
         self.AnimScaleTween:Play()
         self.AnimFadeTween:Play()
         self.AnimStrokeTween:Play()
-        task.delay(0.15, function()
+        task.delay(0.3, function()
             if self and self.Main and not self.VisibleState then
                 self.Main.Visible = false
                 self.Animating = false
@@ -427,8 +430,8 @@ function Window:PlayInitializeAnimation()
         Parent = overlay,
         Rotation = 90,
         Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(7, 11, 18)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 18, 29)),
+            ColorSequenceKeypoint.new(0, C.Main),
+            ColorSequenceKeypoint.new(1, C.Top),
         }),
         Transparency = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 0.1),
@@ -518,9 +521,9 @@ function Window:PlayInitializeAnimation()
     corner(barFill, 99)
 
     local steps = {
-        { Label = "Preparing modules...", Fill = 0.34, Time = 0.24 },
-        { Label = "Building sections...", Fill = 0.72, Time = 0.26 },
-        { Label = "Finalizing...", Fill = 1, Time = 0.2 },
+        { Label = "Authenticating...", Fill = 0.34, Time = 0.3 },
+        { Label = "Initializing components...", Fill = 0.72, Time = 0.35 },
+        { Label = "Ready", Fill = 1, Time = 0.25 },
     }
 
     tw(overlay, 0.12, { BackgroundTransparency = 0.08 }):Play()
@@ -626,9 +629,24 @@ function Window:UpdateHeader()
     end
     local activeTab = self.ActiveTab
     local activeSubTab = activeTab and activeTab.ActiveSubTab or nil
-    self.HeaderTitleLabel.Text = activeTab and tostring(activeTab.Name or "") or "Overview"
-    if self.HeaderSubtitleLabel then
-        self.HeaderSubtitleLabel.Text = activeSubTab and tostring(activeSubTab.Name or "") or ""
+    
+    local titleText = activeTab and tostring(activeTab.Name or "") or "Overview"
+    local subText = activeSubTab and tostring(activeSubTab.Name or "") or ""
+    
+    if self.HeaderTitleLabel.Text ~= titleText then
+        tw(self.HeaderTitleLabel, 0.2, { TextTransparency = 1 }):Play()
+        task.delay(0.2, function()
+            self.HeaderTitleLabel.Text = titleText
+            tw(self.HeaderTitleLabel, 0.2, { TextTransparency = 0 }):Play()
+        end)
+    end
+    
+    if self.HeaderSubtitleLabel and self.HeaderSubtitleLabel.Text ~= subText then
+        tw(self.HeaderSubtitleLabel, 0.2, { TextTransparency = 1 }):Play()
+        task.delay(0.2, function()
+            self.HeaderSubtitleLabel.Text = subText
+            tw(self.HeaderSubtitleLabel, 0.2, { TextTransparency = 0 }):Play()
+        end)
     end
 end
 
@@ -776,13 +794,13 @@ function Window:SelectTab(tabOrName)
     for _, t in ipairs(self.Tabs) do
         local active = t == picked
         t.Page.Visible = active
-        t.Indicator.BackgroundTransparency = active and 0 or 1
-        t.ButtonBack.BackgroundTransparency = active and 0.15 or 1
-        t.Label.TextColor3 = active and C.Text or C.SubText
+        tw(t.Indicator, 0.25, { BackgroundTransparency = active and 0 or 1, Size = active and UDim2.new(0, 3, 1, -16) or UDim2.new(0, 3, 0, 0) }, Enum.EasingStyle.Quart):Play()
+        tw(t.ButtonBack, 0.25, { BackgroundTransparency = active and 0.15 or 1 }):Play()
+        tw(t.Label, 0.25, { TextColor3 = active and C.Text or C.SubText, Position = active and UDim2.new(0, 38, 0, 0) or UDim2.new(0, 34, 0, 0) }):Play()
         if t.Glyph then
             for _, child in ipairs(t.Glyph:GetChildren()) do
                 if child:IsA("Frame") then
-                    child.BackgroundColor3 = active and C.Accent or C.SubText
+                    tw(child, 0.25, { BackgroundColor3 = active and C.Accent or C.SubText }):Play()
                 end
             end
         end
@@ -990,7 +1008,7 @@ function Window:CreatePlayersCategory(options)
 
     local searchBack = mk("Frame", {
         Parent = listBack,
-        BackgroundColor3 = Color3.fromRGB(14, 21, 31),
+        BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
         Position = UDim2.new(0, 6, 0, 6),
         Size = UDim2.new(1, -12, 0, 24),
@@ -4414,7 +4432,7 @@ function Window:CreateRemotesCategory(options)
     end
     local scriptShell = mk("Frame", {
         Parent = scriptSection.Content,
-        BackgroundColor3 = Color3.fromRGB(8, 12, 20),
+        BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 220),
     })
@@ -5312,14 +5330,14 @@ local function controlShell(section, h)
     })
 end
 
-local CONTROL_SURFACE = Color3.fromRGB(37, 43, 55)
-local CONTROL_SURFACE_HOVER = Color3.fromRGB(43, 49, 63)
-local CONTROL_SURFACE_PRESS = Color3.fromRGB(51, 58, 74)
-local CONTROL_FIELD = Color3.fromRGB(28, 33, 43)
-local CONTROL_FIELD_HOVER = Color3.fromRGB(33, 39, 50)
-local CONTROL_OPTION_ACTIVE = Color3.fromRGB(47, 59, 86)
-local CONTROL_STROKE_TRANSPARENCY = 0.6
-local CONTROL_DIVIDER_TRANSPARENCY = 0.48
+local CONTROL_SURFACE = Color3.fromRGB(25, 28, 35)
+local CONTROL_SURFACE_HOVER = Color3.fromRGB(32, 36, 45)
+local CONTROL_SURFACE_PRESS = Color3.fromRGB(40, 45, 56)
+local CONTROL_FIELD = Color3.fromRGB(18, 20, 26)
+local CONTROL_FIELD_HOVER = Color3.fromRGB(24, 27, 34)
+local CONTROL_OPTION_ACTIVE = Color3.fromRGB(60, 125, 255)
+local CONTROL_STROKE_TRANSPARENCY = 0.75
+local CONTROL_DIVIDER_TRANSPARENCY = 0.8
 
 local function controlBack(parent, h)
     local b = mk("Frame", {
@@ -5378,10 +5396,16 @@ function Section:CreateButton(a, b)
         return tostring(value or "")
     end
 
-    local shell = controlShell(self, 36)
+    local shell = controlShell(self, 38)
     local buttonBaseColor = CONTROL_SURFACE
     local buttonHoverColor = CONTROL_SURFACE_HOVER
     local buttonPressColor = CONTROL_SURFACE_PRESS
+    
+    local scale = mk("UIScale", {
+        Parent = shell,
+        Scale = 1
+    })
+
     local btn = mk("TextButton", {
         Parent = shell,
         BackgroundColor3 = buttonBaseColor,
@@ -5394,17 +5418,23 @@ function Section:CreateButton(a, b)
         TextXAlignment = textAlign or Enum.TextXAlignment.Center,
         Text = renderButtonText(text),
     })
-    corner(btn, 5)
+    corner(btn, 6)
     stroke(btn, C.Stroke, CONTROL_STROKE_TRANSPARENCY)
 
     track(self.Window.Connections, btn.MouseEnter:Connect(function()
-        tw(btn, 0.1, { BackgroundColor3 = buttonHoverColor }):Play()
+        tw(btn, 0.15, { BackgroundColor3 = buttonHoverColor }):Play()
+        tw(scale, 0.15, { Scale = 1.015 }):Play()
     end))
     track(self.Window.Connections, btn.MouseLeave:Connect(function()
-        tw(btn, 0.1, { BackgroundColor3 = buttonBaseColor }):Play()
+        tw(btn, 0.15, { BackgroundColor3 = buttonBaseColor }):Play()
+        tw(scale, 0.15, { Scale = 1 }):Play()
     end))
     track(self.Window.Connections, btn.MouseButton1Down:Connect(function()
-        tw(btn, 0.05, { BackgroundColor3 = buttonPressColor }):Play()
+        tw(btn, 0.1, { BackgroundColor3 = buttonPressColor }):Play()
+        tw(scale, 0.1, { Scale = 0.97 }):Play()
+    end))
+    track(self.Window.Connections, btn.MouseButton1Up:Connect(function()
+        tw(scale, 0.15, { Scale = 1.015 }):Play()
     end))
     track(self.Window.Connections, btn.MouseButton1Click:Connect(function()
         safe(cb)
@@ -5439,14 +5469,14 @@ function Section:CreateToggle(a, b, c)
     end
 
     local value = default
-    local shell = controlShell(self, 36)
-    local back = controlBack(shell, 36)
+    local shell = controlShell(self, 38)
+    local back = controlBack(shell, 38)
 
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 0),
-        Size = UDim2.new(1, -58, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Size = UDim2.new(1, -60, 1, 0),
         Font = FONT,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -5456,22 +5486,22 @@ function Section:CreateToggle(a, b, c)
 
     local switch = mk("Frame", {
         Parent = back,
-        Size = UDim2.new(0, 34, 0, 18),
-        Position = UDim2.new(1, -44, 0.5, -9),
+        Size = UDim2.new(0, 36, 0, 20),
+        Position = UDim2.new(1, -48, 0.5, -10),
         BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
     })
     corner(switch, 99)
-    stroke(switch, C.Stroke, 0.68)
+    local switchStroke = stroke(switch, C.Stroke, 0.7)
+    
     local knob = mk("Frame", {
         Parent = switch,
-        Size = UDim2.new(0, 12, 0, 12),
-        Position = UDim2.new(0, 3, 0.5, -6),
-        BackgroundColor3 = Color3.fromRGB(238, 242, 255),
+        Size = UDim2.new(0, 14, 0, 14),
+        Position = UDim2.new(0, 3, 0.5, -7),
+        BackgroundColor3 = Color3.fromRGB(240, 240, 240),
         BorderSizePixel = 0,
     })
     corner(knob, 99)
-    stroke(knob, Color3.fromRGB(24, 31, 43), 0.5)
 
     local hit = mk("TextButton", {
         Parent = back,
@@ -5485,10 +5515,12 @@ function Section:CreateToggle(a, b, c)
     local controller = { Frame = shell }
     function controller:Set(v, skip)
         value = v == true
-        tw(switch, 0.12, { BackgroundColor3 = value and C.Accent or CONTROL_FIELD }):Play()
-        tw(knob, 0.12, {
-            Position = value and UDim2.new(1, -15, 0.5, -6) or UDim2.new(0, 3, 0.5, -6),
-        }):Play()
+        tw(switch, 0.15, { BackgroundColor3 = value and C.Accent or CONTROL_FIELD }, Enum.EasingStyle.Quart):Play()
+        tw(switchStroke, 0.15, { Transparency = value and 0.4 or 0.7 }):Play()
+        tw(knob, 0.15, {
+            Position = value and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7),
+            BackgroundColor3 = value and Color3.new(1, 1, 1) or Color3.fromRGB(240, 240, 240)
+        }, Enum.EasingStyle.Quart):Play()
         if not skip then
             safe(cb, value)
         end
@@ -5535,14 +5567,14 @@ function Section:CreateSlider(a, b, c, d, e)
     end
     local value = roundStep(clamp(defV, minV, maxV), step)
 
-    local shell = controlShell(self, 66)
-    local back = controlBack(shell, 66)
+    local shell = controlShell(self, 68)
+    local back = controlBack(shell, 68)
 
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 6),
-        Size = UDim2.new(1, -90, 0, 18),
+        Position = UDim2.new(0, 12, 0, 8),
+        Size = UDim2.new(1, -95, 0, 18),
         Font = FONT,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -5553,11 +5585,11 @@ function Section:CreateSlider(a, b, c, d, e)
         Parent = back,
         BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
-        Position = UDim2.new(1, -76, 0, 5),
+        Position = UDim2.new(1, -78, 0, 6),
         Size = UDim2.new(0, 66, 0, 22),
     })
     corner(valBack, 4)
-    stroke(valBack, C.Stroke, 0.68)
+    stroke(valBack, C.Stroke, 0.7)
     local val = mk("TextBox", {
         Parent = valBack,
         BackgroundTransparency = 1,
@@ -5577,11 +5609,11 @@ function Section:CreateSlider(a, b, c, d, e)
         Parent = back,
         BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
-        Position = UDim2.new(0, 10, 0, 40),
-        Size = UDim2.new(1, -20, 0, 6),
+        Position = UDim2.new(0, 12, 0, 44),
+        Size = UDim2.new(1, -24, 0, 6),
     })
     corner(bar, 99)
-    stroke(bar, C.Stroke, 0.78)
+    stroke(bar, C.Stroke, 0.8)
     local fill = mk("Frame", {
         Parent = bar,
         BackgroundColor3 = C.Accent,
@@ -5591,19 +5623,20 @@ function Section:CreateSlider(a, b, c, d, e)
     corner(fill, 99)
     local knob = mk("Frame", {
         Parent = bar,
-        BackgroundColor3 = Color3.fromRGB(245, 248, 255),
+        BackgroundColor3 = Color3.new(1, 1, 1),
         BorderSizePixel = 0,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(0, 0, 0.5, 0),
-        Size = UDim2.new(0, 13, 0, 13),
+        Size = UDim2.new(0, 12, 0, 12),
     })
     corner(knob, 99)
-    stroke(knob, Color3.fromRGB(25, 33, 48), 0.35)
+    stroke(knob, Color3.fromRGB(15, 18, 25), 0.3)
+    
     local hit = mk("TextButton", {
         Parent = back,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Position = UDim2.new(0, 8, 0, 30),
+        Position = UDim2.new(0, 8, 0, 36),
         Size = UDim2.new(1, -16, 0, 24),
         Text = "",
         AutoButtonColor = false,
@@ -5861,16 +5894,16 @@ function Section:CreateDropdown(a, b, c, d)
             closeDropdowns(self)
             OPEN_DROPDOWNS[self] = true
             menu.Visible = true
-            arrow.Text = "^"
-            local h = (#opts * 27) + 10
-            tw(shell, 0.12, { Size = UDim2.new(1, 0, 0, 38 + 6 + h) }):Play()
-            tw(menu, 0.12, { Size = UDim2.new(1, 0, 0, h) }):Play()
+            tw(arrow, 0.15, { Rotation = 180 }):Play()
+            local h = (#opts * 28) + 10
+            tw(shell, 0.2, { Size = UDim2.new(1, 0, 0, 40 + 6 + h) }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out):Play()
+            tw(menu, 0.2, { Size = UDim2.new(1, 0, 0, h), BackgroundTransparency = 0 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out):Play()
         else
             OPEN_DROPDOWNS[self] = nil
-            arrow.Text = "v"
-            tw(shell, 0.12, { Size = UDim2.new(1, 0, 0, 38) }):Play()
-            tw(menu, 0.1, { Size = UDim2.new(1, 0, 0, 0) }):Play()
-            task.delay(0.1, function()
+            tw(arrow, 0.15, { Rotation = 0 }):Play()
+            tw(shell, 0.2, { Size = UDim2.new(1, 0, 0, 40) }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out):Play()
+            tw(menu, 0.15, { Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out):Play()
+            task.delay(0.15, function()
                 if not self.Open and menu.Parent then
                     menu.Visible = false
                 end
@@ -5978,13 +6011,13 @@ function Section:CreateInput(a, b, c)
         clear = false
     end
 
-    local shell = controlShell(self, 36)
-    local back = controlBack(shell, 36)
+    local shell = controlShell(self, 40)
+    local back = controlBack(shell, 40)
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 0),
-        Size = UDim2.new(0.46, 0, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        Size = UDim2.new(0.45, 0, 1, 0),
         Font = FONT,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -5995,11 +6028,11 @@ function Section:CreateInput(a, b, c)
         Parent = back,
         BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
-        Position = UDim2.new(0.48, 0, 0.5, -11),
-        Size = UDim2.new(0.52, -10, 0, 22),
+        Position = UDim2.new(0.48, 0, 0.5, -12),
+        Size = UDim2.new(0.52, -10, 0, 24),
     })
-    corner(inBack, 3)
-    stroke(inBack, C.Stroke, 0.68)
+    corner(inBack, 4)
+    local inStroke = stroke(inBack, C.Stroke, 0.7)
     local box = mk("TextBox", {
         Parent = inBack,
         BackgroundTransparency = 1,
@@ -6027,14 +6060,16 @@ function Section:CreateInput(a, b, c)
     controller.Set = controller.SetValue
     controller.Get = controller.GetValue
     track(self.Window.Connections, box.Focused:Connect(function()
-        tw(inBack, 0.1, { BackgroundColor3 = CONTROL_FIELD_HOVER }):Play()
+        tw(inBack, 0.2, { BackgroundColor3 = CONTROL_FIELD_HOVER }):Play()
+        tw(inStroke, 0.2, { Transparency = 0.4 }):Play()
     end))
     track(self.Window.Connections, box.FocusLost:Connect(function(enter)
         safe(cb, box.Text, enter)
         if clear then
             box.Text = ""
         end
-        tw(inBack, 0.1, { BackgroundColor3 = CONTROL_FIELD }):Play()
+        tw(inBack, 0.2, { BackgroundColor3 = CONTROL_FIELD }):Play()
+        tw(inStroke, 0.2, { Transparency = 0.7 }):Play()
     end))
     bindSurfaceHover(self.Window, back, CONTROL_SURFACE, CONTROL_SURFACE_HOVER)
     addControlDivider(shell)
@@ -6061,12 +6096,12 @@ function Section:CreateKeybind(a, b, c)
     local bound = def or Enum.KeyCode.Unknown
     local listening = false
 
-    local shell = controlShell(self, 36)
-    local back = controlBack(shell, 36)
+    local shell = controlShell(self, 40)
+    local back = controlBack(shell, 40)
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 0),
+        Position = UDim2.new(0, 12, 0, 0),
         Size = UDim2.new(0.55, 0, 1, 0),
         Font = FONT,
         TextSize = 13,
@@ -6078,16 +6113,16 @@ function Section:CreateKeybind(a, b, c)
         Parent = back,
         BackgroundColor3 = CONTROL_FIELD,
         BorderSizePixel = 0,
-        Position = UDim2.new(1, -124, 0.5, -11),
-        Size = UDim2.new(0, 114, 0, 22),
+        Position = UDim2.new(1, -126, 0.5, -12),
+        Size = UDim2.new(0, 114, 0, 24),
         AutoButtonColor = false,
         Font = FONT,
         TextSize = 12,
         TextColor3 = C.SubText,
         Text = "",
     })
-    corner(btn, 3)
-    stroke(btn, C.Stroke, 0.68)
+    corner(btn, 4)
+    local btnStroke = stroke(btn, C.Stroke, 0.7)
 
     local function keyText(k)
         return (k == Enum.KeyCode.Unknown) and "None" or k.Name
@@ -6115,7 +6150,8 @@ function Section:CreateKeybind(a, b, c)
     track(self.Window.Connections, btn.MouseButton1Click:Connect(function()
         listening = true
         btn.Text = "..."
-        tw(btn, 0.1, { BackgroundColor3 = CONTROL_FIELD_HOVER }):Play()
+        tw(btn, 0.15, { BackgroundColor3 = CONTROL_FIELD_HOVER }):Play()
+        tw(btnStroke, 0.15, { Transparency = 0.4 }):Play()
     end))
     track(self.Window.Connections, UIS.InputBegan:Connect(function(i, gpe)
         if gpe or i.UserInputType ~= Enum.UserInputType.Keyboard then
@@ -6124,7 +6160,8 @@ function Section:CreateKeybind(a, b, c)
         if listening then
             listening = false
             controller:SetValue(i.KeyCode, false)
-            tw(btn, 0.1, { BackgroundColor3 = CONTROL_FIELD }):Play()
+            tw(btn, 0.15, { BackgroundColor3 = CONTROL_FIELD }):Play()
+            tw(btnStroke, 0.15, { Transparency = 0.7 }):Play()
             return
         end
         if bound ~= Enum.KeyCode.Unknown and i.KeyCode == bound then
@@ -6156,6 +6193,7 @@ function Section:CreateLabel(text)
         TextYAlignment = Enum.TextYAlignment.Top,
         TextWrapped = true,
         Text = tostring(labelText or ""),
+        LineHeight = 1.1,
     })
 
     local function refreshHeight()
@@ -6194,20 +6232,20 @@ function Section:CreateParagraph(a, b)
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
     })
-    corner(shell, 5)
+    corner(shell, 8)
     stroke(shell, C.Stroke, CONTROL_STROKE_TRANSPARENCY)
     mk("UIPadding", {
         Parent = shell,
-        PaddingTop = UDim.new(0, 6),
-        PaddingBottom = UDim.new(0, 6),
-        PaddingLeft = UDim.new(0, 10),
-        PaddingRight = UDim.new(0, 10),
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+        PaddingLeft = UDim.new(0, 14),
+        PaddingRight = UDim.new(0, 14),
     })
     local t = mk("TextLabel", {
         Parent = shell,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 16),
-        Font = FONT,
+        Size = UDim2.new(1, 0, 0, 20),
+        Font = FONT_BOLD,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
@@ -6216,7 +6254,7 @@ function Section:CreateParagraph(a, b)
     local cLbl = mk("TextLabel", {
         Parent = shell,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 18),
+        Position = UDim2.new(0, 0, 0, 22),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Font = FONT,
@@ -6226,6 +6264,7 @@ function Section:CreateParagraph(a, b)
         TextYAlignment = Enum.TextYAlignment.Top,
         TextColor3 = C.SubText,
         Text = content,
+        LineHeight = 1.15,
     })
     return {
         Frame = shell,
@@ -6274,29 +6313,47 @@ local function createSectionForSubTab(tab, subTab, a, b)
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
     })
-    corner(frame, 5)
-    stroke(frame, C.Stroke, 0.35)
-    mk("UIPadding", {
-        Parent = frame,
-        PaddingTop = UDim.new(0, 12),
-        PaddingBottom = UDim.new(0, 12),
-        PaddingLeft = UDim.new(0, 12),
-        PaddingRight = UDim.new(0, 12),
-    })
-    mk("TextLabel", {
+    corner(frame, 8)
+    stroke(frame, C.Stroke, 0.4)
+    
+    local header = mk("Frame", {
         Parent = frame,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 22),
-        Font = FONT,
+        Size = UDim2.new(1, 0, 0, 32),
+    })
+    
+    mk("TextLabel", {
+        Parent = header,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Font = FONT_BOLD,
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
-        Text = name,
+        Text = name:upper(),
     })
+    
+    mk("Frame", {
+        Parent = header,
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 0, 1, 0),
+        Size = UDim2.new(1, 0, 0, 1),
+        BackgroundColor3 = C.Stroke,
+        BackgroundTransparency = 0.8,
+    })
+
+    mk("UIPadding", {
+        Parent = frame,
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 14),
+        PaddingLeft = UDim.new(0, 14),
+        PaddingRight = UDim.new(0, 14),
+    })
+
     local content = mk("Frame", {
         Parent = frame,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 28),
+        Position = UDim2.new(0, 0, 0, 40),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
     })
@@ -6304,7 +6361,7 @@ local function createSectionForSubTab(tab, subTab, a, b)
         Parent = content,
         FillDirection = Enum.FillDirection.Vertical,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 8),
+        Padding = UDim.new(0, 10),
     })
     local sec = setmetatable({
         Name = name,
@@ -6387,7 +6444,7 @@ function Tab:CreateSubTab(a)
         Parent = btn,
         AnchorPoint = Vector2.new(0.5, 1),
         Position = UDim2.new(0.5, 0, 1, 0),
-        Size = UDim2.new(1, -14, 0, 2),
+        Size = UDim2.new(0, 0, 0, 2),
         BackgroundColor3 = C.Accent,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
@@ -6506,8 +6563,8 @@ function Tab:SelectSubTab(subTabOrName)
     for _, subTab in ipairs(self.SubTabs or {}) do
         local active = subTab == picked
         subTab.Page.Visible = active
-        subTab.Label.TextColor3 = active and C.Text or C.SubText
-        subTab.Underline.BackgroundTransparency = active and 0 or 1
+        tw(subTab.Label, 0.2, { TextColor3 = active and C.Text or C.SubText }):Play()
+        tw(subTab.Underline, 0.2, { BackgroundTransparency = active and 0 or 1, Size = active and UDim2.new(1, -4, 0, 2) or UDim2.new(0, 0, 0, 2) }):Play()
     end
 
     if self.Window and self.Window.ActiveTab == self then
@@ -6902,8 +6959,8 @@ function UILibrary:CreateWindow(arg)
         Active = true,
         Visible = false,
     })
-    corner(main, 5)
-    local mainStroke = stroke(main, C.Stroke, 0.45)
+    corner(main, 10)
+    local mainStroke = stroke(main, C.Stroke, 0.45, 1)
     local mainScale = mk("UIScale", {
         Parent = main,
         Scale = 1,
@@ -6945,21 +7002,21 @@ function UILibrary:CreateWindow(arg)
     local brandLabel = mk("TextLabel", {
         Parent = sidebarHeader,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 10),
-        Size = UDim2.new(1, -28, 0, 30),
-        Font = FONT,
-        TextSize = 24,
+        Position = UDim2.new(0, 18, 0, 14),
+        Size = UDim2.new(1, -36, 0, 30),
+        Font = FONT_BOLD,
+        TextSize = 22,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextColor3 = C.Text,
+        TextColor3 = C.Accent,
         Text = "Zyntra",
     })
     local customTitleLabel = mk("TextLabel", {
         Parent = sidebarHeader,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 44),
-        Size = UDim2.new(1, -28, 0, 18),
-        Font = FONT,
-        TextSize = 13,
+        Position = UDim2.new(0, 18, 0, 48),
+        Size = UDim2.new(1, -36, 0, 18),
+        Font = FONT_BOLD,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
         Text = title,
@@ -6967,8 +7024,8 @@ function UILibrary:CreateWindow(arg)
     local customSubtitleLabel = mk("TextLabel", {
         Parent = sidebarHeader,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 64),
-        Size = UDim2.new(1, -28, 0, 16),
+        Position = UDim2.new(0, 18, 0, 68),
+        Size = UDim2.new(1, -36, 0, 16),
         Font = FONT,
         TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -7063,9 +7120,9 @@ function UILibrary:CreateWindow(arg)
     local headerTitle = mk("TextLabel", {
         Parent = header,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 18, 0, 10),
-        Size = UDim2.new(1, -130, 0, 22),
-        Font = FONT,
+        Position = UDim2.new(0, 24, 0, 12),
+        Size = UDim2.new(1, -140, 0, 22),
+        Font = FONT_BOLD,
         TextSize = 18,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
@@ -7074,8 +7131,8 @@ function UILibrary:CreateWindow(arg)
     local headerSubtitle = mk("TextLabel", {
         Parent = header,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 18, 0, 32),
-        Size = UDim2.new(1, -130, 0, 16),
+        Position = UDim2.new(0, 24, 0, 34),
+        Size = UDim2.new(1, -140, 0, 16),
         Font = FONT,
         TextSize = 12,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -7085,31 +7142,33 @@ function UILibrary:CreateWindow(arg)
     local hide = mk("TextButton", {
         Parent = header,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -54, 0.5, 0),
-        Size = UDim2.new(0, 28, 0, 28),
+        Position = UDim2.new(1, -58, 0.5, 0),
+        Size = UDim2.new(0, 32, 0, 32),
+        BackgroundColor3 = C.Control,
+        BorderSizePixel = 0,
+        Font = FONT,
+        TextSize = 18,
+        TextColor3 = C.SubText,
+        Text = "-",
+        AutoButtonColor = false,
+    })
+    corner(hide, 6)
+    stroke(hide, C.Stroke, 0.7)
+    local close = mk("TextButton", {
+        Parent = header,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -18, 0.5, 0),
+        Size = UDim2.new(0, 32, 0, 32),
         BackgroundColor3 = C.Control,
         BorderSizePixel = 0,
         Font = FONT,
         TextSize = 16,
         TextColor3 = C.SubText,
-        Text = "-",
-        AutoButtonColor = false,
-    })
-    corner(hide, 4)
-    local close = mk("TextButton", {
-        Parent = header,
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -18, 0.5, 0),
-        Size = UDim2.new(0, 28, 0, 28),
-        BackgroundColor3 = C.Control,
-        BorderSizePixel = 0,
-        Font = FONT,
-        TextSize = 14,
-        TextColor3 = C.SubText,
         Text = "x",
         AutoButtonColor = false,
     })
-    corner(close, 4)
+    corner(close, 6)
+    stroke(close, C.Stroke, 0.7)
 
     local pageHolder = mk("Frame", {
         Parent = content,
@@ -7138,7 +7197,7 @@ function UILibrary:CreateWindow(arg)
     local tooltipFrame = mk("Frame", {
         Parent = sg,
         Name = "Tooltip",
-        BackgroundColor3 = Color3.fromRGB(10, 15, 24),
+        BackgroundColor3 = C.Top,
         BorderSizePixel = 0,
         Visible = false,
         Size = UDim2.fromOffset(300, 0),
@@ -7398,46 +7457,59 @@ function UILibrary:Notify(args)
 
     local toast = mk("Frame", {
         Parent = host,
-        BackgroundColor3 = C.Top,
+        BackgroundColor3 = C.Main,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         LayoutOrder = -os.clock(),
         ClipsDescendants = true,
+        BackgroundTransparency = 1,
     })
-    local toastStroke = stroke(toast, C.Stroke, 0.25)
+    local toastStroke = stroke(toast, C.Stroke, 0.4)
+    toastStroke.Transparency = 1
+
     local pop = mk("UIScale", {
         Parent = toast,
-        Scale = 0.96,
+        Scale = 0.85,
     })
-    corner(toast, 4)
+    corner(toast, 10)
+    
     mk("UIPadding", {
         Parent = toast,
-        PaddingTop = UDim.new(0, 7),
-        PaddingBottom = UDim.new(0, 7),
-        PaddingLeft = UDim.new(0, 10),
-        PaddingRight = UDim.new(0, 10),
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 12),
+        PaddingLeft = UDim.new(0, 14),
+        PaddingRight = UDim.new(0, 14),
     })
-    mk("UIListLayout", {
+    
+    local contentFrame = mk("Frame", {
         Parent = toast,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+    })
+    
+    mk("UIListLayout", {
+        Parent = contentFrame,
         FillDirection = Enum.FillDirection.Vertical,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 5),
+        Padding = UDim.new(0, 4),
     })
 
     local t = mk("TextLabel", {
-        Parent = toast,
+        Parent = contentFrame,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 16),
-        Font = FONT,
-        TextSize = 13,
+        Size = UDim2.new(1, 0, 0, 18),
+        Font = FONT_BOLD,
+        TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextColor3 = C.Text,
         Text = title,
         LayoutOrder = 1,
+        TextTransparency = 1,
     })
     local c = mk("TextLabel", {
-        Parent = toast,
+        Parent = contentFrame,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -7449,57 +7521,47 @@ function UILibrary:Notify(args)
         TextColor3 = C.SubText,
         Text = content,
         LayoutOrder = 2,
+        LineHeight = 1.1,
+        TextTransparency = 1,
     })
 
     local timerTrack = mk("Frame", {
         Parent = toast,
-        BackgroundColor3 = Color3.fromRGB(17, 25, 38),
+        BackgroundColor3 = C.Stroke,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 3),
-        LayoutOrder = 3,
+        Size = UDim2.new(1, 28, 0, 2),
+        Position = UDim2.new(0, -14, 1, 10),
+        BackgroundTransparency = 1,
     })
-    corner(timerTrack, 99)
+    
     local timerFill = mk("Frame", {
         Parent = timerTrack,
         BackgroundColor3 = C.Accent,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
     })
-    corner(timerFill, 99)
 
-    toast.BackgroundTransparency = 1
-    toastStroke.Transparency = 1
-    t.TextTransparency = 1
-    c.TextTransparency = 1
-    timerTrack.BackgroundTransparency = 1
-    timerFill.BackgroundTransparency = 1
+    tw(toast, 0.4, { BackgroundTransparency = 0.05 }, Enum.EasingStyle.Quart):Play()
+    tw(toastStroke, 0.4, { Transparency = 0.4 }, Enum.EasingStyle.Quart):Play()
+    tw(pop, 0.5, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out):Play()
+    tw(t, 0.3, { TextTransparency = 0 }):Play()
+    tw(c, 0.3, { TextTransparency = 0 }):Play()
+    tw(timerTrack, 0.3, { BackgroundTransparency = 0.8 }):Play()
+    tw(timerFill, 0.3, { BackgroundTransparency = 0 }):Play()
 
-    tw(pop, 0.16, { Scale = 1 }):Play()
-    tw(toast, 0.16, { BackgroundTransparency = 0 }):Play()
-    tw(toastStroke, 0.16, { Transparency = 0.25 }):Play()
-    tw(t, 0.16, { TextTransparency = 0 }):Play()
-    tw(c, 0.16, { TextTransparency = 0 }):Play()
-    tw(timerTrack, 0.16, { BackgroundTransparency = 0 }):Play()
-    tw(timerFill, 0.16, { BackgroundTransparency = 0 }):Play()
-    TweenService:Create(timerFill, TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 0, 1, 0),
-    }):Play()
+    task.delay(0.1, function()
+        tw(timerFill, duration, { Size = UDim2.new(0, 0, 1, 0) }, Enum.EasingStyle.Linear):Play()
+    end)
 
     task.delay(duration, function()
-        if not toast.Parent then
-            return
-        end
-        tw(pop, 0.14, { Scale = 0.95 }):Play()
-        tw(toast, 0.14, { BackgroundTransparency = 1 }):Play()
-        tw(toastStroke, 0.14, { Transparency = 1 }):Play()
-        tw(t, 0.14, { TextTransparency = 1 }):Play()
-        tw(c, 0.14, { TextTransparency = 1 }):Play()
-        tw(timerTrack, 0.14, { BackgroundTransparency = 1 }):Play()
-        tw(timerFill, 0.14, { BackgroundTransparency = 1 }):Play()
-        task.delay(0.15, function()
-            if toast.Parent then
-                toast:Destroy()
-            end
+        tw(pop, 0.3, { Scale = 0.9 }, Enum.EasingStyle.Back, Enum.EasingDirection.In):Play()
+        tw(toast, 0.3, { BackgroundTransparency = 1 }, Enum.EasingStyle.Quart):Play()
+        tw(toastStroke, 0.3, { Transparency = 1 }, Enum.EasingStyle.Quart):Play()
+        tw(t, 0.2, { TextTransparency = 1 }):Play()
+        tw(c, 0.2, { TextTransparency = 1 }):Play()
+        task.delay(0.3, function()
+            toast:Destroy()
         end)
     end)
 end
