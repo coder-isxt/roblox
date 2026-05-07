@@ -34,24 +34,26 @@ local GUI_NAME = "Zyntra V2"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-    Main = Color3.fromRGB(11, 13, 17),
-    Top = Color3.fromRGB(18, 20, 26),
+    Main = Color3.fromRGB(10, 13, 18),
+    Top = Color3.fromRGB(16, 21, 28),
 
-    Sidebar = Color3.fromRGB(15, 17, 22),
-    SidebarActive = Color3.fromRGB(28, 32, 42),
+    Sidebar = Color3.fromRGB(14, 18, 24),
+    SidebarActive = Color3.fromRGB(29, 46, 56),
 
-    Panel = Color3.fromRGB(20, 22, 28),
-    PanelInset = Color3.fromRGB(25, 28, 35),
+    Panel = Color3.fromRGB(20, 25, 33),
+    PanelInset = Color3.fromRGB(26, 32, 41),
 
-    Control = Color3.fromRGB(32, 36, 45),
-    ControlHover = Color3.fromRGB(40, 45, 56),
-    ControlPress = Color3.fromRGB(48, 54, 68),
+    Control = Color3.fromRGB(35, 43, 54),
+    ControlHover = Color3.fromRGB(44, 54, 66),
+    ControlPress = Color3.fromRGB(57, 69, 84),
 
-    Stroke = Color3.fromRGB(50, 55, 70),
-    Accent = Color3.fromRGB(60, 125, 255),
+    Stroke = Color3.fromRGB(67, 80, 95),
 
-    Text = Color3.fromRGB(250, 252, 255),
-    SubText = Color3.fromRGB(150, 160, 180),
+    Accent = Color3.fromRGB(58, 214, 255),
+
+    Text = Color3.fromRGB(240, 248, 255),
+    SubText = Color3.fromRGB(145, 160, 178),
+    
     Success = Color3.fromRGB(75, 255, 150),
     Warning = Color3.fromRGB(255, 200, 75),
     Error = Color3.fromRGB(255, 100, 100),
@@ -396,13 +398,13 @@ function Window:SetVisible(v)
             end
         end)
     else
-        self.AnimScaleTween = tw(self.MainScale, 0.3, { Scale = 0.94 }, Enum.EasingStyle.Exponential)
-        self.AnimFadeTween = tw(self.Main, 0.25, { BackgroundTransparency = 1 })
-        self.AnimStrokeTween = tw(self.MainStroke, 0.25, { Transparency = 1 })
+        self.AnimScaleTween = tw(self.MainScale, 0.4, { Scale = 0.92 }, Enum.EasingStyle.Exponential)
+        self.AnimFadeTween = tw(self.Main, 0.35, { BackgroundTransparency = 1 })
+        self.AnimStrokeTween = tw(self.MainStroke, 0.3, { Transparency = 1 })
         self.AnimScaleTween:Play()
         self.AnimFadeTween:Play()
         self.AnimStrokeTween:Play()
-        task.delay(0.3, function()
+        task.delay(0.4, function()
             if self and self.Main and not self.VisibleState then
                 self.Main.Visible = false
                 self.Animating = false
@@ -425,7 +427,7 @@ function Window:PlayInitializeAnimation()
         BackgroundTransparency = 1,
         ZIndex = 50,
     })
-    corner(overlay, 5)
+    corner(overlay, 8)
     mk("UIGradient", {
         Parent = overlay,
         Rotation = 90,
@@ -453,7 +455,7 @@ function Window:PlayInitializeAnimation()
         Parent = panel,
         Scale = 0.96,
     })
-    corner(panel, 6)
+    corner(panel, 8)
     stroke(panel, C.Stroke, 0.35)
     mk("UIPadding", {
         Parent = panel,
@@ -589,21 +591,21 @@ function Window:PlayCloseAnimation()
         BackgroundTransparency = 1,
         ZIndex = 60,
     })
-    corner(overlay, 5)
+    corner(overlay, 8)
 
     if self.MainScale then
-        tw(self.MainScale, 0.2, { Scale = 0.93 }):Play()
+        tw(self.MainScale, 0.4, { Scale = 0.92 }, Enum.EasingStyle.Exponential):Play()
     end
-    tw(self.Main, 0.2, {
+    tw(self.Main, 0.35, {
         BackgroundTransparency = 1,
-        Position = UDim2.new(startPos.X.Scale, startPos.X.Offset, startPos.Y.Scale, startPos.Y.Offset + 12),
-    }):Play()
+        Position = UDim2.new(startPos.X.Scale, startPos.X.Offset, startPos.Y.Scale, startPos.Y.Offset + 24),
+    }, Enum.EasingStyle.Exponential):Play()
     if self.MainStroke then
-        tw(self.MainStroke, 0.2, { Transparency = 1 }):Play()
+        tw(self.MainStroke, 0.3, { Transparency = 1 }):Play()
     end
-    tw(overlay, 0.2, { BackgroundTransparency = 0.15 }):Play()
+    tw(overlay, 0.3, { BackgroundTransparency = 1 }):Play()
 
-    task.wait(0.21)
+    task.wait(0.4)
 end
 
 function Window:Toggle()
@@ -1000,12 +1002,12 @@ function Window:CreatePlayersCategory(options)
     })
     local listBack = mk("Frame", {
         Parent = listShell,
-        BackgroundColor3 = C.Control,
+        BackgroundColor3 = C.PanelInset,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, 0),
     })
-    corner(listBack, 4)
-    stroke(listBack, C.Stroke, 0.55)
+    corner(listBack, 8)
+    stroke(listBack, C.Stroke, 0.45)
 
     local searchBack = mk("Frame", {
         Parent = listBack,
@@ -1014,8 +1016,8 @@ function Window:CreatePlayersCategory(options)
         Position = UDim2.new(0, 6, 0, 6),
         Size = UDim2.new(1, -12, 0, 24),
     })
-    corner(searchBack, 3)
-    stroke(searchBack, C.Stroke, 0.65)
+    corner(searchBack, 6)
+    stroke(searchBack, C.Stroke, 0.6)
 
     local searchBox = mk("TextBox", {
         Parent = searchBack,
@@ -2117,7 +2119,7 @@ function Window:CreatePlayersCategory(options)
                 Text = displayText,
                 BackgroundColor3 = (selectedPlayer == p) and C.ControlPress or C.Control,
             })
-            corner(row, 3)
+            corner(row, 6)
             stroke(row, C.Stroke, 0.6)
             mk("UIPadding", {
                 Parent = row,
@@ -4053,6 +4055,42 @@ function Window:CreateLocalCategory(options)
     end, false)
     self.LibraryConfigItems.AntiAfk = antiAfkToggle
 
+    local bypassToggle = otherSection:CreateToggle("Bypass AdonisAC", function(v)
+        local getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction
+getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction = 
+    getreg, type, debug.info, task, filtergc, isfunctionhooked, hookfunction
+
+local noop = function() end
+local RunService = game:GetService("RunService")
+
+if RunService:IsStudio() then return end
+
+local function protect()
+    for _, v in getreg() or {} do
+        if type(v) == 'thread' then
+            local ok, source = pcall(debug_info, v, 's')
+            if ok and source then
+                if source:find("Adonis%.Anti", nil, true) or source:find("Anti%-Exploit", nil, true) then
+                    pcall(task.cancel, v)
+                end
+            end
+        end
+    end
+
+    for _, tbl in filtergc('table', {Keys = {'Remote', 'UnWrap', 'AddLog', 'Detected'}}, true) or {} do
+        for k, v in pairs(tbl) do
+            if type(v) == 'function' and not isfunctionhooked(v) then
+                hookfunction(v, noop)
+            end
+        end
+    end
+end
+
+-- Run immediately and every 30 seconds
+protect()
+while task.wait(30) do protect() end
+    end, false)
+
     self:OnClose(function()
         setFlyEnabled(false, true)
         setSprintEnabled(false, true)
@@ -4438,7 +4476,7 @@ function Window:CreateRemotesCategory(options)
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 220),
     })
-    corner(scriptShell, 4)
+    corner(scriptShell, 8)
     stroke(scriptShell, C.Stroke, 0.55)
 
     local scriptScroll = mk("ScrollingFrame", {
@@ -5348,7 +5386,7 @@ local function controlBack(parent, h)
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, h),
     })
-    corner(b, 5)
+    corner(b, 8)
     stroke(b, C.Stroke, CONTROL_STROKE_TRANSPARENCY)
     return b
 end
@@ -5500,7 +5538,7 @@ function Section:CreateToggle(a, b, c)
         Parent = switch,
         Size = UDim2.new(0, 14, 0, 14),
         Position = UDim2.new(0, 3, 0.5, -7),
-        BackgroundColor3 = Color3.fromRGB(240, 240, 240),
+        BackgroundColor3 = C.Text,
         BorderSizePixel = 0,
     })
     corner(knob, 99)
@@ -5521,7 +5559,7 @@ function Section:CreateToggle(a, b, c)
         tw(switchStroke, 0.15, { Transparency = value and 0.4 or 0.7 }):Play()
         tw(knob, 0.15, {
             Position = value and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7),
-            BackgroundColor3 = value and Color3.new(1, 1, 1) or Color3.fromRGB(240, 240, 240)
+            BackgroundColor3 = value and Color3.new(1, 1, 1) or C.Text
         }, Enum.EasingStyle.Quart):Play()
         if not skip then
             safe(cb, value)
@@ -5590,7 +5628,7 @@ function Section:CreateSlider(a, b, c, d, e)
         Position = UDim2.new(1, -78, 0, 6),
         Size = UDim2.new(0, 66, 0, 22),
     })
-    corner(valBack, 4)
+    corner(valBack, 8)
     stroke(valBack, C.Stroke, 0.7)
     local val = mk("TextBox", {
         Parent = valBack,
@@ -5632,7 +5670,7 @@ function Section:CreateSlider(a, b, c, d, e)
         Size = UDim2.new(0, 12, 0, 12),
     })
     corner(knob, 99)
-    stroke(knob, Color3.fromRGB(15, 18, 25), 0.3)
+    stroke(knob, C.Stroke, 0.4)
     
     local hit = mk("TextButton", {
         Parent = back,
@@ -5788,7 +5826,7 @@ function Section:CreateDropdown(a, b, c, d)
         Size = UDim2.new(1, 0, 0, 0),
         Visible = false,
     })
-    corner(menu, 4)
+    corner(menu, 8)
     stroke(menu, C.Stroke, 0.7)
     mk("UIPadding", {
         Parent = menu,
@@ -5850,7 +5888,7 @@ function Section:CreateDropdown(a, b, c, d)
                 Text = o,
                 LayoutOrder = i,
             })
-            corner(btt, 4)
+            corner(btt, 6)
             stroke(btt, C.Stroke, 0.7)
             mk("UIPadding", {
                 Parent = btt,
@@ -6033,7 +6071,7 @@ function Section:CreateInput(a, b, c)
         Position = UDim2.new(0.48, 0, 0.5, -12),
         Size = UDim2.new(0.52, -10, 0, 24),
     })
-    corner(inBack, 4)
+    corner(inBack, 8)
     local inStroke = stroke(inBack, C.Stroke, 0.7)
     local box = mk("TextBox", {
         Parent = inBack,
@@ -6123,7 +6161,7 @@ function Section:CreateKeybind(a, b, c)
         TextColor3 = C.SubText,
         Text = "",
     })
-    corner(btn, 4)
+    corner(btn, 8)
     local btnStroke = stroke(btn, C.Stroke, 0.7)
 
     local function keyText(k)
@@ -6453,7 +6491,7 @@ function Tab:CreateSubTab(a)
     })
     corner(underline, 99)
 
-    local page = mk("Frame", {
+    local page = mk("CanvasGroup", {
         Parent = self.SubTabPageHolder,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
@@ -6564,7 +6602,15 @@ function Tab:SelectSubTab(subTabOrName)
     self.ActiveSubTab = picked
     for _, subTab in ipairs(self.SubTabs or {}) do
         local active = subTab == picked
-        subTab.Page.Visible = active
+        if subTab.Page.Visible ~= active then
+            if active then
+                subTab.Page.GroupTransparency = 1
+                subTab.Page.Visible = true
+                tw(subTab.Page, 0.3, { GroupTransparency = 0 }):Play()
+            else
+                subTab.Page.Visible = false
+            end
+        end
         tw(subTab.Label, 0.2, { TextColor3 = active and C.Text or C.SubText }):Play()
         tw(subTab.Underline, 0.2, { BackgroundTransparency = active and 0 or 1, Size = active and UDim2.new(1, -4, 0, 2) or UDim2.new(0, 0, 0, 2) }):Play()
     end
@@ -6790,7 +6836,7 @@ function Window:CreateTab(a, _iconMaybe)
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, 0),
     })
-    corner(back, 4)
+    corner(back, 8)
     local ind = mk("Frame", {
         Parent = btn,
         BackgroundColor3 = C.Accent,
@@ -7206,7 +7252,7 @@ function UILibrary:CreateWindow(arg)
         AutomaticSize = Enum.AutomaticSize.Y,
         ZIndex = 2000,
     })
-    corner(tooltipFrame, 4)
+    corner(tooltipFrame, 8)
     stroke(tooltipFrame, C.Stroke, 0.3)
     mk("UIPadding", {
         Parent = tooltipFrame,
