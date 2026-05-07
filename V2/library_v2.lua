@@ -34,25 +34,25 @@ local GUI_NAME = "Zyntra V2"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-    Main = Color3.fromRGB(18, 20, 24),
-    Top = Color3.fromRGB(25, 28, 33),
+    Main = Color3.fromRGB(14, 17, 23),
+    Top = Color3.fromRGB(21, 25, 33),
 
-    Sidebar = Color3.fromRGB(22, 25, 29),
-    SidebarActive = Color3.fromRGB(44, 50, 60),
+    Sidebar = Color3.fromRGB(18, 22, 29),
+    SidebarActive = Color3.fromRGB(40, 53, 74),
 
-    Panel = Color3.fromRGB(29, 33, 39),
-    PanelInset = Color3.fromRGB(35, 40, 47),
+    Panel = Color3.fromRGB(24, 29, 38),
+    PanelInset = Color3.fromRGB(31, 37, 48),
 
-    Control = Color3.fromRGB(48, 55, 64),
-    ControlHover = Color3.fromRGB(58, 66, 77),
-    ControlPress = Color3.fromRGB(72, 81, 93),
+    Control = Color3.fromRGB(42, 50, 64),
+    ControlHover = Color3.fromRGB(52, 61, 77),
+    ControlPress = Color3.fromRGB(65, 75, 93),
 
-    Stroke = Color3.fromRGB(87, 96, 110),
+    Stroke = Color3.fromRGB(77, 88, 108),
 
-    Accent = Color3.fromRGB(170, 210, 255),
+    Accent = Color3.fromRGB(110, 170, 255),
 
-    Text = Color3.fromRGB(246, 249, 255),
-    SubText = Color3.fromRGB(162, 172, 186),
+    Text = Color3.fromRGB(244, 247, 255),
+    SubText = Color3.fromRGB(160, 171, 190),
     
     Success = Color3.fromRGB(75, 255, 150),
     Warning = Color3.fromRGB(255, 200, 75),
