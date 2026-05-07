@@ -30,7 +30,7 @@ local TextService = Services.TextService
 -- Definitions / Variables
 local FONT = Enum.Font.Gotham
 local FONT_BOLD = Enum.Font.GothamMedium
-local GUI_NAME = "ZyntraLibrary"
+local GUI_NAME = "Zyntra V2"
 local OPEN_DROPDOWNS = {}
 
 local C = {
@@ -92,7 +92,7 @@ local function safe(cb, ...)
     end
     local ok, err = pcall(cb, ...)
     if not ok then
-        warn("[library_v2] callback error:", err)
+        warn("[Zyntra] callback error:", err)
     end
 end
 
@@ -142,10 +142,10 @@ local function getBuiltInLayoutOrder(name)
         return 25
     elseif n == "universal" then
         return 30
-    elseif n == "scripts" then
-        return 35
+    --elseif n == "scripts" then
+    --    return 35
     elseif n == "remotes" then
-        return 40
+        return 35
     end
     return nil
 end
@@ -521,7 +521,8 @@ function Window:PlayInitializeAnimation()
     corner(barFill, 99)
 
     local steps = {
-        { Label = "Authenticating...", Fill = 0.34, Time = 0.3 },
+        { Label = "Loading...", Fill = 0.34, Time = 0.3 },
+        { Label = "Starting up...", Fill = 0.34, Time = 0.4 },
         { Label = "Initializing components...", Fill = 0.72, Time = 0.35 },
         { Label = "Ready", Fill = 1, Time = 0.25 },
     }
@@ -1190,6 +1191,7 @@ function Window:CreatePlayersCategory(options)
     end
 
     local function getTrollTarget()
+        targetMode = "Selected"
         local candidates = collectModeCandidates()
         for _, p in ipairs(candidates) do
             if p and p.Parent == Players and getTargetRoot(p) then
@@ -1884,7 +1886,7 @@ function Window:CreatePlayersCategory(options)
 
         local reached = runToTargetForPunch(targetPlayer)
         if not reached then
-            notify("Run Fling", "Couldn't get close enough.", 1.8)
+            notify("Fling", "Couldn't get close enough.", 1.8)
             return false
         end
 
@@ -1951,13 +1953,13 @@ function Window:CreatePlayersCategory(options)
                     Duration = 2,
                 })
                 if ok then
-                    notify("Fling Click", "Flinging " .. tostring(clickedPlayer.Name) .. ".", 2.1)
+                    notify("Fling", "Flinging " .. tostring(clickedPlayer.Name) .. ".", 2.1)
                 end
             end)
         end
 
         if not silent then
-            notify("Fling Click", clickFlingEnabled and "Enabled." or "Disabled.", 1.9)
+            notify("Fling", clickFlingEnabled and "Enabled." or "Disabled.", 1.9)
         end
     end
 
@@ -2014,14 +2016,14 @@ function Window:CreatePlayersCategory(options)
 
                     local ok = runAnimationSpamFling(clickedPlayer)
                     if ok then
-                        notify("Run Fling", "Run-spam flinging " .. tostring(clickedPlayer.Name) .. ".", 2.0)
+                        notify("Fling", "Run-spam flinging " .. tostring(clickedPlayer.Name) .. ".", 2.0)
                     end
                 end)
             end)
         end
 
         if not silent then
-            notify("Run Fling", punchFlingEnabled and "Enabled." or "Disabled.", 1.9)
+            notify("Fling", punchFlingEnabled and "Enabled." or "Disabled.", 1.9)
         end
     end
 
@@ -2218,18 +2220,18 @@ function Window:CreatePlayersCategory(options)
         end
     end)
 
-    optionsSection:CreateButton("Run Fling", function()
+    optionsSection:CreateButton("Fling", function()
         local target = getTrollTarget()
         if not target then
-            notify("Run Fling", "No valid target for mode: " .. targetMode, 2.4)
+            notify("Fling", "No valid target for mode: " .. targetMode, 2.4)
             return
         end
         task.spawn(function()
             local ok = runAnimationSpamFling(target)
             if ok then
-                notify("Run Fling", "Run-spam flinging " .. tostring(target.Name) .. " (" .. targetMode .. ").", 2.2)
+                notify("Fling", "Run-spam flinging " .. tostring(target.Name) .. " (" .. targetMode .. ").", 2.2)
             else
-                notify("Run Fling", "Could not run-fling target right now.", 2.8)
+                notify("Fling", "Could not run-fling target right now.", 2.8)
             end
         end)
     end)
