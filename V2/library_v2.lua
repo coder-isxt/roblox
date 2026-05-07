@@ -34,25 +34,25 @@ local GUI_NAME = "Zyntra V2"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-    Main = Color3.fromRGB(16, 20, 19),
-    Top = Color3.fromRGB(22, 28, 26),
+    Main = Color3.fromRGB(18, 20, 24),
+    Top = Color3.fromRGB(25, 28, 33),
 
-    Sidebar = Color3.fromRGB(20, 25, 24),
-    SidebarActive = Color3.fromRGB(37, 52, 47),
+    Sidebar = Color3.fromRGB(22, 25, 29),
+    SidebarActive = Color3.fromRGB(44, 50, 60),
 
-    Panel = Color3.fromRGB(28, 34, 33),
-    PanelInset = Color3.fromRGB(35, 42, 40),
+    Panel = Color3.fromRGB(29, 33, 39),
+    PanelInset = Color3.fromRGB(35, 40, 47),
 
-    Control = Color3.fromRGB(45, 55, 53),
-    ControlHover = Color3.fromRGB(57, 68, 65),
-    ControlPress = Color3.fromRGB(71, 84, 80),
+    Control = Color3.fromRGB(48, 55, 64),
+    ControlHover = Color3.fromRGB(58, 66, 77),
+    ControlPress = Color3.fromRGB(72, 81, 93),
 
-    Stroke = Color3.fromRGB(82, 95, 92),
+    Stroke = Color3.fromRGB(87, 96, 110),
 
-    Accent = Color3.fromRGB(90, 230, 170),
+    Accent = Color3.fromRGB(170, 210, 255),
 
-    Text = Color3.fromRGB(242, 250, 246),
-    SubText = Color3.fromRGB(155, 170, 164),
+    Text = Color3.fromRGB(246, 249, 255),
+    SubText = Color3.fromRGB(162, 172, 186),
     
     Success = Color3.fromRGB(75, 255, 150),
     Warning = Color3.fromRGB(255, 200, 75),
@@ -4054,44 +4054,6 @@ function Window:CreateLocalCategory(options)
         setAntiAfkEnabled(v, false)
     end, false)
     self.LibraryConfigItems.AntiAfk = antiAfkToggle
-
-    local function protect()
-                    for _, v in getreg() or {} do
-                        if type(v) == 'thread' then
-                            local ok, source = pcall(debug_info, v, 's')
-                            if ok and source then
-                                if source:find("Adonis%.Anti", nil, true) or source:find("Anti%-Exploit", nil, true) then
-                                    pcall(task.cancel, v)
-                                end
-                            end
-                        end
-                    end
-
-                    for _, tbl in filtergc('table', {Keys = {'Remote', 'UnWrap', 'AddLog', 'Detected'}}, true) or {} do
-                        for k, v in pairs(tbl) do
-                            if type(v) == 'function' and not isfunctionhooked(v) then
-                                hookfunction(v, noop)
-                            end
-                        end
-                    end
-                end
-    
-    local bypassToggle = otherSection:CreateToggle("Bypass AdonisAC", function(v)
-        if v then
-            task.spawn(function()
-                local getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction
-                getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction = 
-                    getreg, type, debug.info, task, filtergc, isfunctionhooked, hookfunction
-
-                local noop = function() end
-                local RunService = game:GetService("RunService")
-
-                -- Run immediately and every 30 seconds
-                protect()
-                while task.wait(30) do protect() end
-            end)
-        end
-    end, false)
 
     self:OnClose(function()
         setFlyEnabled(false, true)
