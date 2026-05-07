@@ -5334,12 +5334,14 @@ local function controlShell(section, h)
     })
 end
 
-local CONTROL_SURFACE = Color3.fromRGB(25, 28, 35)
-local CONTROL_SURFACE_HOVER = Color3.fromRGB(32, 36, 45)
-local CONTROL_SURFACE_PRESS = Color3.fromRGB(40, 45, 56)
-local CONTROL_FIELD = Color3.fromRGB(18, 20, 26)
-local CONTROL_FIELD_HOVER = Color3.fromRGB(24, 27, 34)
-local CONTROL_OPTION_ACTIVE = Color3.fromRGB(60, 125, 255)
+local CONTROL_SURFACE = Color3.fromRGB(33, 39, 50)
+local CONTROL_SURFACE_HOVER = Color3.fromRGB(42, 49, 62)
+local CONTROL_SURFACE_PRESS = Color3.fromRGB(54, 62, 77)
+
+local CONTROL_FIELD = Color3.fromRGB(20, 24, 31)
+local CONTROL_FIELD_HOVER = Color3.fromRGB(27, 32, 41)
+
+local CONTROL_OPTION_ACTIVE = Color3.fromRGB(110, 170, 255)
 local CONTROL_STROKE_TRANSPARENCY = 0.75
 local CONTROL_DIVIDER_TRANSPARENCY = 0.8
 
