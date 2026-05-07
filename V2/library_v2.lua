@@ -4055,40 +4055,42 @@ function Window:CreateLocalCategory(options)
     end, false)
     self.LibraryConfigItems.AntiAfk = antiAfkToggle
 
-    local bypassToggle = otherSection:CreateToggle("Bypass AdonisAC", function(v)
-        task.spawn(function()
-            local getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction
-            getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction = 
-                getreg, type, debug.info, task, filtergc, isfunctionhooked, hookfunction
+    local function protect()
+                    for _, v in getreg() or {} do
+                        if type(v) == 'thread' then
+                            local ok, source = pcall(debug_info, v, 's')
+                            if ok and source then
+                                if source:find("Adonis%.Anti", nil, true) or source:find("Anti%-Exploit", nil, true) then
+                                    pcall(task.cancel, v)
+                                end
+                            end
+                        end
+                    end
 
-            local noop = function() end
-            local RunService = game:GetService("RunService")
-
-            local function protect()
-                for _, v in getreg() or {} do
-                    if type(v) == 'thread' then
-                        local ok, source = pcall(debug_info, v, 's')
-                        if ok and source then
-                            if source:find("Adonis%.Anti", nil, true) or source:find("Anti%-Exploit", nil, true) then
-                                pcall(task.cancel, v)
+                    for _, tbl in filtergc('table', {Keys = {'Remote', 'UnWrap', 'AddLog', 'Detected'}}, true) or {} do
+                        for k, v in pairs(tbl) do
+                            if type(v) == 'function' and not isfunctionhooked(v) then
+                                hookfunction(v, noop)
                             end
                         end
                     end
                 end
+    
+    local bypassToggle = otherSection:CreateToggle("Bypass AdonisAC", function(v)
+        if v then
+            task.spawn(function()
+                local getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction
+                getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction = 
+                    getreg, type, debug.info, task, filtergc, isfunctionhooked, hookfunction
 
-                for _, tbl in filtergc('table', {Keys = {'Remote', 'UnWrap', 'AddLog', 'Detected'}}, true) or {} do
-                    for k, v in pairs(tbl) do
-                        if type(v) == 'function' and not isfunctionhooked(v) then
-                            hookfunction(v, noop)
-                        end
-                    end
-                end
-            end
+                local noop = function() end
+                local RunService = game:GetService("RunService")
 
-            -- Run immediately and every 30 seconds
-            protect()
-            while task.wait(30) do protect() end
-        end)
+                -- Run immediately and every 30 seconds
+                protect()
+                while task.wait(30) do protect() end
+            end)
+        end
     end, false)
 
     self:OnClose(function()
