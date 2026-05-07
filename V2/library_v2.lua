@@ -33,19 +33,25 @@ local GUI_NAME = "ZyntraLibrary"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-    Main = Color3.fromRGB(21, 24, 31),
-    Top = Color3.fromRGB(30, 34, 43),
-    Sidebar = Color3.fromRGB(31, 35, 45),
-    SidebarActive = Color3.fromRGB(48, 55, 71),
-    Panel = Color3.fromRGB(23, 26, 34),
-    PanelInset = Color3.fromRGB(31, 35, 45),
-    Control = Color3.fromRGB(39, 45, 58),
-    ControlHover = Color3.fromRGB(49, 56, 72),
-    ControlPress = Color3.fromRGB(61, 70, 89),
-    Stroke = Color3.fromRGB(56, 63, 80),
-    Accent = Color3.fromRGB(112, 155, 255),
-    Text = Color3.fromRGB(244, 247, 255),
-    SubText = Color3.fromRGB(153, 161, 178),
+    Main = Color3.fromRGB(17, 19, 24),
+    Top = Color3.fromRGB(24, 27, 34),
+
+    Sidebar = Color3.fromRGB(21, 24, 30),
+    SidebarActive = Color3.fromRGB(39, 46, 60),
+
+    Panel = Color3.fromRGB(26, 29, 37),
+    PanelInset = Color3.fromRGB(32, 36, 45),
+
+    Control = Color3.fromRGB(41, 47, 59),
+    ControlHover = Color3.fromRGB(50, 57, 71),
+    ControlPress = Color3.fromRGB(62, 71, 88),
+
+    Stroke = Color3.fromRGB(70, 79, 98),
+
+    Accent = Color3.fromRGB(96, 147, 255),
+
+    Text = Color3.fromRGB(245, 247, 255),
+    SubText = Color3.fromRGB(160, 168, 185),
 }
 
 -- Shared Helper Functions
