@@ -4056,39 +4056,39 @@ function Window:CreateLocalCategory(options)
     self.LibraryConfigItems.AntiAfk = antiAfkToggle
 
     local bypassToggle = otherSection:CreateToggle("Bypass AdonisAC", function(v)
-        local getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction
-getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction = 
-    getreg, type, debug.info, task, filtergc, isfunctionhooked, hookfunction
+        task.spawn(function()
+            local getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction
+            getreg, type, debug_info, task, filtergc, isfunctionhooked, hookfunction = 
+                getreg, type, debug.info, task, filtergc, isfunctionhooked, hookfunction
 
-local noop = function() end
-local RunService = game:GetService("RunService")
+            local noop = function() end
+            local RunService = game:GetService("RunService")
 
-if RunService:IsStudio() then return end
+            local function protect()
+                for _, v in getreg() or {} do
+                    if type(v) == 'thread' then
+                        local ok, source = pcall(debug_info, v, 's')
+                        if ok and source then
+                            if source:find("Adonis%.Anti", nil, true) or source:find("Anti%-Exploit", nil, true) then
+                                pcall(task.cancel, v)
+                            end
+                        end
+                    end
+                end
 
-local function protect()
-    for _, v in getreg() or {} do
-        if type(v) == 'thread' then
-            local ok, source = pcall(debug_info, v, 's')
-            if ok and source then
-                if source:find("Adonis%.Anti", nil, true) or source:find("Anti%-Exploit", nil, true) then
-                    pcall(task.cancel, v)
+                for _, tbl in filtergc('table', {Keys = {'Remote', 'UnWrap', 'AddLog', 'Detected'}}, true) or {} do
+                    for k, v in pairs(tbl) do
+                        if type(v) == 'function' and not isfunctionhooked(v) then
+                            hookfunction(v, noop)
+                        end
+                    end
                 end
             end
-        end
-    end
 
-    for _, tbl in filtergc('table', {Keys = {'Remote', 'UnWrap', 'AddLog', 'Detected'}}, true) or {} do
-        for k, v in pairs(tbl) do
-            if type(v) == 'function' and not isfunctionhooked(v) then
-                hookfunction(v, noop)
-            end
-        end
-    end
-end
-
--- Run immediately and every 30 seconds
-protect()
-while task.wait(30) do protect() end
+            -- Run immediately and every 30 seconds
+            protect()
+            while task.wait(30) do protect() end
+        end)
     end, false)
 
     self:OnClose(function()
