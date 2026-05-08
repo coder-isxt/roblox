@@ -34,30 +34,41 @@ local GUI_NAME = "Zyntra V2"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-    Main = Color3.fromRGB(14, 17, 23),
-    Top = Color3.fromRGB(21, 25, 33),
+        Main = Color3.fromRGB(15, 15, 20),
+    Top = Color3.fromRGB(18, 18, 24),
 
-    Sidebar = Color3.fromRGB(18, 22, 29),
-    SidebarActive = Color3.fromRGB(40, 53, 74),
+    Sidebar = Color3.fromRGB(18, 18, 24),
+    SidebarActive = Color3.fromRGB(35, 35, 45),
 
-    Panel = Color3.fromRGB(24, 29, 38),
-    PanelInset = Color3.fromRGB(31, 37, 48),
+    Panel = Color3.fromRGB(20, 20, 26),
+    PanelInset = Color3.fromRGB(28, 28, 36),
 
-    Control = Color3.fromRGB(42, 50, 64),
-    ControlHover = Color3.fromRGB(52, 61, 77),
-    ControlPress = Color3.fromRGB(65, 75, 93),
+    Control = Color3.fromRGB(25, 25, 32),
+    ControlHover = Color3.fromRGB(32, 32, 42),
+    ControlPress = Color3.fromRGB(40, 40, 52),
 
-    Stroke = Color3.fromRGB(77, 88, 108),
+    Stroke = Color3.fromRGB(200, 200, 210),
 
-    Accent = Color3.fromRGB(110, 170, 255),
+    Accent = Color3.fromRGB(240, 240, 245),
 
-    Text = Color3.fromRGB(244, 247, 255),
-    SubText = Color3.fromRGB(160, 171, 190),
+    Text = Color3.fromRGB(240, 240, 245),
+    SubText = Color3.fromRGB(150, 150, 160),
     
     Success = Color3.fromRGB(75, 255, 150),
     Warning = Color3.fromRGB(255, 200, 75),
     Error = Color3.fromRGB(255, 100, 100),
 }
+
+local CONTROL_SURFACE = Color3.fromRGB(25, 25, 32)
+local CONTROL_SURFACE_HOVER = Color3.fromRGB(32, 32, 42)
+local CONTROL_SURFACE_PRESS = Color3.fromRGB(40, 40, 52)
+
+local CONTROL_FIELD = Color3.fromRGB(20, 20, 26)
+local CONTROL_FIELD_HOVER = Color3.fromRGB(28, 28, 36)
+
+local CONTROL_OPTION_ACTIVE = Color3.fromRGB(240, 240, 245)
+local CONTROL_STROKE_TRANSPARENCY = 0.75
+local CONTROL_DIVIDER_TRANSPARENCY = 0.8
 
 -- Shared Helper Functions
 local function mk(className, props)
@@ -1026,7 +1037,7 @@ function Window:CreatePlayersCategory(options)
 
     local searchBox = mk("TextBox", {
         Parent = searchBack,
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 0.3,
         Position = UDim2.new(0, 8, 0, 0),
         Size = UDim2.new(1, -16, 1, 0),
         Font = FONT,
@@ -5340,16 +5351,7 @@ local function controlShell(section, h)
     })
 end
 
-local CONTROL_SURFACE = Color3.fromRGB(33, 39, 50)
-local CONTROL_SURFACE_HOVER = Color3.fromRGB(42, 49, 62)
-local CONTROL_SURFACE_PRESS = Color3.fromRGB(54, 62, 77)
 
-local CONTROL_FIELD = Color3.fromRGB(20, 24, 31)
-local CONTROL_FIELD_HOVER = Color3.fromRGB(27, 32, 41)
-
-local CONTROL_OPTION_ACTIVE = Color3.fromRGB(110, 170, 255)
-local CONTROL_STROKE_TRANSPARENCY = 0.75
-local CONTROL_DIVIDER_TRANSPARENCY = 0.8
 
 local function controlBack(parent, h, colors)
     local col = colors or C
