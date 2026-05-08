@@ -934,7 +934,7 @@ function UILibrary:CreateWindow(title, subtitle)
     local FlyState = {
         Master = false,
         Active = false,
-        Speed = 200
+        Speed = 100
     }
     
     local FlyConnection
@@ -967,8 +967,14 @@ function UILibrary:CreateWindow(title, subtitle)
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
             
             root.Velocity = Vector3.new(0,0,0)
+            
+            -- Rotate character to face camera direction
+            local targetRotation = CFrame.new(root.CFrame.Position, root.CFrame.Position + cam.CFrame.LookVector)
+            
             if moveDir.Magnitude > 0 then
-                root.CFrame = root.CFrame + (moveDir.Unit * (FlyState.Speed / 10))
+                root.CFrame = targetRotation + (moveDir.Unit * (FlyState.Speed / 10))
+            else
+                root.CFrame = targetRotation
             end
         end)
     end
@@ -978,7 +984,7 @@ function UILibrary:CreateWindow(title, subtitle)
         if not v then stopFlight() end
     end)
     
-    LocalMenu:AddSlider("Fly Speed", "Adjust flight velocity", 50, 500, 200, 10, nil, function(v)
+    LocalMenu:AddSlider("Fly Speed", "Adjust flight velocity", 20, 300, 100, 10, nil, function(v)
         FlyState.Speed = v
     end)
     
