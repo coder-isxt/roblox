@@ -60,7 +60,8 @@ local function createMenuData(title, subtitle)
         Subtitle = subtitle,
         Options = {},
         SystemOptions = {}, -- Use this for built-ins
-        SelectedIndex = 1
+        SelectedIndex = 1,
+        IsSystem = false -- Track if this is a built-in menu
     }
     table.insert(State.AllMenus, menu)
     return menu
@@ -1284,24 +1285,26 @@ function BuiltIn.Settings(lib)
             if not isfolder("Fracture") then makefolder("Fracture") end
             if not isfolder("Fracture/Configs") then makefolder("Fracture/Configs") end
             
-            -- Dynamic Menu State Gathering
+            -- Dynamic Menu State Gathering (System Only)
             local menuStates = {}
             for _, menu in ipairs(State.AllMenus) do
-                local menuKey = menu.Subtitle or menu.Title
-                local states = {}
-                for _, opt in ipairs(menu.Options) do
-                    if opt.Type == "toggle" then
-                        states[opt.Name] = opt.Value
-                    elseif opt.Type == "slider" then
-                        states[opt.Name] = opt.Value
-                    elseif opt.Type == "keybind" then
-                        states[opt.Name] = serializeValue(opt.Value)
-                    elseif opt.Type == "multichoice" then
-                        states[opt.Name] = opt.Index
+                if menu.IsSystem then
+                    local menuKey = menu.Subtitle or menu.Title
+                    local states = {}
+                    for _, opt in ipairs(menu.Options) do
+                        if opt.Type == "toggle" then
+                            states[opt.Name] = opt.Value
+                        elseif opt.Type == "slider" then
+                            states[opt.Name] = opt.Value
+                        elseif opt.Type == "keybind" then
+                            states[opt.Name] = serializeValue(opt.Value)
+                        elseif opt.Type == "multichoice" then
+                            states[opt.Name] = opt.Index
+                        end
                     end
-                end
-                if next(states) then
-                    menuStates[menuKey] = states
+                    if next(states) then
+                        menuStates[menuKey] = states
+                    end
                 end
             end
 
@@ -1588,9 +1591,10 @@ function UILibrary._wrapMenu(menuData)
     end
     function api:AddMenu(name, desc, icon, isSystem)
         local sub = createMenuData(menuData.Title, name)
+        sub.IsSystem = isSystem or menuData.IsSystem -- Inherit system status
         local opt = {Name = name, Description = desc, Icon = icon, Type = "menu", SubMenu = sub}
         
-        if isSystem then
+        if sub.IsSystem then
             table.insert(menuData.SystemOptions, opt)
         else
             table.insert(menuData.Options, opt)
