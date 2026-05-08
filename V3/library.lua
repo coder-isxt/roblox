@@ -30,6 +30,14 @@ local Config = {
     MenuWidth = 320,
     MaxItemsVisible = 12,
     CornerRadius = UDim.new(0, 8),
+    Icons = {
+        ["Home"] = "rbxassetid://10709769508",
+        ["Settings"] = "rbxassetid://10709769841",
+        ["player"] = "rbxassetid://114275093157258",
+        ["Weapon"] = "rbxassetid://10709770146",
+        ["Vehicle"] = "rbxassetid://10709771131",
+        ["Teleport"] = "rbxassetid://10709771513",
+    }
 }
 
 -- // STATE // --
@@ -198,7 +206,7 @@ LogoImage.Name = "Logo"
 LogoImage.Size = UDim2.new(0, 30, 0, 30)
 LogoImage.Position = UDim2.new(0.5, -15, 0.5, -15)
 LogoImage.BackgroundTransparency = 1
-LogoImage.Image = "rbxassetid://116835985349151"
+LogoImage.Image = "rbxassetid://86045912751052" -- No background: 86045912751052, with background: 116835985349151
 LogoImage.ZIndex = 25
 LogoImage.Parent = Footer
 LogoImage.ScaleType = Enum.ScaleType.Fit
@@ -357,6 +365,10 @@ local function updateSelection()
             optData.UI.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
             optData.UI.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
             
+            if optData.UI.Icon then
+                optData.UI.Icon.ImageColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
+            end
+            
             if optData.UI.Checkbox then
                 if isSelected then
                     optData.UI.Checkbox.BackgroundColor3 = optData.Value and Color3.new(0,0,0) or Color3.fromRGB(40, 40, 40)
@@ -415,7 +427,7 @@ local function renderMenu(menu)
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(0.6, 0, 1, 0)
-        label.Position = UDim2.new(0, 10, 0, 0)
+        label.Position = UDim2.new(0, optData.Icon and 35 or 10, 0, 0)
         label.BackgroundTransparency = 1
         label.Text = optData.Name
         label.TextColor3 = Config.Theme.Text
@@ -423,6 +435,19 @@ local function renderMenu(menu)
         label.Font = Config.Font
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.Parent = frame
+
+        local iconImg = nil
+        if optData.Icon then
+            local iconAsset = Config.Icons[optData.Icon] or optData.Icon
+            iconImg = Instance.new("ImageLabel")
+            iconImg.Name = "Icon"
+            iconImg.Size = UDim2.new(0, 20, 0, 20)
+            iconImg.Position = UDim2.new(0, 7, 0.5, -10)
+            iconImg.BackgroundTransparency = 1
+            iconImg.Image = iconAsset
+            iconImg.ImageColor3 = Config.Theme.Text
+            iconImg.Parent = frame
+        end
 
         local arrow = Instance.new("TextLabel")
         arrow.Size = UDim2.new(0, 20, 1, 0)
@@ -475,7 +500,8 @@ local function renderMenu(menu)
             Label = label,
             Arrow = arrow,
             ValueLabel = valueLabel,
-            Checkbox = checkbox
+            Checkbox = checkbox,
+            Icon = iconImg
         }
     end
 
@@ -637,9 +663,9 @@ function UILibrary:CreateWindow(title, subtitle)
     State.CurrentMenu = createMenuData(title, subtitle)
     
     -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
-    local Settings = self:AddMenu("Settings", "Menu configuration and exit", true)
-    local Developer = Settings:AddMenu("Developer", "Universal developer tools")
-    Settings:AddButton("Unload", "Completely remove the menu and clean up", function()
+    local Settings = self:AddMenu("Settings", "Menu configuration and exit", "Settings", true)
+    local Developer = Settings:AddMenu("Developer", "Universal developer tools", "Settings")
+    Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
         self:Unload()
     end)
 
@@ -655,20 +681,22 @@ function UILibrary:CreateWindow(title, subtitle)
     return self
 end
 
-function UILibrary:AddButton(name, desc, callback)
+function UILibrary:AddButton(name, desc, icon, callback)
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
+        Icon = icon,
         Type = "button",
         Callback = callback
     })
     renderMenu(State.CurrentMenu)
 end
 
-function UILibrary:AddToggle(name, desc, default, callback)
+function UILibrary:AddToggle(name, desc, default, icon, callback)
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
+        Icon = icon,
         Type = "toggle",
         Value = default or false,
         ValueText = (default or false) and "[ON]" or "[OFF]",
@@ -677,13 +705,14 @@ function UILibrary:AddToggle(name, desc, default, callback)
     renderMenu(State.CurrentMenu)
 end
 
-function UILibrary:AddMenu(name, desc, isSystem)
+function UILibrary:AddMenu(name, desc, icon, isSystem)
     local subMenu = createMenuData(State.CurrentMenu.Title, name)
     local targetTable = isSystem and State.CurrentMenu.SystemOptions or State.CurrentMenu.Options
     
     table.insert(targetTable, {
         Name = name,
         Description = desc,
+        Icon = icon,
         Type = "menu",
         SubMenu = subMenu
     })
@@ -692,10 +721,11 @@ function UILibrary:AddMenu(name, desc, isSystem)
     return UILibrary._wrapMenu(subMenu)
 end
 
-function UILibrary:AddSlider(name, desc, min, max, default, increment, callback)
+function UILibrary:AddSlider(name, desc, min, max, default, increment, icon, callback)
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
+        Icon = icon,
         Type = "slider",
         Min = min or 0,
         Max = max or 100,
@@ -706,10 +736,11 @@ function UILibrary:AddSlider(name, desc, min, max, default, increment, callback)
     renderMenu(State.CurrentMenu)
 end
 
-function UILibrary:AddInput(name, desc, placeholder, callback)
+function UILibrary:AddInput(name, desc, placeholder, icon, callback)
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
+        Icon = icon,
         Type = "input",
         Placeholder = placeholder or "Enter Value",
         Value = "",
@@ -721,18 +752,19 @@ end
 -- Helper to wrap menu data into an API object
 function UILibrary._wrapMenu(menuData)
     local api = {}
-    function api:AddButton(name, desc, callback)
-        table.insert(menuData.Options, {Name = name, Description = desc, Type = "button", Callback = callback})
+    function api:AddButton(name, desc, icon, callback)
+        table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "button", Callback = callback})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
-    function api:AddToggle(name, desc, default, callback)
-        table.insert(menuData.Options, {Name = name, Description = desc, Type = "toggle", Value = default, ValueText = default and "[ON]" or "[OFF]", Callback = callback})
+    function api:AddToggle(name, desc, default, icon, callback)
+        table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "toggle", Value = default, ValueText = default and "[ON]" or "[OFF]", Callback = callback})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
-    function api:AddSlider(name, desc, min, max, default, increment, callback)
+    function api:AddSlider(name, desc, min, max, default, increment, icon, callback)
         table.insert(menuData.Options, {
             Name = name,
             Description = desc,
+            Icon = icon,
             Type = "slider",
             Min = min or 0,
             Max = max or 100,
@@ -742,10 +774,11 @@ function UILibrary._wrapMenu(menuData)
         })
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
-    function api:AddInput(name, desc, placeholder, callback)
+    function api:AddInput(name, desc, placeholder, icon, callback)
         table.insert(menuData.Options, {
             Name = name,
             Description = desc,
+            Icon = icon,
             Type = "input",
             Placeholder = placeholder or "Enter Value",
             Value = "",
@@ -753,9 +786,9 @@ function UILibrary._wrapMenu(menuData)
         })
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
-    function api:AddMenu(name, desc)
+    function api:AddMenu(name, desc, icon)
         local sub = createMenuData(menuData.Title, name)
-        table.insert(menuData.Options, {Name = name, Description = desc, Type = "menu", SubMenu = sub})
+        table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "menu", SubMenu = sub})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
         return UILibrary._wrapMenu(sub)
     end
