@@ -1459,14 +1459,16 @@ function BuiltIn.Settings(lib)
             cfgSub:AddButton("Load", "Apply these settings now", nil, function()
                 local data = http:JSONDecode(readfile(file))
                 if data and data.State then
-                    -- Deep merge state
-                    for k, v in pairs(data.State) do
-                        if type(v) == "table" then
-                            for k2, v2 in pairs(v) do
-                                State.Config[k][k2] = deserializeValue(v2)
+                    -- Deep merge State.Config to preserve references
+                    if data.State then
+                        for k, v in pairs(data.State) do
+                            if type(v) == "table" and type(State.Config[k]) == "table" then
+                                for k2, v2 in pairs(v) do
+                                    State.Config[k][k2] = deserializeValue(v2)
+                                end
+                            else
+                                State.Config[k] = deserializeValue(v)
                             end
-                        else
-                            State.Config[k] = v
                         end
                     end
                     
@@ -1643,21 +1645,21 @@ function UILibrary:CreateWindow(title, subtitle)
             if isfile(path) then
                 local data = http:JSONDecode(readfile(path))
                 if data and data.State then
-                    -- Apply loaded state
+                    -- Deep merge State.Config to preserve references
                     for k, v in pairs(data.State) do
-                        if type(v) == "table" then
+                        if type(v) == "table" and type(State.Config[k]) == "table" then
                             for k2, v2 in pairs(v) do
                                 State.Config[k][k2] = deserializeValue(v2)
                             end
                         else
-                            State.Config[k] = v
+                            State.Config[k] = deserializeValue(v)
                         end
                     end
                     
                     State.LoadedMenuStates = data.MenuStates
                     
                     -- Wait for UI to be ready then apply theme and sync
-                    task.wait(0.2)
+                    task.wait(0.5)
                     
                     -- Apply Theme Preset
                     if State.Config.SelectedPreset then
