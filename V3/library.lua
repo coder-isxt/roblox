@@ -1469,7 +1469,7 @@ function BuiltIn.Settings(lib)
 
     local Presets = Theme:AddMenu("Presets", "Theme presets", nil)
     
-    Presets:AddButton("Default", "Standard premium look", nil, function()
+    Presets:AddButton("Default", "Standard Fracture style", nil, function()
         State.Config.SelectedPreset = "Default"
         applyTheme({
             Banner = Color3.fromRGB(8, 8, 12),            -- deep dark purple-black
@@ -1488,7 +1488,7 @@ function BuiltIn.Settings(lib)
         UILibrary:Notify("Presets", "Default theme applied")
     end)
     
-    Presets:AddButton("Impulse", "Classic minimalist look", nil, function()
+    Presets:AddButton("Impulse", "Old GTA5 mod menu style", nil, function()
         State.Config.SelectedPreset = "Impulse"
         applyTheme({
             Banner = Color3.fromRGB(10, 10, 10),
