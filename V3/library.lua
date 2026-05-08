@@ -197,10 +197,12 @@ local LogoImage = Instance.new("ImageLabel")
 LogoImage.Name = "Logo"
 LogoImage.Size = UDim2.new(0, 30, 0, 30)
 LogoImage.Position = UDim2.new(0.5, -15, 0.5, -15)
-LogoImage.BackgroundTransparency = 1
+LogoImage.BackgroundTransparency = 0
 LogoImage.Image = "rbxassetid://90406832214310"
 LogoImage.ZIndex = 25
 LogoImage.Parent = Footer
+LogoImage.ScaleType = Enum.ScaleType.Fit
+LogoImage.Visible = true
 
 -- // INPUT POPUP // --
 local InputPopup = Instance.new("Frame")
