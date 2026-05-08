@@ -432,6 +432,8 @@ syncUIToConfig = function()
             if opt.Name == "Auto Save" then opt.Value = State.Config.AutoSave; changed = true
             elseif opt.Name == "Use Banner" then opt.Value = State.Config.Banner.UseBanner; changed = true
             elseif opt.Name == "Disable Title" then opt.Value = State.Config.Banner.DisableTitle; changed = true
+            elseif opt.Name == "Fly Keybind" then opt.Value = State.Config.Binds.Fly; changed = true
+            elseif opt.Name == "Sprint Keybind" then opt.Value = State.Config.Binds.Sprint; changed = true
             elseif opt.Name == "Banner Scale" then
                 local scales = {"Crop", "Fit", "Stretch", "Tile"}
                 for i, s in ipairs(scales) do
@@ -805,6 +807,12 @@ goBack = function()
         local prev = table.remove(State.History)
         openMenu(prev, true)
     end
+end
+
+local function triggerAutoSave()
+        if State.Config and State.Config.AutoSave then
+            UILibrary.saveCurrentConfig(State.SelectedConfig or "default", true)
+        end
 end
 
 -- // INPUT HANDLING WITH CONTEXT ACTION SERVICE // --
@@ -1432,11 +1440,7 @@ function BuiltIn.Settings(lib)
         return success
     end
 
-    local function triggerAutoSave()
-        if State.Config and State.Config.AutoSave then
-            UILibrary.saveCurrentConfig(State.SelectedConfig or "default", true)
-        end
-    end
+    
 
 
 
