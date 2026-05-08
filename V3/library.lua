@@ -1437,9 +1437,7 @@ function BuiltIn.Settings(lib)
         end
     end
 
-    -- Hook Shutdown Events
-    game:GetService("Players").LocalPlayer.Removing:Connect(triggerAutoSave)
-    ScreenGui.Destroying:Connect(triggerAutoSave)
+
 
     ConfigSub:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
         -- Sanitize filename: remove common illegal characters
@@ -1663,6 +1661,13 @@ function BuiltIn.Settings(lib)
     
     Developer:AddButton("RemoteSpy", "Load remotespy to see remotes firing", nil, function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
+    end)
+
+    Developer:AddButton("Unload UI", "Remove the library completely", nil, function()
+        triggerAutoSave()
+        ScreenGui:Destroy()
+        local CAS = game:GetService("ContextActionService")
+        CAS:UnbindAction("ImpulseMenuInput")
     end)
 end
 
