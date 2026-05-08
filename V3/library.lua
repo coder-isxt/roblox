@@ -394,38 +394,7 @@ NotifyLayout.Parent = NotifyContainer
 
 
 
-local function updateBannerUI()
-    local b = State.Config.Banner
-    if b.UseBanner and b.CurrentID ~= "" and b.CurrentID ~= "0" then
-        BannerTexture.Image = "rbxassetid://" .. b.CurrentID
-        BannerTexture.Visible = true
-        BannerTexture.ScaleType = Enum.ScaleType[b.Scale or "Crop"]
-        PulseLine.Visible = false
-    else
-        BannerTexture.Visible = false
-        PulseLine.Visible = true
-    end
-    
-    BannerTitle.Visible = not b.DisableTitle
-end
 
-local function applyTheme(themeData)
-    for k, v in pairs(themeData) do
-        Config.Theme[k] = v
-    end
-    
-    -- Update Static Elements
-    MainFrame.BackgroundColor3 = Config.Theme.Background
-    MainStroke.Color = Config.Theme.Accent
-    Banner.BackgroundColor3 = Config.Theme.Banner
-    PulseLine.BackgroundColor3 = Config.Theme.PulseColor
-    ScrollIndicator.BackgroundColor3 = Config.Theme.Accent
-    
-    -- Refresh current menu UI
-    if State.CurrentMenu then
-        renderMenu(State.CurrentMenu)
-    end
-end
 
 -- // INTERNAL FUNCTIONS // --
 local function syncUIToConfig()
@@ -742,6 +711,39 @@ local function renderMenu(menu)
     BannerTitle.Text = menu.Title:upper()
     SubTitle.Text = menu.Subtitle
     updateSelection()
+end
+
+local function updateBannerUI()
+    local b = State.Config.Banner
+    if b.UseBanner and b.CurrentID ~= "" and b.CurrentID ~= "0" then
+        BannerTexture.Image = "rbxassetid://" .. b.CurrentID
+        BannerTexture.Visible = true
+        BannerTexture.ScaleType = Enum.ScaleType[b.Scale or "Crop"]
+        PulseLine.Visible = false
+    else
+        BannerTexture.Visible = false
+        PulseLine.Visible = true
+    end
+    
+    BannerTitle.Visible = not b.DisableTitle
+end
+
+local function applyTheme(themeData)
+    for k, v in pairs(themeData) do
+        Config.Theme[k] = v
+    end
+    
+    -- Update Static Elements
+    MainFrame.BackgroundColor3 = Config.Theme.Background
+    MainStroke.Color = Config.Theme.Accent
+    Banner.BackgroundColor3 = Config.Theme.Banner
+    PulseLine.BackgroundColor3 = Config.Theme.PulseColor
+    ScrollIndicator.BackgroundColor3 = Config.Theme.Accent
+    
+    -- Refresh current menu UI
+    if State.CurrentMenu then
+        renderMenu(State.CurrentMenu)
+    end
 end
 
 local function openMenu(menu, isBack)
