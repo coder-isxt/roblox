@@ -1057,6 +1057,7 @@ function UILibrary:Unload()
     local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
     if hum then hum.WalkSpeed = oldws or 16 end
     ContextActionService:UnbindAction("fracturecontrols")
+    triggerAutoSave()
     ScreenGui:Destroy()
 end
 
@@ -1661,13 +1662,6 @@ function BuiltIn.Settings(lib)
     
     Developer:AddButton("RemoteSpy", "Load remotespy to see remotes firing", nil, function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
-    end)
-
-    Developer:AddButton("Unload UI", "Remove the library completely", nil, function()
-        triggerAutoSave()
-        ScreenGui:Destroy()
-        local CAS = game:GetService("ContextActionService")
-        CAS:UnbindAction("ImpulseMenuInput")
     end)
 end
 
