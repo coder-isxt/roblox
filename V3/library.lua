@@ -618,6 +618,8 @@ local function renderMenu(menu)
         
         if optData.Type == "slider" then
             valueLabel.Text = "< " .. tostring(optData.Value) .. " >"
+        elseif optData.Type == "multichoice" then
+            valueLabel.Text = "< " .. tostring(optData.Options[optData.Index] or "NONE") .. " >"
         elseif optData.Type == "keybind" then
             valueLabel.Text = (State.Binding == optData) and "[...]" or "[" .. (optData.Value and optData.Value.Name or "NONE") .. "]"
         elseif optData.Type == "input" then
@@ -735,6 +737,11 @@ local function handleMenuInput(name, state, input)
                 opt.Value = math.clamp(opt.Value - opt.Increment, opt.Min, opt.Max)
                 opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
                 opt.Callback(opt.Value)
+            elseif opt and opt.Type == "multichoice" then
+                opt.Index = opt.Index - 1
+                if opt.Index < 1 then opt.Index = #opt.Options end
+                opt.UI.ValueLabel.Text = "< " .. tostring(opt.Options[opt.Index]) .. " >"
+                opt.Callback(opt.Options[opt.Index])
             end
         elseif state == Enum.UserInputState.End then
             State.SliderHoldingLeft = false
@@ -749,6 +756,11 @@ local function handleMenuInput(name, state, input)
                 opt.Value = math.clamp(opt.Value + opt.Increment, opt.Min, opt.Max)
                 opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
                 opt.Callback(opt.Value)
+            elseif opt and opt.Type == "multichoice" then
+                opt.Index = opt.Index + 1
+                if opt.Index > #opt.Options then opt.Index = 1 end
+                opt.UI.ValueLabel.Text = "< " .. tostring(opt.Options[opt.Index]) .. " >"
+                opt.Callback(opt.Options[opt.Index])
             end
         elseif state == Enum.UserInputState.End then
             State.SliderHoldingRight = false
@@ -772,6 +784,8 @@ local function handleMenuInput(name, state, input)
         elseif opt.Type == "keybind" then
             State.Binding = opt
             opt.UI.ValueLabel.Text = "[...]"
+        elseif opt.Type == "multichoice" then
+            opt.Callback(opt.Options[opt.Index])
         end
         return Enum.ContextActionResult.Sink
     end
@@ -1358,19 +1372,35 @@ function UILibrary._wrapMenu(menuData)
         table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "toggle", Value = default, ValueText = default and "[ON]" or "[OFF]", Callback = callback})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
-    function api:AddSlider(name, desc, min, max, default, increment, icon, callback)
+    function api:AddSlider(name, desc, min, max, default, inc, icon, callback)
         if type(icon) == "function" then callback = icon; icon = nil end
-        table.insert(menuData.Options, {
+        local slider = {
             Name = name,
             Description = desc,
             Icon = icon,
             Type = "slider",
-            Min = min or 0,
-            Max = max or 100,
-            Value = default or min or 0,
-            Increment = increment or 1,
+            Min = min,
+            Max = max,
+            Value = default or min,
+            Increment = inc or 1,
             Callback = callback
-        })
+        }
+        table.insert(menuData.Options, slider)
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+
+    function api:AddMultiChoice(name, desc, options, defaultIndex, icon, callback)
+        if type(icon) == "function" then callback = icon; icon = nil end
+        local choice = {
+            Name = name,
+            Description = desc,
+            Icon = icon,
+            Type = "multichoice",
+            Options = options,
+            Index = defaultIndex or 1,
+            Callback = callback
+        }
+        table.insert(menuData.Options, choice)
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddInput(name, desc, placeholder, icon, callback)
