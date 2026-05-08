@@ -470,7 +470,19 @@ local function updateSelection()
         end
     end
 
-    ItemCount.Text = menu.SelectedIndex .. " / " .. count
+    -- Calculate accurate item count (excluding labels)
+    local totalSelectable = 0
+    local selectableIndex = 0
+    for i, opt in ipairs(combined) do
+        if opt.Type ~= "label" then
+            totalSelectable = totalSelectable + 1
+            if i <= menu.SelectedIndex then
+                selectableIndex = selectableIndex + 1
+            end
+        end
+    end
+
+    ItemCount.Text = selectableIndex .. " / " .. totalSelectable
     updateMainFrameSize()
 end
 
