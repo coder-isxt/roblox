@@ -197,7 +197,7 @@ local LogoImage = Instance.new("ImageLabel")
 LogoImage.Name = "Logo"
 LogoImage.Size = UDim2.new(0, 30, 0, 30)
 LogoImage.Position = UDim2.new(0.5, -15, 0.5, -15)
-LogoImage.BackgroundTransparency = 0
+LogoImage.BackgroundTransparency = 1
 LogoImage.Image = "rbxassetid://90406832214310"
 LogoImage.ZIndex = 25
 LogoImage.Parent = Footer
@@ -299,16 +299,22 @@ local function updateMainFrameSize()
     local visibleCount = math.min(optionsCount, Config.MaxItemsVisible)
     local optionsHeight = math.max(visibleCount * 35, 40)
     
-    local totalHeight = 100 + 30 + optionsHeight + 35 + 45
+    -- Correct offsets to prevent overlap
+    local optionsStart = 135
+    local footerStart = optionsStart + optionsHeight + 5
+    local descStart = footerStart + 35 + 5
+    local totalHeight = descStart + 40 + 5
+    
     MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, totalHeight)
     OptionsContainer.Size = UDim2.new(1, -15, 0, optionsHeight)
     
-    Footer.Position = UDim2.new(0, 0, 0, 130 + optionsHeight)
-    DescFrame.Position = UDim2.new(0, 0, 0, 130 + optionsHeight + 35)
+    Footer.Position = UDim2.new(0, 0, 0, footerStart)
+    DescFrame.Position = UDim2.new(0, 0, 0, descStart)
     
     ScrollbarFrame.Visible = optionsCount > 0
     if optionsCount > 0 then
         ScrollbarFrame.Size = UDim2.new(0, 8, 0, optionsHeight)
+        ScrollbarFrame.Position = UDim2.new(0, 2, 0, optionsStart)
         local progress = (menu.SelectedIndex - 1) / math.max(1, optionsCount - 1)
         local pos = progress * (optionsHeight - 40)
         ScrollIndicator.Position = UDim2.new(0, 0, 0, pos)
