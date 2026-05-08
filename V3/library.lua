@@ -419,28 +419,40 @@ syncUIToConfig = function()
         local savedMenu = State.LoadedMenuStates and State.LoadedMenuStates[menuKey]
         
         for _, opt in ipairs(menu.Options) do
+            local changed = false
             -- 1. Try to sync from MenuStates first (for specific menu values)
             if savedMenu and savedMenu[opt.Name] ~= nil then
                 local val = deserializeValue(savedMenu[opt.Name])
                 opt.Value = val
                 if opt.Type == "multichoice" then opt.Index = val end
+                changed = true
             end
             
             -- 2. Special Sync for Built-ins (State.Config mapping)
-            if opt.Name == "Auto Save" then opt.Value = State.Config.AutoSave
-            elseif opt.Name == "Use Banner" then opt.Value = State.Config.Banner.UseBanner
-            elseif opt.Name == "Disable Title" then opt.Value = State.Config.Banner.DisableTitle
+            if opt.Name == "Auto Save" then opt.Value = State.Config.AutoSave; changed = true
+            elseif opt.Name == "Use Banner" then opt.Value = State.Config.Banner.UseBanner; changed = true
+            elseif opt.Name == "Disable Title" then opt.Value = State.Config.Banner.DisableTitle; changed = true
             elseif opt.Name == "Banner Scale" then
                 local scales = {"Crop", "Fit", "Stretch", "Tile"}
                 for i, s in ipairs(scales) do
                     if s == State.Config.Banner.Scale then
                         opt.Index = i
+                        changed = true
                         break
                     end
                 end
             end
             
-            -- 3. Visual Update
+            -- 3. Trigger Callbacks for non-toggles (toggles usually just set state)
+            if changed and opt.Callback then
+                if opt.Type == "multichoice" and opt.Options then
+                    opt.Callback(opt.Options[opt.Index] or opt.Options[1])
+                elseif opt.Type == "slider" or opt.Type == "toggle" then
+                    opt.Callback(opt.Value)
+                end
+            end
+            
+            -- 4. Visual Update
             if opt.UI then
                 if opt.Type == "toggle" then
                     opt.UI.Checkbox.BackgroundColor3 = opt.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
@@ -448,8 +460,8 @@ syncUIToConfig = function()
                     opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
                 elseif opt.Type == "keybind" then
                     opt.UI.ValueLabel.Text = "[" .. (opt.Value and opt.Value.Name or "None") .. "]"
-                elseif opt.Type == "multichoice" then
-                    opt.UI.ValueLabel.Text = "< " .. tostring(opt.Options[opt.Index]) .. " >"
+                elseif opt.Type == "multichoice" and opt.Options then
+                    opt.UI.ValueLabel.Text = "< " .. tostring(opt.Options[opt.Index] or "NONE") .. " >"
                 end
             end
         end
