@@ -444,7 +444,7 @@ local function renderMenu(menu)
             iconImg.Position = UDim2.new(0, 7, 0.5, -10)
             iconImg.BackgroundTransparency = 1
             iconImg.Image = iconAsset
-            iconImg.ImageColor3 = Config.Theme.Text
+            iconImg.ImageColor3 = Config.Theme.Accent
             iconImg.Parent = frame
         end
 
@@ -662,8 +662,8 @@ function UILibrary:CreateWindow(title, subtitle)
     State.CurrentMenu = createMenuData(title, subtitle)
     
     -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
-    local Settings = self:AddMenu("Settings", "Menu configuration and exit", "Settings", true)
-    local Developer = Settings:AddMenu("Developer", "Universal developer tools", "Settings")
+    local Settings = self:AddMenu("Settings", "Menu configuration and exit", "gear", true)
+    local Developer = Settings:AddMenu("Developer", "Universal developer tools", "globe")
     Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
         self:Unload()
     end)
