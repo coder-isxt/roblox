@@ -320,7 +320,7 @@ local function renderMenu(menu)
         arrow.Size = UDim2.new(0, 20, 1, 0)
         arrow.Position = UDim2.new(1, -25, 0, 0)
         arrow.BackgroundTransparency = 1
-        arrow.Text = optData.Type == "menu" and ">" or ""
+        arrow.Text = (optData.Type == "menu" and ">" or "")
         arrow.TextColor3 = Color3.fromRGB(150, 150, 150)
         arrow.TextSize = 14
         arrow.Font = Enum.Font.SourceSansBold
@@ -344,10 +344,16 @@ local function renderMenu(menu)
         end
 
         local valueLabel = Instance.new("TextLabel")
-        valueLabel.Size = UDim2.new(0.35, 0, 1, 0)
+        valueLabel.Size = UDim2.new(0.4, 0, 1, 0)
         valueLabel.Position = UDim2.new(0.6, -30, 0, 0)
         valueLabel.BackgroundTransparency = 1
-        valueLabel.Text = optData.Type == "button" and (optData.ValueText or "") or ""
+        
+        if optData.Type == "slider" then
+            valueLabel.Text = "< " .. tostring(optData.Value) .. " >"
+        else
+            valueLabel.Text = optData.Type == "button" and (optData.ValueText or "") or ""
+        end
+        
         valueLabel.TextColor3 = Config.Theme.Text
         valueLabel.TextSize = Config.TextSize
         valueLabel.Font = Config.Font
@@ -426,6 +432,22 @@ local function handleMenuInput(name, state, input)
     elseif input.KeyCode == Enum.KeyCode.Backspace then
         goBack()
         return Enum.ContextActionResult.Sink
+    elseif input.KeyCode == Enum.KeyCode.Left then
+        local opt = combined[menu.SelectedIndex]
+        if opt.Type == "slider" then
+            opt.Value = math.clamp(opt.Value - opt.Increment, opt.Min, opt.Max)
+            opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
+            opt.Callback(opt.Value)
+        end
+        return Enum.ContextActionResult.Sink
+    elseif input.KeyCode == Enum.KeyCode.Right then
+        local opt = combined[menu.SelectedIndex]
+        if opt.Type == "slider" then
+            opt.Value = math.clamp(opt.Value + opt.Increment, opt.Min, opt.Max)
+            opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
+            opt.Callback(opt.Value)
+        end
+        return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Return then
         local opt = combined[menu.SelectedIndex]
         if opt.Type == "button" then
@@ -446,7 +468,15 @@ local function handleMenuInput(name, state, input)
 end
 
 -- Bind menu controls
-ContextActionService:BindAction("fracturecontrols", handleMenuInput, false, Enum.KeyCode.Insert, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Return, Enum.KeyCode.Backspace)
+ContextActionService:BindAction("fracturecontrols", handleMenuInput, false, 
+    Enum.KeyCode.Insert, 
+    Enum.KeyCode.Up, 
+    Enum.KeyCode.Down, 
+    Enum.KeyCode.Left, 
+    Enum.KeyCode.Right, 
+    Enum.KeyCode.Return, 
+    Enum.KeyCode.Backspace
+)
 
 -- // PUBLIC API // --
 
@@ -516,6 +546,20 @@ function UILibrary:AddMenu(name, desc, isSystem)
     return UILibrary._wrapMenu(subMenu)
 end
 
+function UILibrary:AddSlider(name, desc, min, max, default, increment, callback)
+    table.insert(State.CurrentMenu.Options, {
+        Name = name,
+        Description = desc,
+        Type = "slider",
+        Min = min or 0,
+        Max = max or 100,
+        Value = default or min or 0,
+        Increment = increment or 1,
+        Callback = callback
+    })
+    renderMenu(State.CurrentMenu)
+end
+
 -- Helper to wrap menu data into an API object
 function UILibrary._wrapMenu(menuData)
     local api = {}
@@ -525,6 +569,19 @@ function UILibrary._wrapMenu(menuData)
     end
     function api:AddToggle(name, desc, default, callback)
         table.insert(menuData.Options, {Name = name, Description = desc, Type = "toggle", Value = default, ValueText = default and "[ON]" or "[OFF]", Callback = callback})
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+    function api:AddSlider(name, desc, min, max, default, increment, callback)
+        table.insert(menuData.Options, {
+            Name = name,
+            Description = desc,
+            Type = "slider",
+            Min = min or 0,
+            Max = max or 100,
+            Value = default or min or 0,
+            Increment = increment or 1,
+            Callback = callback
+        })
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddMenu(name, desc)
