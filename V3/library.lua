@@ -7,6 +7,8 @@ UILibrary.__index = UILibrary
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
+local Player = Players.LocalPlayer
 local oldws = 16
 
 -- // CONFIGURATION // --
