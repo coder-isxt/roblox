@@ -276,6 +276,48 @@ DescText.TextWrapped = true
 DescText.TextXAlignment = Enum.TextXAlignment.Left
 DescText.Parent = DescFrame
 
+-- // PLAYER STATS PANEL // --
+local StatsPanel = Instance.new("Frame")
+StatsPanel.Name = "StatsPanel"
+StatsPanel.Size = UDim2.new(0, 200, 0, 280)
+StatsPanel.BackgroundColor3 = Config.Theme.Background
+StatsPanel.Visible = false
+StatsPanel.Parent = ScreenGui
+
+local StatsCorner = Instance.new("UICorner")
+StatsCorner.CornerRadius = Config.CornerRadius
+StatsCorner.Parent = StatsPanel
+
+local StatsStroke = Instance.new("UIStroke")
+StatsStroke.Thickness = 1.5
+StatsStroke.Color = Config.Theme.Accent
+StatsStroke.Transparency = 0.5
+StatsStroke.Parent = StatsPanel
+
+local StatsAvatar = Instance.new("ImageLabel")
+StatsAvatar.Size = UDim2.new(0, 100, 0, 100)
+StatsAvatar.Position = UDim2.new(0.5, -50, 0, 15)
+StatsAvatar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+StatsAvatar.Image = ""
+StatsAvatar.Parent = StatsPanel
+
+local AvatarCorner = Instance.new("UICorner")
+AvatarCorner.CornerRadius = UDim.new(1, 0)
+AvatarCorner.Parent = StatsAvatar
+
+local StatsInfo = Instance.new("TextLabel")
+StatsInfo.Size = UDim2.new(1, -20, 1, -125)
+StatsInfo.Position = UDim2.new(0, 10, 0, 120)
+StatsInfo.BackgroundTransparency = 1
+StatsInfo.Text = ""
+StatsInfo.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatsInfo.TextSize = 14
+StatsInfo.Font = Config.Font
+StatsInfo.TextXAlignment = Enum.TextXAlignment.Left
+StatsInfo.TextYAlignment = Enum.TextYAlignment.Top
+StatsInfo.RichText = true
+StatsInfo.Parent = StatsPanel
+
 -- // NOTIFICATION CONTAINER // --
 local NotifyContainer = Instance.new("Frame")
 NotifyContainer.Name = "Notifications"
@@ -307,6 +349,13 @@ local function updateMenuPosition()
     TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
         Position = targetPos
     }):Play()
+
+    -- Update StatsPanel Position
+    local statsTarget = (Config.Side == 1)
+        and UDim2.new(0, Config.MenuWidth + 60, 0, 185)
+        or UDim2.new(1, -(Config.MenuWidth + 260), 0, 185)
+    
+    StatsPanel.Position = statsTarget
 end
 
 local function updateMainFrameSize()
@@ -390,6 +439,16 @@ local function updateSelection()
             
             if isSelected then
                 DescText.Text = optData.Description or ""
+                
+                -- Update Stats Panel
+                if optData.PlayerObj then
+                    StatsPanel.Visible = true
+                    State.WatchingPlayer = optData.PlayerObj
+                    StatsAvatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. optData.PlayerObj.UserId .. "&w=150&h=150"
+                else
+                    StatsPanel.Visible = false
+                    State.WatchingPlayer = nil
+                end
             end
         end
     end
@@ -648,9 +707,30 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- // CONTINUOUS SLIDER INPUT // --
+-- // CONTINUOUS SLIDER INPUT & STATS // --
 RunService.Heartbeat:Connect(function()
     if not State.Visible or not State.CurrentMenu then return end
+    
+    -- Update Stats Panel Live
+    if StatsPanel.Visible and State.WatchingPlayer then
+        local p = State.WatchingPlayer
+        local char = p.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        
+        local health = hum and math.floor(hum.Health) or 0
+        local maxHealth = hum and math.floor(hum.MaxHealth) or 100
+        local pos = root and root.Position or Vector3.zero
+        local dist = root and (Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and math.floor((root.Position - Player.Character.HumanoidRootPart.Position).Magnitude) or 0) or 0
+        
+        StatsInfo.Text = string.format([[
+<font color="#00f5ff"><b>DISPLAY:</b></font> %s
+<font color="#00f5ff"><b>USER:</b></font> @%s
+<font color="#00f5ff"><b>HEALTH:</b></font> %d / %d
+<font color="#00f5ff"><b>DIST:</b></font> %d studs
+<font color="#00f5ff"><b>POS:</b></font> %.1f, %.1f, %.1f]], 
+            p.DisplayName, p.Name, health, maxHealth, dist, pos.X, pos.Y, pos.Z)
+    end
     
     if State.SliderHoldingLeft or State.SliderHoldingRight then
         if tick() > State.LastSlideTime then
@@ -705,7 +785,16 @@ function UILibrary:CreateWindow(title, subtitle)
         PlayersMenu:Clear()
         for _, p in ipairs(game.Players:GetPlayers()) do
             if p == Player then continue end -- Skip self
-            local pm = PlayersMenu:AddMenu(p.DisplayName or p.Name, "Actions for " .. p.Name)
+            local pm = PlayersMenu:AddMenu(p.DisplayName .. " (@" .. p.Name .. ")", "Actions for " .. p.Name)
+            
+            -- Store player object in the option data for the stats panel
+            local combined = getCombinedOptions(PlayersMenu)
+            for _, opt in ipairs(combined) do
+                if opt.SubMenu == pm._menuData then
+                    opt.PlayerObj = p
+                    break
+                end
+            end
             
             pm:AddButton("Teleport", "Teleport to this player", nil, function()
                 local char = Player.Character
@@ -864,6 +953,9 @@ function UILibrary._wrapMenu(menuData)
         if State.CurrentMenu == menuData then renderMenu(menuData) end
         return UILibrary._wrapMenu(sub)
     end
+    -- Export the raw data so we can attach custom fields (like PlayerObj)
+    api._menuData = menuData
+    
     function api:Clear()
         table.clear(menuData.Options)
         if State.CurrentMenu == menuData then renderMenu(menuData) end
