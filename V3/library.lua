@@ -414,7 +414,13 @@ syncUIToConfig = function()
                 if opt.Type == "multichoice" then opt.Index = val end
             end
             
-            -- 2. Visual Update
+            -- 2. Special Sync for Built-ins (State.Config mapping)
+            if opt.Name == "Auto Save" then opt.Value = State.Config.AutoSave
+            elseif opt.Name == "Use Banner" then opt.Value = State.Config.Banner.UseBanner
+            elseif opt.Name == "Disable Title" then opt.Value = State.Config.Banner.DisableTitle
+            end
+            
+            -- 3. Visual Update
             if opt.UI then
                 if opt.Type == "toggle" then
                     opt.UI.Checkbox.BackgroundColor3 = opt.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
