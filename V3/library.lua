@@ -202,7 +202,7 @@ local ScrollbarFrame = Instance.new("Frame")
 ScrollbarFrame.Name = "Scrollbar"
 ScrollbarFrame.Size = UDim2.new(0, 8, 1, -165)
 ScrollbarFrame.Position = UDim2.new(0, 2, 0, 135)
-ScrollbarFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ScrollbarFrame.BackgroundColor3 = Config.Theme.Accent
 ScrollbarFrame.BorderSizePixel = 0
 ScrollbarFrame.Parent = MainFrame
 
