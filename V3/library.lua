@@ -23,6 +23,7 @@ local Config = {
         Text = Color3.fromRGB(255, 255, 255),
         TextSelected = Color3.fromRGB(0, 0, 0),
         Accent = Color3.fromRGB(0, 245, 255),
+        Watermark = true,
     },
     Font = Enum.Font.SourceSansBold,
     TitleFont = Enum.Font.GothamBold,
@@ -39,6 +40,10 @@ local Config = {
         ["globe"] = "rbxassetid://101268280882288",
         ["players"] = "rbxassetid://94079975328593",
         ["shield"] = "rbxassetid://82452497198733",
+        ["code"] = "rbxassetid://139461564580672",
+        ["open-folder"] = "rbxassetid://128576782528567",
+        ["upload"] = "rbxassetid://113966760590535",
+        ["download"] = "rbxassetid://108861759506895",
     }
 }
 
@@ -178,7 +183,8 @@ State.Config = {
     Fly = { Master = false, Active = false, Speed = 100 },
     Sprint = { Master = false, Active = false, Speed = 50 },
     Protections = { AntiFling = false, AntiAFK = false },
-    Movement = { Noclip = false, InfiniteJump = false, NoCameraCollision = false }
+    Movement = { Noclip = false, InfiniteJump = false, NoCameraCollision = false },
+    Watermark = true
 }
 
 
@@ -409,6 +415,35 @@ NotifyLayout.Parent = NotifyContainer
 
 
 
+-- // WATERMARK UI // --
+local WatermarkFrame = Instance.new("Frame")
+WatermarkFrame.Name = "Watermark"
+WatermarkFrame.Size = UDim2.new(0, 200, 0, 30)
+WatermarkFrame.Position = UDim2.new(0.5, -100, 0, -10)
+WatermarkFrame.BackgroundColor3 = Config.Theme.Background
+WatermarkFrame.BackgroundTransparency = 0.2
+WatermarkFrame.BorderSizePixel = 0
+WatermarkFrame.Visible = State.Config.Watermark
+WatermarkFrame.Parent = ScreenGui
+
+local wmCorner = Instance.new("UICorner")
+wmCorner.CornerRadius = UDim.new(0, 6)
+wmCorner.Parent = WatermarkFrame
+
+local wmStroke = Instance.new("UIStroke")
+wmStroke.Color = Config.Theme.Accent
+wmStroke.Transparency = 0.5
+wmStroke.Parent = WatermarkFrame
+
+local WatermarkLabel = Instance.new("TextLabel")
+WatermarkLabel.Size = UDim2.new(1, 0, 1, 0)
+WatermarkLabel.BackgroundTransparency = 1
+WatermarkLabel.TextColor3 = Config.Theme.Text
+WatermarkLabel.TextSize = 14
+WatermarkLabel.Font = Enum.Font.GothamBold
+WatermarkLabel.Text = "FRACTURE | V3"
+WatermarkLabel.Parent = WatermarkFrame
+
 
 
 -- // INTERNAL FUNCTIONS // --
@@ -464,6 +499,7 @@ syncUIToConfig = function()
             elseif name == "Noclip" then opt.Value = sc.Movement.Noclip; changed = true
             elseif name == "Infinite Jump" then opt.Value = sc.Movement.InfiniteJump; changed = true
             elseif name == "No Camera Collision" then opt.Value = sc.Movement.NoCameraCollision; changed = true
+            elseif name == "Watermark" then opt.Value = sc.Watermark; changed = true
             end
             
             -- 3. Force Logic Refresh (Callbacks)
@@ -599,7 +635,7 @@ updateSelection = function()
             optData.UI.Arrow.TextColor3 = (isSelected and optData.Type ~= "label") and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
             
             if optData.UI.Icon then
-                optData.UI.Icon.ImageColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
+                optData.UI.Icon.ImageColor3 = isSelected and Config.Theme.Accent or Config.Theme.Selected
             end
             
             if optData.UI.Checkbox then
@@ -701,7 +737,7 @@ renderMenu = function(menu)
             iconImg.Position = UDim2.new(0, 7, 0.5, -10)
             iconImg.BackgroundTransparency = 1
             iconImg.Image = iconAsset
-            iconImg.ImageColor3 = Config.Theme.Accent
+            iconImg.ImageColor3 = Config.Theme.Selected
             iconImg.Parent = frame
         end
 
@@ -797,6 +833,11 @@ applyTheme = function(themeData)
     PulseLine.BackgroundColor3 = Config.Theme.PulseColor
     ScrollIndicator.BackgroundColor3 = Config.Theme.Accent
     StatsStroke.Color = Config.Theme.Accent
+    
+    -- Update Watermark UI
+    WatermarkFrame.BackgroundColor3 = Config.Theme.Background
+    wmStroke.Color = Config.Theme.Accent
+    WatermarkLabel.TextColor3 = Config.Theme.Text
     
     -- Refresh current menu UI
     if State.CurrentMenu then
@@ -1380,6 +1421,63 @@ function BuiltIn.Protections(lib)
             UILibrary:Notify("Protections", "Anti-Fling Disabled")
         end
     end)
+
+    ProtectionsMenu:AddToggle("Anti-Touch", "Immune to traps and kill-bricks", false, nil, function(v)
+        if v then
+            if _G.AntiTouch then _G.AntiTouch:Disconnect() end
+            _G.AntiTouch = RunService.Stepped:Connect(function()
+                if Player.Character then
+                    for _, part in ipairs(Player.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanTouch = false
+                        end
+                    end
+                end
+            end)
+            UILibrary:Notify("Protections", "Anti-Touch Enabled")
+        else
+            if _G.AntiTouch then _G.AntiTouch:Disconnect(); _G.AntiTouch = nil end
+            if Player.Character then
+                for _, part in ipairs(Player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanTouch = true
+                    end
+                end
+            end
+            UILibrary:Notify("Protections", "Anti-Touch Disabled")
+        end
+    end)
+
+    local BlockedRemotes = {"Log", "Error", "Report", "Analytics", "Cheat", "Detect", "Flag", "Ban", "Kick", "Anticheat", "Adonis", "Anti"}
+    ProtectionsMenu:AddToggle("Remote Protection", "Blocks AC and Analytics remotes", false, nil, function(v)
+        _G.AntiLog = v
+        if v then
+            -- Only hook once globally
+            if not _G.RemoteHooked then
+                _G.RemoteHooked = true
+                local mt = getrawmetatable(game)
+                local old = mt.__namecall
+                setreadonly(mt, false)
+                
+                mt.__namecall = newcclosure(function(self, ...)
+                    local method = getnamecallmethod()
+                    if _G.AntiLog and (method == "FireServer" or method == "InvokeServer") then
+                        local name = tostring(self)
+                        for _, word in ipairs(BlockedRemotes) do
+                            if name:lower():find(word:lower()) then
+                                return nil -- Block the call
+                            end
+                        end
+                    end
+                    return old(self, ...)
+                end)
+                setreadonly(mt, true)
+            end
+            UILibrary:Notify("Protections", "Suspicious Remotes are now being blocked")
+        else
+            UILibrary:Notify("Protections", "Suspicious Remotes are now going through")
+        end
+    end)
     
     ProtectionsMenu:AddToggle("Anti-AFK", "Prevents idle kick", false, nil, function(v)
         ps.AntiAFK = v
@@ -1404,9 +1502,9 @@ end
 
 function BuiltIn.Settings(lib)
     local Settings = lib:AddMenu("Settings", "Menu configuration", "gear", true)
-    local Developer = Settings:AddMenu("Developer", "Universal Developer tools", "globe")
-    local Theme = Settings:AddMenu("Theme", "Customize the menu theme", nil)
-    local ConfigSub = Settings:AddMenu("Config", "Save your settings", nil)
+    local Developer = Settings:AddMenu("Developer", "Universal Developer tools", "code")
+    local Theme = Settings:AddMenu("Theme", "Customize the menu theme", "globe")
+    local ConfigSub = Settings:AddMenu("Config", "Save your settings", "open-folder")
 
     -- Config Logic
     local SelectedConfigName = "default"
@@ -1470,7 +1568,7 @@ function BuiltIn.Settings(lib)
         State.SelectedConfig = sanitized ~= "" and sanitized or "default"
     end)
     
-    ConfigSub:AddButton("Save Config", "Save your settings to file", nil, function()
+    ConfigSub:AddButton("Save Config", "Save your settings to file", "upload", function()
         UILibrary.saveCurrentConfig(State.SelectedConfig)
     end)
 
@@ -1513,11 +1611,11 @@ function BuiltIn.Settings(lib)
             
             local cfgSub = ConfigSub:AddMenu(name, "Manage " .. name .. " configuration")
             
-            cfgSub:AddButton("Save", "Overwrite this file with current settings", nil, function()
+            cfgSub:AddButton("Save", "Overwrite this file with current settings", "upload", function()
                 UILibrary.saveCurrentConfig(name)
             end)
 
-            cfgSub:AddButton("Load", "Apply these settings now", nil, function()
+            cfgSub:AddButton("Load", "Apply these settings now", "download", function()
                 local data = http:JSONDecode(readfile(file))
                 if data and data.State then
                     -- Deep merge State.Config to preserve references
@@ -1653,6 +1751,11 @@ function BuiltIn.Settings(lib)
         l.GlobalShadows = not v
         settings().Rendering.QualityLevel = v and 1 or 10
         UILibrary:Notify("Settings", "FPS Boost " .. (v and "Enabled" or "Disabled"))
+    end)
+    
+    Settings:AddToggle("Watermark", "Show screen watermark", State.Config.Watermark, nil, function(v)
+        State.Config.Watermark = v
+        WatermarkFrame.Visible = v
     end)
     
     Settings:AddLabel("Other")
