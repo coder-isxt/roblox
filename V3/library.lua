@@ -418,13 +418,20 @@ NotifyLayout.Parent = NotifyContainer
 -- // WATERMARK UI // --
 local WatermarkFrame = Instance.new("Frame")
 WatermarkFrame.Name = "Watermark"
-WatermarkFrame.Size = UDim2.new(0, 200, 0, 30)
-WatermarkFrame.Position = UDim2.new(0.5, -100, 0, -10)
+WatermarkFrame.Size = UDim2.new(0, 0, 0, 30)
+WatermarkFrame.AutomaticSize = Enum.AutomaticSize.X
+WatermarkFrame.Position = UDim2.new(0.5, 0, 0, -10)
+WatermarkFrame.AnchorPoint = Vector2.new(0.5, 0)
 WatermarkFrame.BackgroundColor3 = Config.Theme.Background
 WatermarkFrame.BackgroundTransparency = 0.2
 WatermarkFrame.BorderSizePixel = 0
 WatermarkFrame.Visible = State.Config.Watermark
 WatermarkFrame.Parent = ScreenGui
+
+local wmPadding = Instance.new("UIPadding")
+wmPadding.PaddingLeft = UDim.new(0, 15)
+wmPadding.PaddingRight = UDim.new(0, 15)
+wmPadding.Parent = WatermarkFrame
 
 local wmCorner = Instance.new("UICorner")
 wmCorner.CornerRadius = UDim.new(0, 6)
@@ -436,13 +443,22 @@ wmStroke.Transparency = 0.5
 wmStroke.Parent = WatermarkFrame
 
 local WatermarkLabel = Instance.new("TextLabel")
-WatermarkLabel.Size = UDim2.new(1, 0, 1, 0)
+WatermarkLabel.Size = UDim2.new(0, 0, 1, 0)
+WatermarkLabel.AutomaticSize = Enum.AutomaticSize.X
 WatermarkLabel.BackgroundTransparency = 1
 WatermarkLabel.TextColor3 = Config.Theme.Text
 WatermarkLabel.TextSize = 14
 WatermarkLabel.Font = Enum.Font.GothamBold
-WatermarkLabel.Text = "FRACTURE | V3"
+WatermarkLabel.Text = ""
 WatermarkLabel.Parent = WatermarkFrame
+
+-- Update loop for time and user
+RunService.Heartbeat:Connect(function()
+    if WatermarkFrame.Visible then
+        local timeStr = os.date("%X")
+        WatermarkLabel.Text = string.format("%s | FRACTURE | @%s", timeStr, Player.Name)
+    end
+end)
 
 
 
