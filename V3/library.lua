@@ -30,6 +30,7 @@ local Config = {
     MenuWidth = 320,
     MaxItemsVisible = 12,
     CornerRadius = UDim.new(0, 8),
+    Side = 1, -- 1: Left, 2: Right
     Icons = {
         ["eye"] = "rbxassetid://86045912751052",
         ["house"] = "rbxassetid://82102353211434",
@@ -295,6 +296,17 @@ local function getCombinedOptions(menu)
     for _, v in ipairs(menu.Options) do table.insert(combined, v) end
     for _, v in ipairs(menu.SystemOptions) do table.insert(combined, v) end
     return combined
+end
+
+local function updateMenuPosition()
+    local targetPos = (Config.Side == 1) 
+        and UDim2.new(0, 50, 0, 50) 
+        -- Right side calculation: Screen - Width - Padding
+        or UDim2.new(1, -(Config.MenuWidth + 50), 0, 50)
+    
+    TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Position = targetPos
+    }):Play()
 end
 
 local function updateMainFrameSize()
@@ -664,6 +676,12 @@ function UILibrary:CreateWindow(title, subtitle)
     -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
     local Settings = self:AddMenu("Settings", "Menu configuration and exit", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal developer tools", "globe")
+    
+    Settings:AddSlider("Menu Side", "Dock menu to left (1) or right (2)", 1, 2, Config.Side, 1, "gear", function(v)
+        Config.Side = v
+        updateMenuPosition()
+    end)
+
     Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
         self:Unload()
     end)
@@ -677,6 +695,7 @@ function UILibrary:CreateWindow(title, subtitle)
     end)
     
     renderMenu(State.CurrentMenu)
+    updateMenuPosition()
     return self
 end
 
