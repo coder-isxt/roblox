@@ -1345,8 +1345,11 @@ function BuiltIn.Players(lib)
     local PlayersMenu = lib:AddMenu("Players", "Manage players in the server", "players", true)
     
     local function refreshPlayers()
-        for _, opt in ipairs(PlayersMenu._menuData.Options) do
-            if opt.PlayerObj then table.remove(PlayersMenu._menuData.Options, table.find(PlayersMenu._menuData.Options, opt)) end
+        local options = PlayersMenu._menuData.Options
+        for i = #options, 1, -1 do
+            if options[i].PlayerObj then
+                table.remove(options, i)
+            end
         end
         
         for _, p in ipairs(game.Players:GetPlayers()) do
