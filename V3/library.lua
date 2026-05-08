@@ -412,6 +412,15 @@ NotifyLayout.Parent = NotifyContainer
 
 
 -- // INTERNAL FUNCTIONS // --
+local function getCombinedOptions(menu)
+    local combined = {}
+    for _, opt in ipairs(menu.Options) do table.insert(combined, opt) end
+    if menu.SystemOptions then
+        for _, opt in ipairs(menu.SystemOptions) do table.insert(combined, opt) end
+    end
+    return combined
+end
+
 syncUIToConfig = function()
     -- Map menu states to config
     for _, menu in ipairs(State.AllMenus) do
@@ -486,17 +495,6 @@ syncUIToConfig = function()
     if State.CurrentMenu then renderMenu(State.CurrentMenu) end
 end
 
-local function getCombinedOptions(menu)
-    if not menu then return {} end
-    local combined = {}
-    for _, opt in ipairs(menu.Options or {}) do
-        table.insert(combined, opt)
-    end
-    for _, opt in ipairs(menu.SystemOptions or {}) do
-        table.insert(combined, opt)
-    end
-    return combined
-end
 
 local function updateMenuPosition()
     local targetPos = (Config.Side == 1) 
