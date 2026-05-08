@@ -81,6 +81,18 @@ local function serializeValue(val)
     return val
 end
 
+local function deepSerialize(tbl)
+    local new = {}
+    for k, v in pairs(tbl) do
+        if type(v) == "table" then
+            new[k] = deepSerialize(v)
+        else
+            new[k] = serializeValue(v)
+        end
+    end
+    return new
+end
+
 local function deserializeValue(val)
     if type(val) == "table" and val.Type then
         if val.Type == "Color3" then
@@ -418,6 +430,14 @@ syncUIToConfig = function()
             if opt.Name == "Auto Save" then opt.Value = State.Config.AutoSave
             elseif opt.Name == "Use Banner" then opt.Value = State.Config.Banner.UseBanner
             elseif opt.Name == "Disable Title" then opt.Value = State.Config.Banner.DisableTitle
+            elseif opt.Name == "Banner Scale" then
+                local scales = {"Crop", "Fit", "Stretch", "Tile"}
+                for i, s in ipairs(scales) do
+                    if s == State.Config.Banner.Scale then
+                        opt.Index = i
+                        break
+                    end
+                end
             end
             
             -- 3. Visual Update
@@ -1383,7 +1403,7 @@ function BuiltIn.Settings(lib)
             end
 
             local saveTable = {
-                State = State.Config,
+                State = deepSerialize(State.Config),
                 MenuSide = Config.Side,
                 MenuStates = menuStates
             }
@@ -1691,6 +1711,7 @@ function UILibrary:CreateWindow(title, subtitle)
                     end
                     
                     syncUIToConfig()
+                    task.wait(0.1) -- Final safety wait
                     updateBannerUI()
                     UILibrary:Notify("Fracture", "Auto-loaded config: " .. name)
                 end
