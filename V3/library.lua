@@ -407,12 +407,12 @@ local function handleMenuInput(name, state, input)
 end
 
 -- Bind menu controls
-ContextActionService:BindAction("GTAMenuControls", handleMenuInput, false, Enum.KeyCode.Insert, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Return, Enum.KeyCode.Backspace)
+ContextActionService:BindAction("fracturecontrols", handleMenuInput, false, Enum.KeyCode.Insert, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Return, Enum.KeyCode.Backspace)
 
 -- // PUBLIC API // --
 
 function UILibrary:Unload()
-    ContextActionService:UnbindAction("GTAMenuControls")
+    ContextActionService:UnbindAction("fracturecontrols")
     ScreenGui:Destroy()
 end
 
@@ -421,8 +421,17 @@ function UILibrary:CreateWindow(title, subtitle)
     
     -- Add Built-in Settings Menu
     local Settings = self:AddMenu("Settings", "Menu configuration and exit")
+    local Developer = self:AddMenu("Developer", "Universal developer tools")
     Settings:AddButton("Unload", "Completely remove the menu and clean up", function()
         self:Unload()
+    end)
+
+    Developer:AddButton("DarkDex", "Load darkdex explorer", function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
+    end)
+
+    Developer:AddButton("RemoteSpy", "Load remotespy to see remotes firing", function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
     end)
     
     renderMenu(State.CurrentMenu)
