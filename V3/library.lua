@@ -32,9 +32,18 @@ local Config = {
 -- // STATE // --
 local State = {
     Visible = false,
-    SelectedIndex = 1,
-    Options = {},
+    History = {},
+    CurrentMenu = nil,
 }
+
+local function createMenuData(title, subtitle)
+    return {
+        Title = title,
+        Subtitle = subtitle,
+        Options = {},
+        SelectedIndex = 1
+    }
+end
 
 -- // CREATE SCREEN GUI // --
 local ScreenGui = Instance.new("ScreenGui")
@@ -188,87 +197,114 @@ DescText.Parent = DescFrame
 -- // INTERNAL FUNCTIONS // --
 
 local function updateMainFrameSize()
-    local optionsHeight = #State.Options * 35
-    local totalHeight = 100 + 30 + optionsHeight + 35 + 45 -- Banner + SubHeader + Options + Footer + Desc
+    local optionsHeight = #State.CurrentMenu.Options * 35
+    local totalHeight = 100 + 30 + optionsHeight + 35 + 45
     MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, totalHeight)
     OptionsContainer.Size = UDim2.new(1, -15, 0, optionsHeight)
     Footer.Position = UDim2.new(0, 0, 0, 130 + optionsHeight)
     DescFrame.Position = UDim2.new(0, 0, 0, 130 + optionsHeight + 40)
     
     ScrollbarFrame.Size = UDim2.new(0, 8, 0, optionsHeight)
-    ScrollIndicator.Position = UDim2.new(0, 0, 0, (State.SelectedIndex - 1) * 35)
+    ScrollIndicator.Position = UDim2.new(0, 0, 0, (State.CurrentMenu.SelectedIndex - 1) * 35)
 end
 
 local function updateSelection()
-    for i, option in ipairs(State.Options) do
-        local isSelected = (i == State.SelectedIndex)
+    local menu = State.CurrentMenu
+    for i, optData in ipairs(menu.Options) do
+        local isSelected = (i == menu.SelectedIndex)
+        local frame = optData.UI.Frame
         
-        TweenService:Create(option.Frame, TweenInfo.new(0.1), {
+        TweenService:Create(frame, TweenInfo.new(0.1), {
             BackgroundColor3 = isSelected and Config.Theme.Selected or Color3.fromRGB(0,0,0),
             BackgroundTransparency = isSelected and 0 or 1
         }):Play()
 
-        option.Label.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
-        option.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
-        option.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
+        optData.UI.Label.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
+        optData.UI.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
+        optData.UI.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
         
         if isSelected then
-            DescText.Text = option.Description or ""
+            DescText.Text = optData.Description or ""
         end
     end
 
-    ItemCount.Text = State.SelectedIndex .. " / " .. #State.Options
+    ItemCount.Text = menu.SelectedIndex .. " / " .. #menu.Options
     updateMainFrameSize()
 end
 
-local function createOption(name, type, desc)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 35)
-    frame.BackgroundTransparency = 1
-    frame.BorderSizePixel = 0
-    frame.Parent = OptionsContainer
+local function renderMenu(menu)
+    -- Clear current UI
+    for _, child in ipairs(OptionsContainer:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.6, 0, 1, 0)
-    label.Position = UDim2.new(0, 10, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.TextColor3 = Config.Theme.Text
-    label.TextSize = Config.TextSize
-    label.Font = Config.Font
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = frame
+    -- Rebuild UI from data
+    for i, optData in ipairs(menu.Options) do
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, 0, 0, 35)
+        frame.BackgroundTransparency = 1
+        frame.BorderSizePixel = 0
+        frame.Parent = OptionsContainer
 
-    local arrow = Instance.new("TextLabel")
-    arrow.Size = UDim2.new(0, 20, 1, 0)
-    arrow.Position = UDim2.new(1, -25, 0, 0)
-    arrow.BackgroundTransparency = 1
-    arrow.Text = ">"
-    arrow.TextColor3 = Color3.fromRGB(150, 150, 150)
-    arrow.TextSize = 14
-    arrow.Font = Enum.Font.SourceSansBold
-    arrow.TextXAlignment = Enum.TextXAlignment.Right
-    arrow.Parent = frame
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.6, 0, 1, 0)
+        label.Position = UDim2.new(0, 10, 0, 0)
+        label.BackgroundTransparency = 1
+        label.Text = optData.Name
+        label.TextColor3 = Config.Theme.Text
+        label.TextSize = Config.TextSize
+        label.Font = Config.Font
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
 
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0.35, 0, 1, 0)
-    valueLabel.Position = UDim2.new(0.6, -30, 0, 0)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = ""
-    valueLabel.TextColor3 = Config.Theme.Text
-    valueLabel.TextSize = Config.TextSize
-    valueLabel.Font = Config.Font
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.Parent = frame
-    
-    return {
-        Frame = frame,
-        Label = label,
-        Arrow = arrow,
-        ValueLabel = valueLabel,
-        Type = type,
-        Description = desc or "No description provided."
-    }
+        local arrow = Instance.new("TextLabel")
+        arrow.Size = UDim2.new(0, 20, 1, 0)
+        arrow.Position = UDim2.new(1, -25, 0, 0)
+        arrow.BackgroundTransparency = 1
+        arrow.Text = optData.Type == "menu" and ">" or ""
+        arrow.TextColor3 = Color3.fromRGB(150, 150, 150)
+        arrow.TextSize = 14
+        arrow.Font = Enum.Font.SourceSansBold
+        arrow.TextXAlignment = Enum.TextXAlignment.Right
+        arrow.Parent = frame
+
+        local valueLabel = Instance.new("TextLabel")
+        valueLabel.Size = UDim2.new(0.35, 0, 1, 0)
+        valueLabel.Position = UDim2.new(0.6, -30, 0, 0)
+        valueLabel.BackgroundTransparency = 1
+        valueLabel.Text = optData.ValueText or ""
+        valueLabel.TextColor3 = Config.Theme.Text
+        valueLabel.TextSize = Config.TextSize
+        valueLabel.Font = Config.Font
+        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+        valueLabel.Parent = frame
+
+        optData.UI = {
+            Frame = frame,
+            Label = label,
+            Arrow = arrow,
+            ValueLabel = valueLabel
+        }
+    end
+
+    BannerTitle.Text = menu.Title:upper()
+    SubTitle.Text = menu.Subtitle
+    updateSelection()
+end
+
+local function openMenu(menu)
+    if State.CurrentMenu then
+        table.insert(State.History, State.CurrentMenu)
+    end
+    State.CurrentMenu = menu
+    renderMenu(menu)
+end
+
+local function goBack()
+    if #State.History > 0 then
+        State.CurrentMenu = table.remove(State.History)
+        renderMenu(State.CurrentMenu)
+    end
 end
 
 -- // INPUT HANDLING WITH CONTEXT ACTION SERVICE // --
@@ -293,25 +329,33 @@ local function handleMenuInput(name, state, input)
     
     if not State.Visible then return Enum.ContextActionResult.Pass end
     
-    -- Consume navigation keys when menu is visible
+    local menu = State.CurrentMenu
+    if not menu then return Enum.ContextActionResult.Pass end
+
     if input.KeyCode == Enum.KeyCode.Up then
-        State.SelectedIndex = State.SelectedIndex - 1
-        if State.SelectedIndex < 1 then State.SelectedIndex = #State.Options end
+        menu.SelectedIndex = menu.SelectedIndex - 1
+        if menu.SelectedIndex < 1 then menu.SelectedIndex = #menu.Options end
         updateSelection()
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Down then
-        State.SelectedIndex = State.SelectedIndex + 1
-        if State.SelectedIndex > #State.Options then State.SelectedIndex = 1 end
+        menu.SelectedIndex = menu.SelectedIndex + 1
+        if menu.SelectedIndex > #menu.Options then menu.SelectedIndex = 1 end
         updateSelection()
         return Enum.ContextActionResult.Sink
+    elseif input.KeyCode == Enum.KeyCode.Backspace then
+        goBack()
+        return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Return then
-        local opt = State.Options[State.SelectedIndex]
+        local opt = menu.Options[menu.SelectedIndex]
         if opt.Type == "button" then
             opt.Callback()
         elseif opt.Type == "toggle" then
             opt.Value = not opt.Value
-            opt.ValueLabel.Text = opt.Value and "[ON]" or "[OFF]"
+            opt.ValueText = opt.Value and "[ON]" or "[OFF]"
+            opt.UI.ValueLabel.Text = opt.ValueText
             opt.Callback(opt.Value)
+        elseif opt.Type == "menu" then
+            openMenu(opt.SubMenu)
         end
         return Enum.ContextActionResult.Sink
     end
@@ -320,30 +364,92 @@ local function handleMenuInput(name, state, input)
 end
 
 -- Bind menu controls
-ContextActionService:BindAction("GTAMenuControls", handleMenuInput, false, Enum.KeyCode.Insert, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Return)
+ContextActionService:BindAction("GTAMenuControls", handleMenuInput, false, Enum.KeyCode.Insert, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Return, Enum.KeyCode.Backspace)
 
 -- // PUBLIC API // --
 
 function UILibrary:CreateWindow(title, subtitle)
-    BannerTitle.Text = title:upper()
-    SubTitle.Text = subtitle:upper()
+    State.CurrentMenu = createMenuData(title, subtitle)
+    renderMenu(State.CurrentMenu)
     return self
 end
 
 function UILibrary:AddButton(name, desc, callback)
-    local opt = createOption(name, "button", desc)
-    opt.Callback = callback
-    table.insert(State.Options, opt)
-    updateSelection()
+    table.insert(State.CurrentMenu.Options, {
+        Name = name,
+        Description = desc,
+        Type = "button",
+        Callback = callback
+    })
+    renderMenu(State.CurrentMenu)
 end
 
 function UILibrary:AddToggle(name, desc, default, callback)
-    local opt = createOption(name, "toggle", desc)
-    opt.Value = default or false
-    opt.Callback = callback
-    opt.ValueLabel.Text = opt.Value and "[ON]" or "[OFF]"
-    table.insert(State.Options, opt)
-    updateSelection()
+    table.insert(State.CurrentMenu.Options, {
+        Name = name,
+        Description = desc,
+        Type = "toggle",
+        Value = default or false,
+        ValueText = (default or false) and "[ON]" or "[OFF]",
+        Callback = callback
+    })
+    renderMenu(State.CurrentMenu)
+end
+
+function UILibrary:AddMenu(name, desc)
+    local subMenu = createMenuData(State.CurrentMenu.Title, name)
+    
+    table.insert(State.CurrentMenu.Options, {
+        Name = name,
+        Description = desc,
+        Type = "menu",
+        SubMenu = subMenu
+    })
+    
+    renderMenu(State.CurrentMenu)
+    
+    -- Return a proxy object that allows adding to the subMenu
+    local proxy = {}
+    function proxy:AddButton(n, d, c)
+        table.insert(subMenu.Options, {Name = n, Description = d, Type = "button", Callback = c})
+    end
+    function proxy:AddToggle(n, d, def, c)
+        table.insert(subMenu.Options, {Name = n, Description = d, Type = "toggle", Value = def, ValueText = def and "[ON]" or "[OFF]", Callback = c})
+    end
+    function proxy:AddMenu(n, d)
+        -- Support recursive submenus
+        local deepMenu = createMenuData(subMenu.Title, n)
+        table.insert(subMenu.Options, {Name = n, Description = d, Type = "menu", SubMenu = deepMenu})
+        
+        local deepProxy = {}
+        deepProxy.AddButton = proxy.AddButton
+        deepProxy.AddToggle = proxy.AddToggle
+        deepProxy.AddMenu = proxy.AddMenu -- This needs to be correctly scoped, but this is a simple way
+        -- For a truly recursive API, we can define a common "Menu" class
+        return UILibrary._wrapMenu(deepMenu)
+    end
+    
+    return UILibrary._wrapMenu(subMenu)
+end
+
+-- Helper to wrap menu data into an API object
+function UILibrary._wrapMenu(menuData)
+    local api = {}
+    function api:AddButton(name, desc, callback)
+        table.insert(menuData.Options, {Name = name, Description = desc, Type = "button", Callback = callback})
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+    function api:AddToggle(name, desc, default, callback)
+        table.insert(menuData.Options, {Name = name, Description = desc, Type = "toggle", Value = default, ValueText = default and "[ON]" or "[OFF]", Callback = callback})
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+    function api:AddMenu(name, desc)
+        local sub = createMenuData(menuData.Title, name)
+        table.insert(menuData.Options, {Name = name, Description = desc, Type = "menu", SubMenu = sub})
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+        return UILibrary._wrapMenu(sub)
+    end
+    return api
 end
 
 return UILibrary
