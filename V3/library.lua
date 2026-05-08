@@ -399,6 +399,7 @@ local function updateBannerUI()
     if b.UseBanner and b.CurrentID ~= "" and b.CurrentID ~= "0" then
         BannerTexture.Image = "rbxassetid://" .. b.CurrentID
         BannerTexture.Visible = true
+        BannerTexture.ScaleType = Enum.ScaleType[b.Scale or "Crop"]
         PulseLine.Visible = false
     else
         BannerTexture.Visible = false
@@ -427,6 +428,38 @@ local function applyTheme(themeData)
 end
 
 -- // INTERNAL FUNCTIONS // --
+local function syncUIToConfig()
+    -- Map menu states to config
+    for _, menu in ipairs(State.AllMenus) do
+        local menuKey = menu.Subtitle or menu.Title
+        local savedMenu = State.LoadedMenuStates and State.LoadedMenuStates[menuKey]
+        
+        for _, opt in ipairs(menu.Options) do
+            -- 1. Try to sync from MenuStates first (for specific menu values)
+            if savedMenu and savedMenu[opt.Name] ~= nil then
+                local val = deserializeValue(savedMenu[opt.Name])
+                opt.Value = val
+                if opt.Type == "multichoice" then opt.Index = val end
+            end
+            
+            -- 2. Visual Update
+            if opt.UI then
+                if opt.Type == "toggle" then
+                    opt.UI.Checkbox.BackgroundColor3 = opt.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
+                elseif opt.Type == "slider" then
+                    opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
+                elseif opt.Type == "keybind" then
+                    opt.UI.ValueLabel.Text = "[" .. (opt.Value and opt.Value.Name or "None") .. "]"
+                elseif opt.Type == "multichoice" then
+                    opt.UI.ValueLabel.Text = "< " .. tostring(opt.Options[opt.Index]) .. " >"
+                end
+            end
+        end
+    end
+    
+    if State.CurrentMenu then renderMenu(State.CurrentMenu) end
+end
+
 local function getCombinedOptions(menu)
     if not menu then return {} end
     local combined = {}
@@ -1422,7 +1455,10 @@ function BuiltIn.Settings(lib)
                         end
                     end
                     
-                    -- Apply Theme Preset
+                    -- Store MenuStates for syncing
+                    State.LoadedMenuStates = data.MenuStates
+                    
+                    -- Apply Theme Preset (Must happen before sync to get correct colors)
                     if State.Config.SelectedPreset then
                         for _, opt in ipairs(Theme._menuData.Options) do
                             if opt.Name == "Presets" then
@@ -1435,6 +1471,7 @@ function BuiltIn.Settings(lib)
                         end
                     end
                     
+                    syncUIToConfig()
                     updateBannerUI()
                     UILibrary:Notify("Config", "Loaded: " .. name)
                 end
@@ -1601,8 +1638,42 @@ function UILibrary:CreateWindow(title, subtitle)
                             State.Config[k] = v
                         end
                     end
-                    -- Wait for UI to be ready then apply theme
-                    task.wait(0.1)
+                    
+                    State.LoadedMenuStates = data.MenuStates
+                    
+                    -- Wait for UI to be ready then apply theme and sync
+                    task.wait(0.2)
+                    
+                    -- Apply Theme Preset
+                    if State.Config.SelectedPreset then
+                        -- We need to find the Theme menu again in the built UI
+                        -- (Easier to just call applyTheme directly if we know the presets)
+                        if State.Config.SelectedPreset == "Default" then
+                            applyTheme({
+                                Banner = Color3.fromRGB(8, 8, 12),
+                                PulseColor = Color3.fromRGB(166, 77, 255),
+                                SubHeader = Color3.fromRGB(18, 18, 26),
+                                Background = Color3.fromRGB(12, 12, 18),
+                                Selected = Color3.fromRGB(190, 120, 255),
+                                Text = Color3.fromRGB(245, 245, 255),
+                                TextSelected = Color3.fromRGB(10, 10, 10),
+                                Accent = Color3.fromRGB(140, 60, 255),
+                            })
+                        elseif State.Config.SelectedPreset == "Impulse" then
+                            applyTheme({
+                                Banner = Color3.fromRGB(10, 10, 10),
+                                PulseColor = Color3.fromRGB(0, 245, 255),
+                                SubHeader = Color3.fromRGB(20, 20, 20),
+                                Background = Color3.fromRGB(15, 15, 15),
+                                Selected = Color3.fromRGB(0, 245, 255),
+                                Text = Color3.fromRGB(255, 255, 255),
+                                TextSelected = Color3.fromRGB(0, 0, 0),
+                                Accent = Color3.fromRGB(0, 245, 255),
+                            })
+                        end
+                    end
+                    
+                    syncUIToConfig()
                     updateBannerUI()
                     UILibrary:Notify("Fracture", "Auto-loaded config: " .. name)
                 end
