@@ -51,6 +51,7 @@ local State = {
     WatchingPlayer = nil,
     Binding = nil,
     Keybinds = {},
+    SelectedConfig = "default", -- Track globally for auto-save
     AllMenus = {} -- Track all menus for config saving
 }
 
@@ -148,6 +149,7 @@ BannerTexture.Parent = Banner
 -- Track state for banner logic
 State.Config = {
     SelectedPreset = "Default",
+    AutoSave = false,
     Banner = {
         UseBanner = true,
         CurrentID = "81459253942868",
@@ -416,6 +418,7 @@ local function applyTheme(themeData)
     MainStroke.Color = Config.Theme.Accent
     Banner.BackgroundColor3 = Config.Theme.Banner
     PulseLine.BackgroundColor3 = Config.Theme.PulseColor
+    ScrollIndicator.BackgroundColor3 = Config.Theme.Accent
     
     -- Refresh current menu UI
     if State.CurrentMenu then
@@ -738,8 +741,15 @@ local function handleMenuInput(name, state, input)
         MainFrame.Visible = State.Visible
         
         -- If closing, trigger cleanup for the current menu
-        if not State.Visible and State.CurrentMenu and State.CurrentMenu.OnClose then
-            State.CurrentMenu.OnClose()
+        if not State.Visible then
+            if State.CurrentMenu and State.CurrentMenu.OnClose then
+                State.CurrentMenu.OnClose()
+            end
+            
+            -- AUTO SAVE LOGIC
+            if State.Config.AutoSave then
+                UILibrary.saveCurrentConfig(State.SelectedConfig or "default", true)
+            end
         end
         
         local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
@@ -1299,15 +1309,7 @@ function BuiltIn.Settings(lib)
 
     -- Config Logic
     local SelectedConfigName = "default"
-    ConfigSub:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
-        -- Sanitize filename: remove common illegal characters
-        local sanitized = v:gsub('[\\/:*?"<>|]', "")
-        sanitized = sanitized:gsub("%s+", "_") -- Replace spaces with underscores
-        
-        SelectedConfigName = sanitized ~= "" and sanitized or "default"
-    end)
-    
-    ConfigSub:AddButton("Save Config", "Save your settings to file", nil, function()
+    function UILibrary.saveCurrentConfig(name, silent)
         local http = game:GetService("HttpService")
         local success, err = pcall(function()
             if not isfolder("Fracture") then makefolder("Fracture") end
@@ -1342,14 +1344,33 @@ function BuiltIn.Settings(lib)
                 MenuStates = menuStates
             }
             
-            writefile("Fracture/Configs/" .. SelectedConfigName .. ".json", http:JSONEncode(saveTable))
+            writefile("Fracture/Configs/" .. name .. ".json", http:JSONEncode(saveTable))
         end)
         
-        if success then
-            UILibrary:Notify("Config", "Saved config: " .. SelectedConfigName)
-        else
-            UILibrary:Notify("Config", "Failed to save: " .. tostring(err))
+        if not silent then
+            if success then
+                UILibrary:Notify("Config", "Saved config: " .. name)
+            else
+                UILibrary:Notify("Config", "Failed to save: " .. tostring(err))
+            end
         end
+        return success
+    end
+
+    ConfigSub:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
+        -- Sanitize filename: remove common illegal characters
+        local sanitized = v:gsub('[\\/:*?"<>|]', "")
+        sanitized = sanitized:gsub("%s+", "_") -- Replace spaces with underscores
+        
+        State.SelectedConfig = sanitized ~= "" and sanitized or "default"
+    end)
+    
+    ConfigSub:AddButton("Save Config", "Save your settings to file", nil, function()
+        UILibrary.saveCurrentConfig(State.SelectedConfig)
+    end)
+
+    ConfigSub:AddToggle("Auto Save", "Save automatically on menu close", State.Config.AutoSave, nil, function(v)
+        State.Config.AutoSave = v
     end)
 
     ConfigSub:AddLabel("Configs")
