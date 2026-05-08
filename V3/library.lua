@@ -682,6 +682,7 @@ function UILibrary:CreateWindow(title, subtitle)
 end
 
 function UILibrary:AddButton(name, desc, icon, callback)
+    if type(icon) == "function" then callback = icon; icon = nil end
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
@@ -693,6 +694,7 @@ function UILibrary:AddButton(name, desc, icon, callback)
 end
 
 function UILibrary:AddToggle(name, desc, default, icon, callback)
+    if type(icon) == "function" then callback = icon; icon = nil end
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
@@ -722,6 +724,7 @@ function UILibrary:AddMenu(name, desc, icon, isSystem)
 end
 
 function UILibrary:AddSlider(name, desc, min, max, default, increment, icon, callback)
+    if type(icon) == "function" then callback = icon; icon = nil end
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
@@ -737,6 +740,7 @@ function UILibrary:AddSlider(name, desc, min, max, default, increment, icon, cal
 end
 
 function UILibrary:AddInput(name, desc, placeholder, icon, callback)
+    if type(icon) == "function" then callback = icon; icon = nil end
     table.insert(State.CurrentMenu.Options, {
         Name = name,
         Description = desc,
@@ -753,14 +757,17 @@ end
 function UILibrary._wrapMenu(menuData)
     local api = {}
     function api:AddButton(name, desc, icon, callback)
+        if type(icon) == "function" then callback = icon; icon = nil end
         table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "button", Callback = callback})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddToggle(name, desc, default, icon, callback)
+        if type(icon) == "function" then callback = icon; icon = nil end
         table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "toggle", Value = default, ValueText = default and "[ON]" or "[OFF]", Callback = callback})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddSlider(name, desc, min, max, default, increment, icon, callback)
+        if type(icon) == "function" then callback = icon; icon = nil end
         table.insert(menuData.Options, {
             Name = name,
             Description = desc,
@@ -775,6 +782,7 @@ function UILibrary._wrapMenu(menuData)
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddInput(name, desc, placeholder, icon, callback)
+        if type(icon) == "function" then callback = icon; icon = nil end
         table.insert(menuData.Options, {
             Name = name,
             Description = desc,
