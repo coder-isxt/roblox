@@ -5443,26 +5443,10 @@ function Section:CreateButton(a, b)
         Scale = 1
     })
 
+    local textOffset = 0
     local iconImage = nil
-    local iconSize = 16
+    local iconSize = 18
     
-    if icon then
-        local iconAssetId = icon
-        if type(icon) == "string" and not icon:match("^rbxasset://") and not icon:match("^http") then
-            iconAssetId = ICON_REGISTRY[icon] or icon
-        end
-        iconImage = mk("ImageLabel", {
-            Parent = shell,
-            BackgroundTransparency = 1,
-            Size = UDim2.fromOffset(iconSize, iconSize),
-            Position = UDim2.new(0, 12, 0.5, -iconSize/2),
-            Image = iconAssetId,
-            ImageColor3 = col.Text,
-            ZIndex = 2,
-        })
-    end
-
-    local textOffset = icon and (iconSize + 8) or 0
     local btn = mk("TextButton", {
         Parent = shell,
         BackgroundColor3 = buttonBaseColor,
@@ -5474,7 +5458,28 @@ function Section:CreateButton(a, b)
         TextColor3 = col.Text,
         TextXAlignment = textAlign or Enum.TextXAlignment.Center,
         Text = renderButtonText(text),
+        ZIndex = 1,
     })
+    
+    if icon then
+        local iconAssetId = icon
+        if type(icon) == "string" and not icon:match("^rbxasset://") and not icon:match("^http") then
+            iconAssetId = ICON_REGISTRY[icon] or icon
+        end
+        iconImage = mk("ImageLabel", {
+            Parent = btn,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            Position = UDim2.new(0, 10, 0.5, 0),
+            Image = iconAssetId,
+            ZIndex = 10,
+            Visible = true,
+            AnchorPoint = Vector2.new(0, 0.5),
+            ScaleType = Enum.ScaleType.Fit,
+        })
+        textOffset = iconSize + 12
+    end
+    
     mk("UIPadding", {
         Parent = btn,
         PaddingLeft = UDim.new(0, textOffset),
@@ -5536,7 +5541,7 @@ function Section:CreateToggle(a, b, c)
     local back = controlBack(shell, 38, col)
 
     local iconImage = nil
-    local iconSize = 16
+    local iconSize = 18
     
     if icon then
         local iconAssetId = icon
@@ -5549,8 +5554,8 @@ function Section:CreateToggle(a, b, c)
             Size = UDim2.fromOffset(iconSize, iconSize),
             Position = UDim2.new(0, 12, 0.5, -iconSize/2),
             Image = iconAssetId,
-            ImageColor3 = col.Text,
-            ZIndex = 2,
+            ZIndex = 10,
+            Visible = true,
         })
     end
 
@@ -6272,7 +6277,7 @@ function Section:CreateLabel(text)
     local shell = controlShell(self, 24)
 
     local iconImage = nil
-    local iconSize = 16
+    local iconSize = 18
     
     if icon then
         local iconAssetId = icon
@@ -6285,8 +6290,8 @@ function Section:CreateLabel(text)
             Size = UDim2.fromOffset(iconSize, iconSize),
             Position = UDim2.new(0, 12, 0, 4),
             Image = iconAssetId,
-            ImageColor3 = col.SubText,
-            ZIndex = 2,
+            ZIndex = 10,
+            Visible = true,
         })
     end
 
