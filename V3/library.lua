@@ -1062,10 +1062,28 @@ end)
 -- // PUBLIC API // --
 
 function UILibrary:Unload()
-    local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
-    if hum then hum.WalkSpeed = oldws or 16 end
-    ContextActionService:UnbindAction("fracturecontrols")
+    -- 1. Shutdown Auto-Save
     triggerAutoSave()
+    
+    -- 2. Force Disable Movement Mods
+    if State.Config.Fly then State.Config.Fly.Active = false end
+    if State.Config.Sprint then State.Config.Sprint.Active = false end
+    
+    -- 3. Restore Character Physics
+    local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+    if hum then
+        hum.WalkSpeed = 16
+        hum.PlatformStand = false
+    end
+    
+    -- 4. Clean up Global Protections
+    if _G.AntiFling then _G.AntiFling:Disconnect(); _G.AntiFling = nil end
+    if _G.AntiAFK then _G.AntiAFK:Disconnect(); _G.AntiAFK = nil end
+    
+    -- 5. Unbind Inputs & Destroy
+    local CAS = game:GetService("ContextActionService")
+    CAS:UnbindAction("fracturecontrols")
+    
     ScreenGui:Destroy()
 end
 
@@ -1344,22 +1362,23 @@ function BuiltIn.Protections(lib)
     local ProtectionsMenu = lib:AddMenu("Protections", "Security and anti-exploit", "shield", true)
     local ps = State.Config.Protections
 
-    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents flinging", false, nil, function(v)
+    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents being flung", false, nil, function(v)
         ps.AntiFling = v
         if v then
+            if _G.AntiFling then _G.AntiFling:Disconnect() end
             _G.AntiFling = RunService.Stepped:Connect(function()
-                if Player.Character then
-                    for _, p in ipairs(Player.Character:GetDescendants()) do
-                        if p:IsA("BasePart") then
-                            p.CanTouch = false
-                            if p.Velocity.Magnitude > 50 then p.Velocity = Vector3.new(0,0,0) end
+                local char = Player.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanTouch = false
                         end
                     end
                 end
             end)
             UILibrary:Notify("Protections", "Anti-Fling Enabled")
         else
-            if _G.AntiFling then _G.AntiFling:Disconnect() end
+            if _G.AntiFling then _G.AntiFling:Disconnect(); _G.AntiFling = nil end
             UILibrary:Notify("Protections", "Anti-Fling Disabled")
         end
     end)
@@ -1367,13 +1386,14 @@ function BuiltIn.Protections(lib)
     ProtectionsMenu:AddToggle("Anti-AFK", "Prevents idle kick", false, nil, function(v)
         ps.AntiAFK = v
         if v then
+            if _G.AntiAFK then _G.AntiAFK:Disconnect() end
             _G.AntiAFK = Player.Idled:Connect(function()
                 game:GetService("VirtualUser"):CaptureController()
                 game:GetService("VirtualUser"):ClickButton2(Vector2.new())
             end)
             UILibrary:Notify("Protections", "Anti-AFK Enabled")
         else
-            if _G.AntiAFK then _G.AntiAFK:Disconnect() end
+            if _G.AntiAFK then _G.AntiAFK:Disconnect(); _G.AntiAFK = nil end
             UILibrary:Notify("Protections", "Anti-AFK Disabled")
         end
     end)
