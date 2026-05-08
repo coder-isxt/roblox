@@ -426,14 +426,21 @@ local function updateSelection()
         frame.Visible = isVisible
         
         if isVisible then
-            TweenService:Create(frame, TweenInfo.new(0.1), {
-                BackgroundColor3 = isSelected and Config.Theme.Selected or Color3.fromRGB(0,0,0),
-                BackgroundTransparency = isSelected and 0 or 1
-            }):Play()
+            if optData.Type == "label" then
+                -- Labels don't get selection highlights
+                frame.BackgroundTransparency = 1
+            else
+                TweenService:Create(frame, TweenInfo.new(0.1), {
+                    BackgroundColor3 = isSelected and Config.Theme.Selected or Color3.fromRGB(0,0,0),
+                    BackgroundTransparency = isSelected and 0 or 1
+                }):Play()
+            end
 
-            optData.UI.Label.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
-            optData.UI.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
-            optData.UI.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
+            local textColor = (isSelected and optData.Type ~= "label") and Config.Theme.TextSelected or (optData.Type == "label" and Config.Theme.Accent or Config.Theme.Text)
+            
+            optData.UI.Label.TextColor3 = textColor
+            optData.UI.ValueLabel.TextColor3 = textColor
+            optData.UI.Arrow.TextColor3 = (isSelected and optData.Type ~= "label") and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
             
             if optData.UI.Icon then
                 optData.UI.Icon.ImageColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
@@ -506,14 +513,14 @@ local function renderMenu(menu)
         frameCorner.Parent = frame
 
         local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(0.6, 0, 1, 0)
-        label.Position = UDim2.new(0, optData.Icon and 35 or 10, 0, 0)
+        label.Size = UDim2.new(1, -20, 1, 0)
+        label.Position = UDim2.new(0, (optData.Type == "label" and 10 or (optData.Icon and 35 or 10)), 0, 0)
         label.BackgroundTransparency = 1
-        label.Text = optData.Name
-        label.TextColor3 = Config.Theme.Text
-        label.TextSize = Config.TextSize
+        label.Text = optData.Type == "label" and ("--- " .. optData.Name:upper() .. " ---") or optData.Name
+        label.TextColor3 = (optData.Type == "label" and Config.Theme.Accent or Config.Theme.Text)
+        label.TextSize = (optData.Type == "label" and 14 or Config.TextSize)
         label.Font = Config.Font
-        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextXAlignment = (optData.Type == "label" and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left)
         label.Parent = frame
 
         local iconImg = nil
@@ -648,13 +655,19 @@ local function handleMenuInput(name, state, input)
     local combined = getCombinedOptions(menu)
 
     if input.KeyCode == Enum.KeyCode.Up then
-        menu.SelectedIndex = menu.SelectedIndex - 1
-        if menu.SelectedIndex < 1 then menu.SelectedIndex = #combined end
+        repeat
+            menu.SelectedIndex = menu.SelectedIndex - 1
+            if menu.SelectedIndex < 1 then menu.SelectedIndex = #combined end
+        until combined[menu.SelectedIndex].Type ~= "label"
+        
         updateSelection()
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Down then
-        menu.SelectedIndex = menu.SelectedIndex + 1
-        if menu.SelectedIndex > #combined then menu.SelectedIndex = 1 end
+        repeat
+            menu.SelectedIndex = menu.SelectedIndex + 1
+            if menu.SelectedIndex > #combined then menu.SelectedIndex = 1 end
+        until combined[menu.SelectedIndex].Type ~= "label"
+        
         updateSelection()
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Backspace then
@@ -931,6 +944,7 @@ function UILibrary:CreateWindow(title, subtitle)
     -- // LOCAL MENU // --
     local LocalMenu = self:AddMenu("Local", "Manage local player options", "player", true)
     
+    LocalMenu:AddLabel("Flight")
     local FlyState = {
         Master = false,
         Active = false,
@@ -988,7 +1002,7 @@ function UILibrary:CreateWindow(title, subtitle)
         FlyState.Speed = v
     end)
     
-    LocalMenu:AddKeybind("Fly Keybind", "Toggle flight on/off", Enum.KeyCode.F, nil, function()
+    LocalMenu:AddKeybind("Fly Keybind", "Toggle flight on/off", Enum.KeyCode.Z, nil, function()
         if not FlyState.Master then 
             Lib:Notify("Flight", "Turn on Flight Master first!")
             return 
@@ -1000,6 +1014,103 @@ function UILibrary:CreateWindow(title, subtitle)
         else
             startFlight()
             Lib:Notify("Flight", "Flight Enabled")
+        end
+    end)
+    
+    LocalMenu:AddLabel("Movement")
+    -- // SPRINT SYSTEM // --
+    local SprintState = {
+        Master = false,
+        Active = false,
+        Speed = 50
+    }
+    
+    local function updateSprint()
+        local char = Player.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if not hum then return end
+        
+        if SprintState.Master and SprintState.Active then
+            hum.WalkSpeed = SprintState.Speed
+        else
+            hum.WalkSpeed = oldws or 16
+        end
+    end
+    
+    LocalMenu:AddToggle("Sprint", "Master switch for sprinting", false, nil, function(v)
+        SprintState.Master = v
+        updateSprint()
+    end)
+    
+    LocalMenu:AddSlider("Sprint Speed", "Adjust running velocity", 16, 200, 50, 2, nil, function(v)
+        SprintState.Speed = v
+        updateSprint()
+    end)
+    
+    local SprintKeybind = LocalMenu:AddKeybind("Sprint Keybind", "Hold to sprint", Enum.KeyCode.C, nil, function()
+        -- Callback not needed for hold logic, but system requires one
+    end)
+    
+    RunService.Heartbeat:Connect(function()
+        if not SprintState.Master then return end
+        
+        local isPressed = UserInputService:IsKeyDown(SprintKeybind.Value or Enum.KeyCode.None)
+        if isPressed ~= SprintState.Active then
+            SprintState.Active = isPressed
+            updateSprint()
+        end
+    end)
+    
+    Player.CharacterAdded:Connect(function()
+        task.wait(1) -- Wait for humanoid
+        updateSprint()
+    end)
+    
+    -- // NOCLIP & INF JUMP // --
+    local NoclipConnection
+    LocalMenu:AddToggle("Noclip", "Walk through walls and objects", false, nil, function(v)
+        if v then
+            NoclipConnection = RunService.Stepped:Connect(function()
+                local char = Player.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+            Lib:Notify("Movement", "Noclip Enabled")
+        else
+            if NoclipConnection then NoclipConnection:Disconnect() end
+            Lib:Notify("Movement", "Noclip Disabled")
+        end
+    end)
+    
+    local InfJumpConnection
+    LocalMenu:AddToggle("Infinite Jump", "Jump infinitely in mid-air", false, nil, function(v)
+        if v then
+            InfJumpConnection = UserInputService.JumpRequest:Connect(function()
+                local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+                if hum then
+                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end)
+            Lib:Notify("Movement", "Infinite Jump Enabled")
+        else
+            if InfJumpConnection then InfJumpConnection:Disconnect() end
+            Lib:Notify("Movement", "Infinite Jump Disabled")
+        end
+    end)
+    
+    LocalMenu:AddLabel("Camera")
+    LocalMenu:AddToggle("No Camera Collision", "Camera goes through walls", false, nil, function(v)
+        if v then
+            Player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Invisicam
+            Lib:Notify("Movement", "Camera Collision Disabled")
+        else
+            Player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
+            Lib:Notify("Movement", "Camera Collision Enabled")
         end
     end)
     
@@ -1313,6 +1424,10 @@ function UILibrary._wrapMenu(menuData)
         }
         table.insert(menuData.Options, bind)
         table.insert(State.Keybinds, bind)
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+    function api:AddLabel(text)
+        table.insert(menuData.Options, {Name = text, Type = "label"})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddMenu(name, desc, icon)
