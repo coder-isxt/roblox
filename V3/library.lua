@@ -334,9 +334,14 @@ NotifyLayout.Parent = NotifyContainer
 
 -- // INTERNAL FUNCTIONS // --
 local function getCombinedOptions(menu)
+    if not menu then return {} end
     local combined = {}
-    for _, v in ipairs(menu.Options) do table.insert(combined, v) end
-    for _, v in ipairs(menu.SystemOptions) do table.insert(combined, v) end
+    for _, opt in ipairs(menu.Options or {}) do
+        table.insert(combined, opt)
+    end
+    for _, opt in ipairs(menu.SystemOptions or {}) do
+        table.insert(combined, opt)
+    end
     return combined
 end
 
@@ -788,7 +793,7 @@ function UILibrary:CreateWindow(title, subtitle)
             local pm = PlayersMenu:AddMenu(p.DisplayName .. " (@" .. p.Name .. ")", "Actions for " .. p.Name)
             
             -- Store player object in the option data for the stats panel
-            local combined = getCombinedOptions(PlayersMenu)
+            local combined = getCombinedOptions(PlayersMenu._menuData)
             for _, opt in ipairs(combined) do
                 if opt.SubMenu == pm._menuData then
                     opt.PlayerObj = p
