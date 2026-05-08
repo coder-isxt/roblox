@@ -2243,6 +2243,7 @@ function UILibrary._wrapMenu(menuData)
     function api:AddMenu(name, desc, icon, isSystem)
         local sub = createMenuData(menuData.Title, name)
         sub.IsSystem = isSystem or menuData.IsSystem -- Inherit system status
+        sub.PlayerObj = menuData.PlayerObj -- Inherit player context for stats panel
         local opt = {Name = name, Description = desc, Icon = icon, Type = "menu", SubMenu = sub}
         
         if sub.IsSystem then
