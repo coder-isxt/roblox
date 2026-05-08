@@ -164,36 +164,7 @@ State.Config = {
     Movement = { Noclip = false, InfiniteJump = false, NoCameraCollision = false }
 }
 
-local function updateBannerUI()
-    local b = State.Config.Banner
-    if b.UseBanner and b.CurrentID ~= "" and b.CurrentID ~= "0" then
-        BannerTexture.Image = "rbxassetid://" .. b.CurrentID
-        BannerTexture.Visible = true
-        PulseLine.Visible = false
-    else
-        BannerTexture.Visible = false
-        PulseLine.Visible = true
-    end
-    
-    BannerTitle.Visible = not b.DisableTitle
-end
 
-local function applyTheme(themeData)
-    for k, v in pairs(themeData) do
-        Config.Theme[k] = v
-    end
-    
-    -- Update Static Elements
-    MainFrame.BackgroundColor3 = Config.Theme.Background
-    MainStroke.Color = Config.Theme.Accent
-    Banner.BackgroundColor3 = Config.Theme.Banner
-    PulseLine.BackgroundColor3 = Config.Theme.PulseColor
-    
-    -- Refresh current menu UI
-    if State.CurrentMenu then
-        renderMenu(State.CurrentMenu)
-    end
-end
 
 local PulseGradient = Instance.new("UIGradient")
 PulseGradient.Transparency = NumberSequence.new({
@@ -418,6 +389,39 @@ NotifyLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 NotifyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 NotifyLayout.Padding = UDim.new(0, 10)
 NotifyLayout.Parent = NotifyContainer
+
+
+
+local function updateBannerUI()
+    local b = State.Config.Banner
+    if b.UseBanner and b.CurrentID ~= "" and b.CurrentID ~= "0" then
+        BannerTexture.Image = "rbxassetid://" .. b.CurrentID
+        BannerTexture.Visible = true
+        PulseLine.Visible = false
+    else
+        BannerTexture.Visible = false
+        PulseLine.Visible = true
+    end
+    
+    BannerTitle.Visible = not b.DisableTitle
+end
+
+local function applyTheme(themeData)
+    for k, v in pairs(themeData) do
+        Config.Theme[k] = v
+    end
+    
+    -- Update Static Elements
+    MainFrame.BackgroundColor3 = Config.Theme.Background
+    MainStroke.Color = Config.Theme.Accent
+    Banner.BackgroundColor3 = Config.Theme.Banner
+    PulseLine.BackgroundColor3 = Config.Theme.PulseColor
+    
+    -- Refresh current menu UI
+    if State.CurrentMenu then
+        renderMenu(State.CurrentMenu)
+    end
+end
 
 -- // INTERNAL FUNCTIONS // --
 local function getCombinedOptions(menu)
