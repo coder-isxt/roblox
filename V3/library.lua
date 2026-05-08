@@ -1,6 +1,9 @@
 -- // GTA 5 STYLE MODMENU UI LIBRARY // --
 -- // Navigation: Arrow Keys | Select: Enter | Toggle: Insert // --
 
+
+-- UPLOAD HERE: https://pastebin.com/1UxxKpJz
+
 local UILibrary = {}
 UILibrary.__index = UILibrary
 
@@ -1775,6 +1778,7 @@ function BuiltIn.Settings(lib)
     end)
     
     Settings:AddLabel("Other")
+    Settings:AddButton("Rejoin", "Rejoin the same server", nil, function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end)
     Settings:AddButton("Unload", "Close menu", nil, function() lib:Unload() end)
     
     Theme:AddToggle("Use Banner", "Show the image in the header", true, nil, function(v)
@@ -1889,7 +1893,11 @@ function UILibrary:CreateWindow(title, subtitle)
                 end
             end)
 
-            local Troll = pm:AddMenu("Troll", "Aggressive player actions")
+            local Troll = pm:AddMenu("Troll", "Aggressive player actions", "shield")
+            local Universal = pm:AddMenu("Universal", "Universal player utilities", "globe")
+            
+            -- Universal Options
+            
             
             Troll:AddButton("Fling", "Send this player into the outside world", nil, function()
                 local char = Player.Character
