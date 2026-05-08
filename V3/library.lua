@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ContextActionService = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 local oldws = 16
 
@@ -35,6 +36,9 @@ local State = {
     Visible = false,
     History = {},
     CurrentMenu = nil,
+    SliderHoldingLeft = false,
+    SliderHoldingRight = false,
+    LastSlideTime = 0,
 }
 
 local function createMenuData(title, subtitle)
@@ -181,6 +185,41 @@ LogoImage.Image = "rbxassetid://90406832214310"
 LogoImage.ZIndex = 25
 LogoImage.Parent = Footer
 
+-- // INPUT POPUP // --
+local InputPopup = Instance.new("Frame")
+InputPopup.Name = "InputPopup"
+InputPopup.Size = UDim2.new(0, 300, 0, 100)
+InputPopup.Position = UDim2.new(0.5, -150, 0.5, -50)
+InputPopup.BackgroundColor3 = Config.Theme.Background
+InputStroke = Instance.new("UIStroke")
+InputStroke.Thickness = 2
+InputStroke.Color = Config.Theme.Accent
+InputStroke.Parent = InputPopup
+InputPopup.Visible = false
+InputPopup.Parent = ScreenGui
+
+local InputPlaceholder = Instance.new("TextLabel")
+InputPlaceholder.Size = UDim2.new(1, 0, 0, 30)
+InputPlaceholder.Position = UDim2.new(0, 0, 0, 10)
+InputPlaceholder.BackgroundTransparency = 1
+InputPlaceholder.Text = "Enter Value"
+InputPlaceholder.TextColor3 = Config.Theme.Accent
+InputPlaceholder.TextSize = 16
+InputPlaceholder.Font = Config.Font
+InputPlaceholder.Parent = InputPopup
+
+local InputBox = Instance.new("TextBox")
+InputBox.Size = UDim2.new(0.8, 0, 0, 35)
+InputBox.Position = UDim2.new(0.1, 0, 0, 45)
+InputBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+InputBox.BorderSizePixel = 0
+InputBox.Text = ""
+InputBox.PlaceholderText = "Type here..."
+InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+InputBox.TextSize = 16
+InputBox.Font = Config.Font
+InputBox.Parent = InputPopup
+
 -- // DESCRIPTION BOX // --
 local DescFrame = Instance.new("Frame")
 DescFrame.Name = "Description"
@@ -289,6 +328,24 @@ local function updateSelection()
     updateMainFrameSize()
 end
 
+local function openInputPopup(optData)
+    InputPopup.Visible = true
+    InputPlaceholder.Text = optData.Placeholder or "Enter Value"
+    InputBox.Text = tostring(optData.Value or "")
+    InputBox:CaptureFocus()
+    
+    local connection
+    connection = InputBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            optData.Value = InputBox.Text
+            optData.UI.ValueLabel.Text = optData.Value
+            optData.Callback(optData.Value)
+        end
+        InputPopup.Visible = false
+        connection:Disconnect()
+    end)
+end
+
 local function renderMenu(menu)
     -- Clear current UI
     for _, child in ipairs(OptionsContainer:GetChildren()) do
@@ -350,6 +407,8 @@ local function renderMenu(menu)
         
         if optData.Type == "slider" then
             valueLabel.Text = "< " .. tostring(optData.Value) .. " >"
+        elseif optData.Type == "input" then
+            valueLabel.Text = tostring(optData.Value or "")
         else
             valueLabel.Text = optData.Type == "button" and (optData.ValueText or "") or ""
         end
@@ -432,23 +491,36 @@ local function handleMenuInput(name, state, input)
     elseif input.KeyCode == Enum.KeyCode.Backspace then
         goBack()
         return Enum.ContextActionResult.Sink
-    elseif input.KeyCode == Enum.KeyCode.Left then
-        local opt = combined[menu.SelectedIndex]
-        if opt.Type == "slider" then
-            opt.Value = math.clamp(opt.Value - opt.Increment, opt.Min, opt.Max)
-            opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
-            opt.Callback(opt.Value)
+    if input.KeyCode == Enum.KeyCode.Left then
+        if state == Enum.UserInputState.Begin then
+            local opt = combined[menu.SelectedIndex]
+            if opt and opt.Type == "slider" then
+                State.SliderHoldingLeft = true
+                State.LastSlideTime = tick() + 0.3 -- Initial delay before repeat
+                opt.Value = math.clamp(opt.Value - opt.Increment, opt.Min, opt.Max)
+                opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
+                opt.Callback(opt.Value)
+            end
+        elseif state == Enum.UserInputState.End then
+            State.SliderHoldingLeft = false
         end
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Right then
-        local opt = combined[menu.SelectedIndex]
-        if opt.Type == "slider" then
-            opt.Value = math.clamp(opt.Value + opt.Increment, opt.Min, opt.Max)
-            opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
-            opt.Callback(opt.Value)
+        if state == Enum.UserInputState.Begin then
+            local opt = combined[menu.SelectedIndex]
+            if opt and opt.Type == "slider" then
+                State.SliderHoldingRight = true
+                State.LastSlideTime = tick() + 0.3
+                opt.Value = math.clamp(opt.Value + opt.Increment, opt.Min, opt.Max)
+                opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
+                opt.Callback(opt.Value)
+            end
+        elseif state == Enum.UserInputState.End then
+            State.SliderHoldingRight = false
         end
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Return then
+        if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
         local opt = combined[menu.SelectedIndex]
         if opt.Type == "button" then
             opt.Callback()
@@ -460,6 +532,8 @@ local function handleMenuInput(name, state, input)
             opt.Callback(opt.Value)
         elseif opt.Type == "menu" then
             openMenu(opt.SubMenu)
+        elseif opt.Type == "input" then
+            openInputPopup(opt)
         end
         return Enum.ContextActionResult.Sink
     end
@@ -477,6 +551,27 @@ ContextActionService:BindAction("fracturecontrols", handleMenuInput, false,
     Enum.KeyCode.Return, 
     Enum.KeyCode.Backspace
 )
+
+-- // CONTINUOUS SLIDER INPUT // --
+RunService.Heartbeat:Connect(function()
+    if not State.Visible or not State.CurrentMenu then return end
+    
+    if State.SliderHoldingLeft or State.SliderHoldingRight then
+        if tick() > State.LastSlideTime then
+            State.LastSlideTime = tick() + 0.05 -- Repeat interval
+            local menu = State.CurrentMenu
+            local combined = getCombinedOptions(menu)
+            local opt = combined[menu.SelectedIndex]
+            
+            if opt and opt.Type == "slider" then
+                local dir = State.SliderHoldingLeft and -1 or 1
+                opt.Value = math.clamp(opt.Value + (dir * opt.Increment), opt.Min, opt.Max)
+                opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
+                opt.Callback(opt.Value)
+            end
+        end
+    end
+end)
 
 -- // PUBLIC API // --
 
@@ -560,6 +655,18 @@ function UILibrary:AddSlider(name, desc, min, max, default, increment, callback)
     renderMenu(State.CurrentMenu)
 end
 
+function UILibrary:AddInput(name, desc, placeholder, callback)
+    table.insert(State.CurrentMenu.Options, {
+        Name = name,
+        Description = desc,
+        Type = "input",
+        Placeholder = placeholder or "Enter Value",
+        Value = "",
+        Callback = callback
+    })
+    renderMenu(State.CurrentMenu)
+end
+
 -- Helper to wrap menu data into an API object
 function UILibrary._wrapMenu(menuData)
     local api = {}
@@ -580,6 +687,17 @@ function UILibrary._wrapMenu(menuData)
             Max = max or 100,
             Value = default or min or 0,
             Increment = increment or 1,
+            Callback = callback
+        })
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+    function api:AddInput(name, desc, placeholder, callback)
+        table.insert(menuData.Options, {
+            Name = name,
+            Description = desc,
+            Type = "input",
+            Placeholder = placeholder or "Enter Value",
+            Value = "",
             Callback = callback
         })
         if State.CurrentMenu == menuData then renderMenu(menuData) end
