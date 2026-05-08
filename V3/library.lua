@@ -59,6 +59,7 @@ local function createMenuData(title, subtitle)
         Title = title,
         Subtitle = subtitle,
         Options = {},
+        SystemOptions = {}, -- Use this for built-ins
         SelectedIndex = 1
     }
     table.insert(State.AllMenus, menu)
@@ -1585,9 +1586,16 @@ function UILibrary._wrapMenu(menuData)
         table.insert(menuData.Options, {Name = text, Type = "label"})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
-    function api:AddMenu(name, desc, icon)
+    function api:AddMenu(name, desc, icon, isSystem)
         local sub = createMenuData(menuData.Title, name)
-        table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "menu", SubMenu = sub})
+        local opt = {Name = name, Description = desc, Icon = icon, Type = "menu", SubMenu = sub}
+        
+        if isSystem then
+            table.insert(menuData.SystemOptions, opt)
+        else
+            table.insert(menuData.Options, opt)
+        end
+        
         if State.CurrentMenu == menuData then renderMenu(menuData) end
         return UILibrary._wrapMenu(sub)
     end
