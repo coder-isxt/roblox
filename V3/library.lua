@@ -113,6 +113,14 @@ PulseLine.BackgroundColor3 = Config.Theme.PulseColor
 PulseLine.BorderSizePixel = 0
 PulseLine.Parent = Banner
 
+local BannerTexture = Instance.new("ImageLabel")
+BannerTexture.Name = "BannerTexture"
+BannerTexture.Size = UDim2.new(1, 0, 1, 0)
+BannerTexture.BackgroundTransparency = 1
+BannerTexture.Image = ""
+BannerTexture.ScaleType = Enum.ScaleType.Crop
+BannerTexture.Parent = Banner
+
 local PulseGradient = Instance.new("UIGradient")
 PulseGradient.Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 1),
@@ -965,20 +973,17 @@ function UILibrary:Notify(title, text, duration)
     end)
 end
 
-function UILibrary:CreateWindow(title, subtitle)
-    State.CurrentMenu = createMenuData(title, subtitle)
+-- // BUILT-IN FEATURES MODULES // --
+local BuiltIn = {}
 
-    -- // LOCAL MENU // --
-    local LocalMenu = self:AddMenu("Local", "Manage local player options", "player", true)
+function BuiltIn.Local(lib)
+    local LocalMenu = lib:AddMenu("Local", "Manage local player options", "player", true)
     
+    -- Flight System
     LocalMenu:AddLabel("Flight")
-    local FlyState = {
-        Master = false,
-        Active = false,
-        Speed = 100
-    }
-    
+    local FlyState = { Master = false, Active = false, Speed = 100 }
     local FlyConnection
+    
     local function stopFlight()
         FlyState.Active = false
         if FlyConnection then FlyConnection:Disconnect() end
@@ -994,9 +999,7 @@ function UILibrary:CreateWindow(title, subtitle)
         FlyConnection = RunService.RenderStepped:Connect(function()
             local char = Player.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
-            local hum = char and char:FindFirstChild("Humanoid")
             local cam = workspace.CurrentCamera
-            
             if not root or not FlyState.Master then stopFlight(); return end
             
             local moveDir = Vector3.new(0,0,0)
@@ -1008,10 +1011,7 @@ function UILibrary:CreateWindow(title, subtitle)
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
             
             root.Velocity = Vector3.new(0,0,0)
-            
-            -- Rotate character to face camera direction
             local targetRotation = CFrame.new(root.CFrame.Position, root.CFrame.Position + cam.CFrame.LookVector)
-            
             if moveDir.Magnitude > 0 then
                 root.CFrame = targetRotation + (moveDir.Unit * (FlyState.Speed / 10))
             else
@@ -1034,34 +1034,19 @@ function UILibrary:CreateWindow(title, subtitle)
             UILibrary:Notify("Flight", "Turn on Flight Master first!")
             return 
         end
-        
-        if FlyState.Active then
-            stopFlight()
-            UILibrary:Notify("Flight", "Flight Disabled")
-        else
-            startFlight()
-            UILibrary:Notify("Flight", "Flight Enabled")
-        end
+        if FlyState.Active then stopFlight(); UILibrary:Notify("Flight", "Flight Disabled")
+        else startFlight(); UILibrary:Notify("Flight", "Flight Enabled") end
     end)
-    
+
+    -- Sprint System
     LocalMenu:AddLabel("Movement")
-    -- // SPRINT SYSTEM // --
-    local SprintState = {
-        Master = false,
-        Active = false,
-        Speed = 50
-    }
-    
+    local SprintState = { Master = false, Active = false, Speed = 50 }
     local function updateSprint()
         local char = Player.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if not hum then return end
-        
-        if SprintState.Master and SprintState.Active then
-            hum.WalkSpeed = SprintState.Speed
-        else
-            hum.WalkSpeed = oldws or 16
-        end
+        if SprintState.Master and SprintState.Active then hum.WalkSpeed = SprintState.Speed
+        else hum.WalkSpeed = oldws or 16 end
     end
     
     LocalMenu:AddToggle("Sprint", "Master switch for sprinting", false, nil, function(v)
@@ -1074,16 +1059,9 @@ function UILibrary:CreateWindow(title, subtitle)
         updateSprint()
     end)
     
-    -- Export to state so input handler can see it
-    State.UpdateSprint = updateSprint 
-    
-    local SprintKeybind = LocalMenu:AddKeybind("Sprint Keybind", "Hold to sprint", Enum.KeyCode.C, nil, function()
-        -- Callback not needed for hold logic
-    end)
-    
+    local SprintKeybind = LocalMenu:AddKeybind("Sprint Keybind", "Hold to sprint", Enum.KeyCode.C, nil, function() end)
     RunService.Heartbeat:Connect(function()
         if not SprintState.Master then return end
-        
         local isPressed = UserInputService:IsKeyDown(SprintKeybind.Value or Enum.KeyCode.None)
         if isPressed ~= SprintState.Active then
             SprintState.Active = isPressed
@@ -1091,232 +1069,167 @@ function UILibrary:CreateWindow(title, subtitle)
         end
     end)
     
-    Player.CharacterAdded:Connect(function()
-        task.wait(1) -- Wait for humanoid
-        updateSprint()
-    end)
-    
-    -- // NOCLIP & INF JUMP // --
-    local NoclipConnection
-    LocalMenu:AddToggle("Noclip", "Walk through walls and objects", false, nil, function(v)
+    State.UpdateSprint = updateSprint
+    Player.CharacterAdded:Connect(function() task.wait(1); updateSprint() end)
+
+    -- Extra Movement
+    LocalMenu:AddToggle("Noclip", "Walk through walls", false, nil, function(v)
         if v then
-            NoclipConnection = RunService.Stepped:Connect(function()
-                local char = Player.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
+            _G.NoclipConn = RunService.Stepped:Connect(function()
+                if Player.Character then
+                    for _, p in ipairs(Player.Character:GetDescendants()) do
+                        if p:IsA("BasePart") then p.CanCollide = false end
                     end
                 end
             end)
-            Lib:Notify("Movement", "Noclip Enabled")
+            UILibrary:Notify("Movement", "Noclip Enabled")
         else
-            if NoclipConnection then NoclipConnection:Disconnect() end
-            Lib:Notify("Movement", "Noclip Disabled")
+            if _G.NoclipConn then _G.NoclipConn:Disconnect() end
+            UILibrary:Notify("Movement", "Noclip Disabled")
         end
     end)
     
-    local InfJumpConnection
-    LocalMenu:AddToggle("Infinite Jump", "Jump infinitely in mid-air", false, nil, function(v)
+    LocalMenu:AddToggle("Infinite Jump", "Jump in mid-air", false, nil, function(v)
         if v then
-            InfJumpConnection = UserInputService.JumpRequest:Connect(function()
+            _G.InfJumpConn = UserInputService.JumpRequest:Connect(function()
                 local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
-                if hum then
-                    hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                end
+                if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
             end)
-            Lib:Notify("Movement", "Infinite Jump Enabled")
+            UILibrary:Notify("Movement", "Infinite Jump Enabled")
         else
-            if InfJumpConnection then InfJumpConnection:Disconnect() end
-            Lib:Notify("Movement", "Infinite Jump Disabled")
+            if _G.InfJumpConn then _G.InfJumpConn:Disconnect() end
+            UILibrary:Notify("Movement", "Infinite Jump Disabled")
         end
     end)
-    
+
     LocalMenu:AddLabel("Camera")
     LocalMenu:AddToggle("No Camera Collision", "Camera goes through walls", false, nil, function(v)
-        if v then
-            Player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Invisicam
-            Lib:Notify("Movement", "Camera Collision Disabled")
-        else
-            Player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
-            Lib:Notify("Movement", "Camera Collision Enabled")
-        end
+        Player.DevCameraOcclusionMode = v and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
+        UILibrary:Notify("Movement", "Camera Collision " .. (v and "Disabled" or "Enabled"))
     end)
-    
-    -- // PLAYERS MENU // --
-    local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "players", true)
+end
 
-    -- // PROTECTIONS MENU // --
-    local ProtectionsMenu = self:AddMenu("Protections", "Security and anti-exploit tools", "shield", true)
-
-    -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
-    local Settings = self:AddMenu("Settings", "Menu configuration and exit", "gear", true)
-    local Developer = Settings:AddMenu("Developer", "Universal developer tools", "globe")
-    
-    Settings:AddSlider("Menu Side", "Dock menu to left (1) or right (2)", 1, 2, Config.Side, 1, nil, function(v)
-        Config.Side = v
-        updateMenuPosition()
-    end)
-
-    local originalSettings = {
-        Shadows = game:GetService("Lighting").GlobalShadows,
-        Quality = settings().Rendering.QualityLevel
-    }
-    
-    Settings:AddToggle("FPS Boost", "Maximize performance by lowering graphics", false, nil, function(v)
-        local lighting = game:GetService("Lighting")
-        if v then
-            originalSettings.Shadows = lighting.GlobalShadows
-            originalSettings.Quality = settings().Rendering.QualityLevel
-            
-            lighting.GlobalShadows = false
-            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
-            
-            for _, effect in ipairs(lighting:GetChildren()) do
-                if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") then
-                    effect.Enabled = false
-                end
-            end
-            UILibrary:Notify("Settings", "FPS Boost Enabled")
-        else
-            lighting.GlobalShadows = originalSettings.Shadows
-            settings().Rendering.QualityLevel = originalSettings.Quality
-            
-            for _, effect in ipairs(lighting:GetChildren()) do
-                if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") then
-                    effect.Enabled = true
-                end
-            end
-            UILibrary:Notify("Settings", "FPS Boost Disabled")
-        end
-    end)
-
-    Settings:AddLabel("Other")
-
-    Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
-        self:Unload()
-    end)
-
-    
-
-    
+function BuiltIn.Players(lib)
+    local PlayersMenu = lib:AddMenu("Players", "Manage players in the server", "players", true)
     
     local function refreshPlayers()
-        PlayersMenu:Clear()
+        for _, opt in ipairs(PlayersMenu._menuData.Options) do
+            if opt.PlayerObj then table.remove(PlayersMenu._menuData.Options, table.find(PlayersMenu._menuData.Options, opt)) end
+        end
+        
         for _, p in ipairs(game.Players:GetPlayers()) do
-            if p == Player then continue end -- Skip self
-            local pm = PlayersMenu:AddMenu(p.DisplayName .. " (@" .. p.Name .. ")", "Actions for " .. p.Name)
+            if p == Player then continue end
+            local pm = PlayersMenu:AddMenu(p.DisplayName .. " (@" .. p.Name .. ")", "View actions for " .. p.Name, nil)
+            pm._menuData.PlayerObj = p
             
-            -- Store player object in the option data for the stats panel
-            local combined = getCombinedOptions(PlayersMenu._menuData)
-            for _, opt in ipairs(combined) do
-                if opt.SubMenu == pm._menuData then
-                    opt.PlayerObj = p
-                    break
-                end
-            end
-
-            pm:AddToggle("Spectate", "Watch this player", (workspace.CurrentCamera.CameraSubject == (p.Character and p.Character:FindFirstChild("Humanoid"))), "eye", function(v)
-                local cam = workspace.CurrentCamera
-                if v then
-                    cam.CameraSubject = p.Character:FindFirstChild("Humanoid")
-                    Lib:Notify("Spectate", "Now spectating " .. p.Name)
-                else
-                    cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
-                    Lib:Notify("Spectate", "Stopped spectating " .. p.Name)
-                end
-            end)
-
-            -- Reset camera when leaving this specific player's menu
-            pm._menuData.OnClose = function()
-                local cam = workspace.CurrentCamera
-                local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
-                if cam.CameraSubject ~= hum then
-                    cam.CameraSubject = hum
-                end
-            end
-            
-            pm:AddButton("Teleport", "Teleport to this player", nil, function()
-                local char = Player.Character
+            pm:AddButton("Teleport", "Teleport to player", nil, function()
+                local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
                 local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                if char and target then
-                    char:PivotTo(target.CFrame * CFrame.new(0, 0, 3))
-                end
+                if root and target then root:PivotTo(target.CFrame * CFrame.new(0, 0, 3)) end
             end)
             
-            
+            pm:AddToggle("Spectate", "Watch this player", false, nil, function(v)
+                local cam = workspace.CurrentCamera
+                cam.CameraSubject = v and p.Character:FindFirstChild("Humanoid") or Player.Character:FindFirstChild("Humanoid")
+            end)
         end
     end
-
+    
     refreshPlayers()
     game.Players.PlayerAdded:Connect(refreshPlayers)
     game.Players.PlayerRemoving:Connect(refreshPlayers)
+end
+
+function BuiltIn.Protections(lib)
+    local ProtectionsMenu = lib:AddMenu("Protections", "Security and anti-exploit", "shield", true)
     
-    
-    
-    local AntiFlingConnection
-    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents players from flinging you", false, nil, function(v)
+    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents flinging", false, nil, function(v)
         if v then
-            AntiFlingConnection = RunService.Stepped:Connect(function()
-                local char = Player.Character
-                if char then
-                    for _, part in ipairs(char:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanTouch = false
-                            -- Prevent massive velocity spikes
-                            if part.Velocity.Magnitude > 50 or part.RotVelocity.Magnitude > 50 then
-                                part.Velocity = Vector3.new(0, 0, 0)
-                                part.RotVelocity = Vector3.new(0, 0, 0)
-                            end
+            _G.AntiFling = RunService.Stepped:Connect(function()
+                if Player.Character then
+                    for _, p in ipairs(Player.Character:GetDescendants()) do
+                        if p:IsA("BasePart") then
+                            p.CanTouch = false
+                            if p.Velocity.Magnitude > 50 then p.Velocity = Vector3.new(0,0,0) end
                         end
                     end
                 end
             end)
             UILibrary:Notify("Protections", "Anti-Fling Enabled")
         else
-            if AntiFlingConnection then AntiFlingConnection:Disconnect() end
-            local char = Player.Character
-            if char then
-                for _, part in ipairs(char:GetDescendants()) do
-                    if part:IsA("BasePart") then
-                        part.CanTouch = true
-                    end
-                end
-            end
+            if _G.AntiFling then _G.AntiFling:Disconnect() end
             UILibrary:Notify("Protections", "Anti-Fling Disabled")
         end
     end)
-
-    local AntiAFKConnection
-    ProtectionsMenu:AddToggle("Anti-AFK", "Prevents being kicked for idling", false, nil, function(v)
+    
+    ProtectionsMenu:AddToggle("Anti-AFK", "Prevents idle kick", false, nil, function(v)
         if v then
-            AntiAFKConnection = Player.Idled:Connect(function()
-                local vu = game:GetService("VirtualUser")
-                vu:CaptureController()
-                vu:ClickButton2(Vector2.new())
+            _G.AntiAFK = Player.Idled:Connect(function()
+                game:GetService("VirtualUser"):CaptureController()
+                game:GetService("VirtualUser"):ClickButton2(Vector2.new())
             end)
             UILibrary:Notify("Protections", "Anti-AFK Enabled")
         else
-            if AntiAFKConnection then AntiAFKConnection:Disconnect() end
+            if _G.AntiAFK then _G.AntiAFK:Disconnect() end
             UILibrary:Notify("Protections", "Anti-AFK Disabled")
         end
     end)
-
+    
     ProtectionsMenu:AddLabel("Bypass")
-
-    ProtectionsMenu:AddButton("Adonis AntiExploit", "Bypasses Adonis Anti Exploit kicks", function()
+    ProtectionsMenu:AddButton("Adonis Bypass", "Bypass Adonis Anti-Cheat", nil, function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/V3/bypass.lua"))()
     end)
+end
 
-    Developer:AddButton("DarkDex", "Load darkdex explorer", function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
-    end)
-
-    Developer:AddButton("RemoteSpy", "Load remotespy to see remotes firing", function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
+function BuiltIn.Settings(lib)
+    local Settings = lib:AddMenu("Settings", "Menu configuration", "gear", true)
+    local Developer = Settings:AddMenu("Developer", "Universal Developer tools", "globe")
+    local Theme = Settings:AddMenu("Theme", "Customize the menu theme", nil)
+    
+    Settings:AddSlider("Menu Side", "Dock side", 1, 2, Config.Side, 1, nil, function(v)
+        Config.Side = v
+        updateMenuPosition()
     end)
     
+    Settings:AddToggle("FPS Boost", "Optimize graphics", false, nil, function(v)
+        local l = game:GetService("Lighting")
+        l.GlobalShadows = not v
+        settings().Rendering.QualityLevel = v and 1 or 10
+        UILibrary:Notify("Settings", "FPS Boost " .. (v and "Enabled" or "Disabled"))
+    end)
+    
+    Settings:AddLabel("Other")
+    Settings:AddButton("Unload", "Close menu", nil, function() lib:Unload() end)
+    
+    Theme:AddInput("Banner Texture", "Paste a Roblox Image ID", "", "Texture ID", function(v)
+        local id = v:gsub("%D", "")
+        if id == "" or id == "0" then
+            BannerTexture.Image = ""
+            PulseLine.Visible = true
+        else
+            BannerTexture.Image = "rbxassetid://" .. id
+            PulseLine.Visible = false
+        end
+    end)
+
+    Developer:AddButton("DarkDex", "Load explorer", nil, function()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
+    end)
+    
+    Developer:AddButton("RemoteSpy", "Load remotespy to see remotes firing", nil, function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
+    end)
+end
+
+function UILibrary:CreateWindow(title, subtitle)
+    State.CurrentMenu = createMenuData(title, subtitle)
+
+    -- Load Built-ins
+    BuiltIn.Local(self)
+    BuiltIn.Players(self)
+    BuiltIn.Protections(self)
+    BuiltIn.Settings(self)
+
     renderMenu(State.CurrentMenu)
     updateMenuPosition()
     return self
