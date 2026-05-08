@@ -964,7 +964,8 @@ function UILibrary:Notify(title, text, duration)
     
     -- Outer frame for UIListLayout
     local NotifyFrame = Instance.new("Frame")
-    NotifyFrame.Size = UDim2.new(1, 0, 0, 60)
+    NotifyFrame.Size = UDim2.new(1, 0, 0, 0)
+    NotifyFrame.AutomaticSize = Enum.AutomaticSize.Y
     NotifyFrame.BackgroundTransparency = 1
     NotifyFrame.BorderSizePixel = 0
     NotifyFrame.Parent = NotifyContainer
@@ -972,12 +973,17 @@ function UILibrary:Notify(title, text, duration)
     -- Inner frame for sliding animations
     local Main = Instance.new("Frame")
     Main.Name = "Main"
-    Main.Size = UDim2.new(1, 0, 1, 0)
-    Main.Position = UDim2.new(1.2, 0, 0, 0) -- Start off-screen to the right
+    Main.Size = UDim2.new(1, 0, 0, 0)
+    Main.AutomaticSize = Enum.AutomaticSize.Y
+    Main.Position = UDim2.new(1.2, 0, 0, 0)
     Main.BackgroundColor3 = Config.Theme.Background
     Main.BorderSizePixel = 0
     Main.Parent = NotifyFrame
     
+    local NotifyPadding = Instance.new("UIPadding")
+    NotifyPadding.PaddingBottom = UDim.new(0, 10)
+    NotifyPadding.Parent = Main
+
     local NotifyCorner = Instance.new("UICorner")
     NotifyCorner.CornerRadius = Config.CornerRadius
     NotifyCorner.Parent = Main
@@ -1000,8 +1006,9 @@ function UILibrary:Notify(title, text, duration)
     NotifyTitle.Parent = Main
     
     local NotifyBody = Instance.new("TextLabel")
-    NotifyBody.Size = UDim2.new(1, -15, 1, -30)
-    NotifyBody.Position = UDim2.new(0, 10, 0, 25)
+    NotifyBody.Size = UDim2.new(1, -20, 0, 0)
+    NotifyBody.Position = UDim2.new(0, 10, 0, 28)
+    NotifyBody.AutomaticSize = Enum.AutomaticSize.Y
     NotifyBody.BackgroundTransparency = 1
     NotifyBody.Text = text
     NotifyBody.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -1015,7 +1022,7 @@ function UILibrary:Notify(title, text, duration)
     local TimerBar = Instance.new("Frame")
     TimerBar.Name = "TimerBar"
     TimerBar.Size = UDim2.new(1, 0, 0, 2)
-    TimerBar.Position = UDim2.new(0, 0, 1, -2)
+    TimerBar.Position = UDim2.new(0, 0, 1, 8) -- Positioned relative to bottom after padding
     TimerBar.BackgroundColor3 = Config.Theme.Accent
     TimerBar.BorderSizePixel = 0
     TimerBar.Parent = Main
