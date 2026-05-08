@@ -62,6 +62,12 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 1.5
+MainStroke.Color = Config.Theme.Accent
+MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+MainStroke.Parent = MainFrame
+
 -- // HEADER (BANNER) // --
 local Banner = Instance.new("Frame")
 Banner.Name = "Banner"
@@ -92,8 +98,9 @@ BannerTitle.Size = UDim2.new(1, 0, 1, 0)
 BannerTitle.BackgroundTransparency = 1
 BannerTitle.Text = "IMPULSE"
 BannerTitle.TextColor3 = Config.Theme.PulseColor
-BannerTitle.TextSize = 55
+BannerTitle.TextSize = 45
 BannerTitle.Font = Config.TitleFont
+BannerTitle.TextStrokeTransparency = 0.8
 BannerTitle.Parent = Banner
 
 -- // SUB-HEADER // --
@@ -197,38 +204,74 @@ DescText.Parent = DescFrame
 -- // INTERNAL FUNCTIONS // --
 
 local function updateMainFrameSize()
-    local optionsHeight = #State.CurrentMenu.Options * 35
+    local menu = State.CurrentMenu
+    local optionsCount = #menu.Options
+    
+    -- Fixed window size for scrolling
+    local visibleCount = math.min(optionsCount, Config.MaxItemsVisible)
+    local optionsHeight = math.max(visibleCount * 35, 40) -- Increased min height for empty state
+    
     local totalHeight = 100 + 30 + optionsHeight + 35 + 45
     MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, totalHeight)
     OptionsContainer.Size = UDim2.new(1, -15, 0, optionsHeight)
-    Footer.Position = UDim2.new(0, 0, 0, 130 + optionsHeight)
-    DescFrame.Position = UDim2.new(0, 0, 0, 130 + optionsHeight + 40)
     
-    ScrollbarFrame.Size = UDim2.new(0, 8, 0, optionsHeight)
-    ScrollIndicator.Position = UDim2.new(0, 0, 0, (State.CurrentMenu.SelectedIndex - 1) * 35)
+    Footer.Position = UDim2.new(0, 0, 0, 130 + optionsHeight)
+    DescFrame.Position = UDim2.new(0, 0, 0, 130 + optionsHeight + 35) -- Tighter gap
+    
+    ScrollbarFrame.Visible = optionsCount > 0
+    if optionsCount > 0 then
+        ScrollbarFrame.Size = UDim2.new(0, 8, 0, optionsHeight)
+        
+        -- Calculate scroll indicator position relative to visible items
+        local progress = (menu.SelectedIndex - 1) / math.max(1, optionsCount - 1)
+        local pos = progress * (optionsHeight - 40)
+        ScrollIndicator.Position = UDim2.new(0, 0, 0, pos)
+    end
 end
 
 local function updateSelection()
     local menu = State.CurrentMenu
+    local count = #menu.Options
+    
+    if count == 0 then
+        menu.SelectedIndex = 1
+        ItemCount.Text = "0 / 0"
+        DescText.Text = "No options available in this menu."
+        updateMainFrameSize()
+        return
+    end
+
+    -- Scrolling Logic: Calculate visible range
+    local start = 1
+    if count > Config.MaxItemsVisible then
+        start = math.clamp(menu.SelectedIndex - math.floor(Config.MaxItemsVisible / 2), 1, count - Config.MaxItemsVisible + 1)
+    end
+    local finish = math.min(count, start + Config.MaxItemsVisible - 1)
+
     for i, optData in ipairs(menu.Options) do
         local isSelected = (i == menu.SelectedIndex)
+        local isVisible = (i >= start and i <= finish)
         local frame = optData.UI.Frame
         
-        TweenService:Create(frame, TweenInfo.new(0.1), {
-            BackgroundColor3 = isSelected and Config.Theme.Selected or Color3.fromRGB(0,0,0),
-            BackgroundTransparency = isSelected and 0 or 1
-        }):Play()
-
-        optData.UI.Label.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
-        optData.UI.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
-        optData.UI.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
+        frame.Visible = isVisible
         
-        if isSelected then
-            DescText.Text = optData.Description or ""
+        if isVisible then
+            TweenService:Create(frame, TweenInfo.new(0.1), {
+                BackgroundColor3 = isSelected and Config.Theme.Selected or Color3.fromRGB(0,0,0),
+                BackgroundTransparency = isSelected and 0 or 1
+            }):Play()
+
+            optData.UI.Label.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
+            optData.UI.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
+            optData.UI.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
+            
+            if isSelected then
+                DescText.Text = optData.Description or ""
+            end
         end
     end
 
-    ItemCount.Text = menu.SelectedIndex .. " / " .. #menu.Options
+    ItemCount.Text = menu.SelectedIndex .. " / " .. count
     updateMainFrameSize()
 end
 
