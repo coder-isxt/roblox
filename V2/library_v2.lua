@@ -1146,7 +1146,7 @@ function Window:CreatePlayersCategory(options)
     local selectedName = optionsSection:CreateLabel("Selected: None")
     local selectedUser = optionsSection:CreateLabel("@none")
     --local targetModeButton = optionsSection:CreateButton("Target Mode: Selected")
-    local spectateButton = optionsSection:CreateButton("Spectate")
+    local spectateButton = optionsSection:CreateButton({Name="Spectate", Icon="eye"})
 
     local headsitButton = nil
     local bangButton = nil
