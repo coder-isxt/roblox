@@ -795,15 +795,7 @@ function UILibrary:CreateWindow(title, subtitle)
                     break
                 end
             end
-            
-            pm:AddButton("Teleport", "Teleport to this player", nil, function()
-                local char = Player.Character
-                local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                if char and target then
-                    char:PivotTo(target.CFrame * CFrame.new(0, 0, 3))
-                end
-            end)
-            
+
             pm:AddButton("Spectate", "Watch this player", "eye", function()
                 local cam = workspace.CurrentCamera
                 if cam.CameraSubject == (p.Character and p.Character:FindFirstChild("Humanoid")) then
@@ -814,6 +806,16 @@ function UILibrary:CreateWindow(title, subtitle)
                     Lib:Notify("Spectate", "Now spectating " .. p.Name)
                 end
             end)
+            
+            pm:AddButton("Teleport", "Teleport to this player", nil, function()
+                local char = Player.Character
+                local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                if char and target then
+                    char:PivotTo(target.CFrame * CFrame.new(0, 0, 3))
+                end
+            end)
+            
+            
         end
     end
 
