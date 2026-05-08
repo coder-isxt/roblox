@@ -1352,6 +1352,10 @@ function BuiltIn.Settings(lib)
         end
     end)
 
+    ConfigSub:AddLabel("Configs")
+
+
+
     local Presets = Theme:AddMenu("Presets", "Theme presets", nil)
     
     Presets:AddButton("Default", "Standard premium look", nil, function()
