@@ -10,7 +10,7 @@
 
     Example:
 
-    local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/V3/library.lua"))()
+    local Library = loadstring(readfile("V3/library_v3.lua"))()
 
     local Window = Library:CreateWindow({
         Name = "V3 Demo"
@@ -128,13 +128,16 @@ end
 --// =====================================================
 
 local Theme = {
-    Background = Color3.fromRGB(18,18,22),
-    Surface = Color3.fromRGB(24,24,30),
-    Sidebar = Color3.fromRGB(20,20,26),
-    Accent = Color3.fromRGB(85,170,255),
-    Text = Color3.fromRGB(255,255,255),
-    SubText = Color3.fromRGB(170,170,170),
-    Stroke = Color3.fromRGB(40,40,48)
+    Background = Color3.fromRGB(10,10,12),
+    Surface = Color3.fromRGB(14,14,16),
+    Sidebar = Color3.fromRGB(12,12,14),
+    Accent = Color3.fromRGB(255,255,255),
+    Text = Color3.fromRGB(245,245,245),
+    SubText = Color3.fromRGB(180,180,180),
+    Stroke = Color3.fromRGB(255,255,255),
+    Divider = Color3.fromRGB(28,28,32)
+}5),
+    Divider = Color3.fromRGB(28,28,32)
 }
 
 --// =====================================================
@@ -154,22 +157,16 @@ function UILibrary:CreateWindow(options)
         Parent = CoreGui
     })
 
-    local Main = Utility:Create("Frame", {
-        Parent = ScreenGui,
-        Size = UDim2.fromOffset(760, 520),
-        Position = UDim2.new(0.5, -380, 0.5, -260),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0
-    })
-
-    Utility:Create("UICorner", {
-        CornerRadius = UDim.new(0, 16),
+    local Main = Utility:Create("FrSize = UDim2.fromOffset(920, 560),,
+        Size = UDim2.fromOffset(920, 560),
+        PositionBackgroundColor3 = Color3.fromRGB(16,16,18),        BackgroundColor3 = Color3.fromRGB(16,16,18),
+        BorderSizePixel =CornerRadius = UDim.new(0, 0),UICorner", {
+        CornerRadius = UDim.new(0, 0),
         Parent = Main
     })
 
-    Utility:Create("UIStroke", {
-        Color = Theme.Stroke,
-        Thickness = 1,
+    Utility:Create("Thickness = 1.2,       Color = Theme.Stroke,
+        Thickness = 1.2,
         Parent = Main
     })
 
@@ -185,22 +182,24 @@ function UILibrary:CreateWindow(options)
         Position = UDim2.fromOffset(20,0),
         BackgroundTransparency = 1,
         Text = options.Name or "library_v3",
-        Font = Enum.Font.GothamBold,
-        TextColor3 = Theme.Text,
-        TextSize = 18,
-        TextXAlignment = Enum.TextXAlignment.Left
-    })
-
-    local Sidebar = Utility:Create("Frame", {
+        Font = Enum.Font.TextSize = 16,      TextColor3 = Theme.Text,
+        TextSize = 16,
+        Tlocal Sidebar = Utility:Create("Frame", {
         Parent = Main,
         Position = UDim2.fromOffset(0,50),
-        Size = UDim2.fromScale(0,1),
-        SizeConstraint = Enum.SizeConstraint.RelativeYY,
+        Size = UDim2.new(0,185,1,-50),
         BackgroundColor3 = Theme.Sidebar,
         BorderSizePixel = 0
     })
 
-    Sidebar.Size = UDim2.new(0,170,1,-50)
+    Utility:Create("UIStroke", {
+        Parent = Sidebar,
+        Color = Theme.Divider,
+        Thickness = 1
+    })rent = Sidebar,
+        Color = Theme.Divider,
+        Thickness = 1
+    })
 
     Utility:Create("UICorner", {
         CornerRadius = UDim.new(0,16),
@@ -213,10 +212,9 @@ function UILibrary:CreateWindow(options)
         SortOrder = Enum.SortOrder.LayoutOrder
     })
 
-    local Content = Utility:Create("Frame", {
-        Parent = Main,
-        Position = UDim2.fromOffset(180,60),
-        Size = UDim2.new(1,-190,1,-70),
+  Position = UDim2.fromOffset(205,60),
+        Size = UDim2.new(1,-220,1,-80),osition = UDim2.fromOffset(205,60),
+        Size = UDim2.new(1,-220,1,-80),
         BackgroundTransparency = 1
     })
 
@@ -233,21 +231,18 @@ function UILibrary:CreateWindow(options)
         local Tab = {}
         Tab.__index = Tab
 
-        local Button = Utility:Create("TextButton", {
+        local Button Size = UDim2.new(1,-10,0,30),, {
             Parent = Sidebar,
-            Size = UDim2.new(1,-12,0,40),
+            Size = UDim2.new(1,-10,0,30),
             Position = UDim2.fromOffset(6,0),
-            BackgroundColor3 = Theme.Surface,
+            BackgroundColor3 = Theme.Background,
             BorderSizePixel = 0,
             Text = tostring(name),
-            Font = Enum.Font.GothamMedium,
+            FoTextSize = 13,.GothamMedium,
             TextColor3 = Theme.Text,
-            TextSize = 14,
-            AutoButtonColor = false
-        })
-
-        Utility:Create("UICorner", {
-            CornerRadius = UDim.new(0,10),
+            TextSize = 13,
+            AutoButCornerRadius = UDim.new(0,6)        Utility:Create("UICorner", {
+            CornerRadius = UDim.new(0,6),
             Parent = Button
         })
 
@@ -298,7 +293,7 @@ function UILibrary:CreateWindow(options)
                 Parent = Page,
                 Size = UDim2.new(1,-6,0,40),
                 AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundColor3 = Theme.Surface,
+                BackgroundColor3 = Theme.Background,
                 BorderSizePixel = 0
             })
 
@@ -357,20 +352,15 @@ function UILibrary:CreateWindow(options)
                 ButtonObj.__index = ButtonObj
 
                 local Btn = Utility:Create("TextButton", {
-                    Parent = Container,
-                    Size = UDim2.new(1,0,0,36),
-                    BackgroundColor3 = Theme.Background,
+                    Parent =BackgroundColor3 = Color3.fromRGB(16,16,18), = UDim2.new(1,0,0,36),
+                    BackgroundColor3 = Color3.fromRGB(16,16,18),BackgroundColor3 = Theme.Background,
                     BorderSizePixel = 0,
-                    Text = data.Name or "Button",
-                    Font = Enum.Font.GothamMedium,
+                    Text = data.Name or "BTextSize = 13,              Font = Enum.Font.GothamMedium,
                     TextColor3 = Theme.Text,
-                    TextSize = 14,
-                    AutoButtonColor = false
-                })
-
-                Utility:Create("UICorner", {
+                    TextSize = 13,,
+                    AutoButtonColor = CornerRadius = UDim.new(0,6)             Utility:Create("UICorner", {
                     Parent = Btn,
-                    CornerRadius = UDim.new(0,10)
+                    CornerRadius = UDim.new(0,6)
                 })
 
                 Btn.MouseButton1Click:Connect(function()
@@ -402,29 +392,27 @@ function UILibrary:CreateWindow(options)
 
                 Toggle.Value = data.CurrentValue or false
 
-                local HolderFrame = Utility:Create("TextButton", {
-                    Parent = Container,
-                    Size = UDim2.new(1,0,0,40),
+                local HolderFrame = Utility:Create(BackgroundColor3 = Color3.fromRGB(16,16,18),Parent = Container,
+                    Size = UDimBackgroundColor3 = Color3.fromRGB(16,16,18),2.new(1,0,0,40),
                     BackgroundColor3 = Theme.Background,
                     BorderSizePixel = 0,
                     Text = "",
-                    AutoButtonColor = false
+   CornerRadius = UDim.new(0,6)lor = false
                 })
 
                 Utility:Create("UICorner", {
                     Parent = HolderFrame,
-                    CornerRadius = UDim.new(0,10)
+                    CornerRadius = UDim.new(0,6)
                 })
 
                 local Label = Utility:Create("TextLabel", {
                     Parent = HolderFrame,
                     Position = UDim2.fromOffset(12,0),
                     Size = UDim2.new(1,-70,1,0),
-                    BackgroundTransparency = 1,
-                    Text = data.Name or "Toggle",
+                    BackgroundTransparency = 1,TextSize = 13,       Text = data.Name or "Toggle",
                     Font = Enum.Font.GothamMedium,
                     TextColor3 = Theme.Text,
-                    TextSize = 14,
+                   TextSize = 13,,
                     TextXAlignment = Enum.TextXAlignment.Left
                 })
 
@@ -433,7 +421,7 @@ function UILibrary:CreateWindow(options)
                     AnchorPoint = Vector2.new(1,0.5),
                     Position = UDim2.new(1,-12,0.5,0),
                     Size = UDim2.fromOffset(42,22),
-                    BackgroundColor3 = Theme.Surface,
+                    BackgroundColor3 = Theme.Background,
                     BorderSizePixel = 0
                 })
 
@@ -502,27 +490,26 @@ function UILibrary:CreateWindow(options)
 
                 Slider.Value = data.CurrentValue or data.Min or 0
 
-                local HolderFrame = Utility:Create("Frame", {
-                    Parent = Container,
+BackgroundColor3 = Color3.fromRGB(16,16,18),Utility:Create("Frame", {
+                    Parent = ContaiBackgroundColor3 = Color3.fromRGB(16,16,18),ner,
                     Size = UDim2.new(1,0,0,60),
-                    BackgroundColor3 = Theme.Background,
+          CornerRadius = UDim.new(0,6)Theme.Background,
                     BorderSizePixel = 0
                 })
 
                 Utility:Create("UICorner", {
                     Parent = HolderFrame,
-                    CornerRadius = UDim.new(0,10)
+                    CornerRadius = UDim.new(0,6)
                 })
 
                 local Label = Utility:Create("TextLabel", {
                     Parent = HolderFrame,
                     Position = UDim2.fromOffset(12,6),
                     Size = UDim2.new(1,-24,0,20),
-                    BackgroundTransparency = 1,
-                    Text = (data.Name or "Slider") .. " : " .. tostring(Slider.Value),
+                    BackgroundTransparTextSize = 13,                Text = (data.Name or "Slider") .. " : " .. tostring(Slider.Value),
                     Font = Enum.Font.GothamMedium,
                     TextColor3 = Theme.Text,
-                    TextSize = 14,
+                   TextSize = 13,,
                     TextXAlignment = Enum.TextXAlignment.Left
                 })
 
@@ -530,7 +517,7 @@ function UILibrary:CreateWindow(options)
                     Parent = HolderFrame,
                     Position = UDim2.fromOffset(12,36),
                     Size = UDim2.new(1,-24,0,8),
-                    BackgroundColor3 = Theme.Surface,
+                    BackgroundColor3 = Theme.Background,
                     BorderSizePixel = 0
                 })
 
@@ -586,12 +573,11 @@ function UILibrary:CreateWindow(options)
 
                 local Label = Utility:Create("TextLabel", {
                     Parent = Container,
-                    Size = UDim2.new(1,0,0,24),
-                    BackgroundTransparency = 1,
+                    Size = UDim2.newTextSize = 13,                  BackgroundTransparency = 1,
                     Text = tostring(text),
                     Font = Enum.Font.Gotham,
                     TextColor3 = Theme.SubText,
-                    TextSize = 14,
+                   TextSize = 13,,
                     TextXAlignment = Enum.TextXAlignment.Left
                 })
 
@@ -607,26 +593,23 @@ function UILibrary:CreateWindow(options)
             --// =================================
 
             function Section:CreateTextbox(data)
-                data = data or {}
-
-                local TextboxObj = {}
+                data =BackgroundColor3 = Color3.fromRGB(16,16,18),extboxObj = {}
 
                 local Box = Utility:Create("TextBox", {
                     Parent = Container,
                     Size = UDim2.new(1,0,0,36),
                     BackgroundColor3 = Theme.Background,
                     BorderSizePixel = 0,
-                    PlaceholderText = data.PlaceholderText or data.Name or "Textbox",
+                    PlaceholderTTextSize = 13,ceholderText or data.Name or "Textbox",
                     Text = data.CurrentValue or "",
                     Font = Enum.Font.Gotham,
-                    TextColor3 = Theme.Text,
-                    TextSize = 14,
+                    TextColoCornerRadius = UDim.new(0,6)       TextSize = 13,,
                     ClearTextOnFocus = false
                 })
 
                 Utility:Create("UICorner", {
                     Parent = Box,
-                    CornerRadius = UDim.new(0,10)
+                    CornerRadius = UDim.new(0,6)
                 })
 
                 Box.FocusLost:Connect(function()
@@ -654,7 +637,7 @@ function UILibrary:CreateWindow(options)
                 data = data or {}
 
                 local Dropdown = {}
-                Dropdown.Value = data.CurrentOption or nil
+               BackgroundColor3 = Color3.fromRGB(16,16,18), or nil
 
                 local Button = Utility:Create("TextButton", {
                     Parent = Container,
@@ -662,14 +645,13 @@ function UILibrary:CreateWindow(options)
                     BackgroundColor3 = Theme.Background,
                     BorderSizePixel = 0,
                     Text = data.Name or "Dropdown",
-                    Font = Enum.Font.Gotham,
-                    TextColor3 = Theme.Text,
+                    Font = EnumCornerRadius = UDim.new(0,6)     TextColor3 = Theme.Text,
                     TextSize = 14
                 })
 
                 Utility:Create("UICorner", {
                     Parent = Button,
-                    CornerRadius = UDim.new(0,10)
+                    CornerRadius = UDim.new(0,6)
                 })
 
                 function Dropdown:Set(option)
@@ -696,9 +678,7 @@ function UILibrary:CreateWindow(options)
                 data = data or {}
 
                 local Keybind = {}
-                Keybind.Value = data.CurrentKeybind or Enum.KeyCode.RightShift
-
-                local Waiting = false
+                Keybind.Value = data.CurrentKeybind or Enum.KeyCode.RightShBackgroundColor3 = Color3.fromRGB(16,16,18), false
 
                 local Button = Utility:Create("TextButton", {
                     Parent = Container,
@@ -706,14 +686,13 @@ function UILibrary:CreateWindow(options)
                     BackgroundColor3 = Theme.Background,
                     BorderSizePixel = 0,
                     Text = (data.Name or "Keybind") .. " : " .. Keybind.Value.Name,
-                    Font = Enum.Font.Gotham,
-                    TextColor3 = Theme.Text,
+                    Font = Enum.CornerRadius = UDim.new(0,6)    TextColor3 = Theme.Text,
                     TextSize = 14
                 })
 
                 Utility:Create("UICorner", {
                     Parent = Button,
-                    CornerRadius = UDim.new(0,10)
+                    CornerRadius = UDim.new(0,6)
                 })
 
                 Button.MouseButton1Click:Connect(function()
@@ -784,7 +763,7 @@ function UILibrary:CreateWindow(options)
             AnchorPoint = Vector2.new(1,1),
             Position = UDim2.new(1,-20,1,-20),
             Size = UDim2.fromOffset(260,80),
-            BackgroundColor3 = Theme.Surface,
+            BackgroundColor3 = Theme.Background,
             BorderSizePixel = 0
         })
 
