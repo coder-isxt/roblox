@@ -31,12 +31,11 @@ local Config = {
     MaxItemsVisible = 12,
     CornerRadius = UDim.new(0, 8),
     Icons = {
-        ["Home"] = "rbxassetid://10709769508",
-        ["Settings"] = "rbxassetid://10709769841",
-        ["player"] = "rbxassetid://114275093157258",
-        ["Weapon"] = "rbxassetid://10709770146",
-        ["Vehicle"] = "rbxassetid://10709771131",
-        ["Teleport"] = "rbxassetid://10709771513",
+        ["eye"] = "rbxassetid://86045912751052",
+        ["house"] = "rbxassetid://82102353211434",
+        ["player"] = "rbxassetid://86951848379193",
+        ["gear"] = "rbxassetid://106265837716775",
+        ["globe"] = "rbxassetid://101268280882288",
     }
 }
 
