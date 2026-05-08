@@ -90,7 +90,7 @@ end
 
 -- // CREATE SCREEN GUI // --
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GTANativeMenu"
+ScreenGui.Name = "Fracture"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = game:GetService("CoreGui") or Player:WaitForChild("PlayerGui")
