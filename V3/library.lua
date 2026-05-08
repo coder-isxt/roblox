@@ -411,8 +411,20 @@ ContextActionService:BindAction("GTAMenuControls", handleMenuInput, false, Enum.
 
 -- // PUBLIC API // --
 
+function UILibrary:Unload()
+    ContextActionService:UnbindAction("GTAMenuControls")
+    ScreenGui:Destroy()
+end
+
 function UILibrary:CreateWindow(title, subtitle)
     State.CurrentMenu = createMenuData(title, subtitle)
+    
+    -- Add Built-in Settings Menu
+    local Settings = self:AddMenu("Settings", "Menu configuration and exit")
+    Settings:AddButton("Unload", "Completely remove the menu and clean up", function()
+        self:Unload()
+    end)
+    
     renderMenu(State.CurrentMenu)
     return self
 end
