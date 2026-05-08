@@ -1032,12 +1032,12 @@ function Window:CreatePlayersCategory(options)
         Position = UDim2.new(0, 6, 0, 6),
         Size = UDim2.new(1, -12, 0, 24),
     })
-    corner(searchBack, 6)
+    corner(searchBack, 8)
     stroke(searchBack, col.Stroke, 0.6)
 
     local searchBox = mk("TextBox", {
         Parent = searchBack,
-        BackgroundTransparency = 0.3,
+        BackgroundTransparency = 1,
         Position = UDim2.new(0, 8, 0, 0),
         Size = UDim2.new(1, -16, 1, 0),
         Font = FONT,
