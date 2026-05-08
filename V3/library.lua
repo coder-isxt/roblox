@@ -170,15 +170,14 @@ ItemCount.Font = Config.Font
 ItemCount.TextXAlignment = Enum.TextXAlignment.Left
 ItemCount.Parent = Footer
 
-local LogoPlaceholder = Instance.new("TextLabel")
-LogoPlaceholder.Size = UDim2.new(0.2, 0, 1, 0)
-LogoPlaceholder.Position = UDim2.new(0.4, 0, 0, 0)
-LogoPlaceholder.BackgroundTransparency = 1
-LogoPlaceholder.Text = "⚡"
-LogoPlaceholder.TextColor3 = Config.Theme.PulseColor
-LogoPlaceholder.TextSize = 20
-LogoPlaceholder.Font = Config.Font
-LogoPlaceholder.Parent = Footer
+local LogoImage = Instance.new("ImageLabel")
+LogoImage.Name = "Logo"
+LogoImage.Size = UDim2.new(0, 25, 0, 25)
+LogoImage.Position = UDim2.new(0.5, -12, 0.5, -12)
+LogoImage.BackgroundTransparency = 1
+LogoImage.Image = "rbxassetid://90406832214310"
+LogoImage.ImageColor3 = Config.Theme.PulseColor
+LogoImage.Parent = Footer
 
 -- // DESCRIPTION BOX // --
 local DescFrame = Instance.new("Frame")
