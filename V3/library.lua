@@ -838,6 +838,72 @@ function UILibrary:CreateWindow(title, subtitle)
     -- // LOCAL MENU // --
     local LocalMenu = self:AddMenu("Local", "Manage local player options", "player", true)
     
+    local FlyState = {
+        Master = false,
+        Active = false,
+        Speed = 200
+    }
+    
+    local FlyConnection
+    local function stopFlight()
+        FlyState.Active = false
+        if FlyConnection then FlyConnection:Disconnect() end
+        local char = Player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+        end
+    end
+    
+    local function startFlight()
+        stopFlight()
+        FlyState.Active = true
+        FlyConnection = RunService.RenderStepped:Connect(function()
+            local char = Player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
+            local cam = workspace.CurrentCamera
+            
+            if not root or not FlyState.Master then stopFlight(); return end
+            
+            local moveDir = Vector3.new(0,0,0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
+            
+            root.Velocity = Vector3.new(0,0,0)
+            if moveDir.Magnitude > 0 then
+                root.CFrame = root.CFrame + (moveDir.Unit * (FlyState.Speed / 10))
+            end
+        end)
+    end
+    
+    LocalMenu:AddToggle("Fly", "Master switch for flying", false, nil, function(v)
+        FlyState.Master = v
+        if not v then stopFlight() end
+    end)
+    
+    LocalMenu:AddSlider("Fly Speed", "Adjust flight velocity", 50, 500, 200, 10, nil, function(v)
+        FlyState.Speed = v
+    end)
+    
+    LocalMenu:AddKeybind("Fly Keybind", "Toggle flight on/off", Enum.KeyCode.F, nil, function()
+        if not FlyState.Master then 
+            Lib:Notify("Flight", "Turn on Flight Master first!")
+            return 
+        end
+        
+        if FlyState.Active then
+            stopFlight()
+            Lib:Notify("Flight", "Flight Disabled")
+        else
+            startFlight()
+            Lib:Notify("Flight", "Flight Enabled")
+        end
+    end)
+    
     -- // PLAYERS MENU // --
     local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "players", true)
 
@@ -851,10 +917,6 @@ function UILibrary:CreateWindow(title, subtitle)
     Settings:AddSlider("Menu Side", "Dock menu to left (1) or right (2)", 1, 2, Config.Side, 1, nil, function(v)
         Config.Side = v
         updateMenuPosition()
-    end)
-
-    Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
-        self:Unload()
     end)
 
     local originalSettings = {
@@ -889,6 +951,12 @@ function UILibrary:CreateWindow(title, subtitle)
             Lib:Notify("Settings", "FPS Boost Disabled")
         end
     end)
+
+    Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
+        self:Unload()
+    end)
+
+    
 
     
     
