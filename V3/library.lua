@@ -1273,7 +1273,7 @@ function BuiltIn.Settings(lib)
 
     -- Config Logic
     local SelectedConfigName = "default"
-    ConfigMenu:AddInput("Config Name", "Name of the file", "default", nil, function(v)
+    ConfigMenu:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
         SelectedConfigName = v
     end)
     
@@ -1339,7 +1339,6 @@ function BuiltIn.Settings(lib)
     TextSelected = Color3.fromRGB(10, 10, 10),    -- dark text on purple
     Accent = Color3.fromRGB(140, 60, 255),        -- primary accent purple
         })
-        })
         State.Config.Banner.UseBanner = true
         State.Config.Banner.CurrentID = "81459253942868"
         updateBannerUI()
@@ -1357,7 +1356,6 @@ function BuiltIn.Settings(lib)
         Text = Color3.fromRGB(255, 255, 255),
         TextSelected = Color3.fromRGB(0, 0, 0),
         Accent = Color3.fromRGB(0, 245, 255),
-        })
         })
         State.Config.Banner.UseBanner = false
         updateBannerUI()
