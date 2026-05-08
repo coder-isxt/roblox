@@ -32,7 +32,7 @@ local Config = {
     CornerRadius = UDim.new(0, 8),
     Side = 1, -- 1: Left, 2: Right
     Icons = {
-        ["eye"] = "rbxassetid://86045912751052",
+        ["eye"] = "rbxassetid://114275093157258",
         ["house"] = "rbxassetid://82102353211434",
         ["player"] = "rbxassetid://86951848379193",
         ["gear"] = "rbxassetid://106265837716775",
@@ -58,7 +58,8 @@ local function createMenuData(title, subtitle)
         Subtitle = subtitle,
         Options = {},
         SystemOptions = {}, -- Built-ins go here
-        SelectedIndex = 1
+        SelectedIndex = 1,
+        OnClose = nil
     }
 end
 
@@ -587,8 +588,8 @@ local function renderMenu(menu)
     updateSelection()
 end
 
-local function openMenu(menu)
-    if State.CurrentMenu then
+local function openMenu(menu, isBack)
+    if not isBack and State.CurrentMenu then
         table.insert(State.History, State.CurrentMenu)
     end
     State.CurrentMenu = menu
@@ -597,8 +598,13 @@ end
 
 local function goBack()
     if #State.History > 0 then
-        State.CurrentMenu = table.remove(State.History)
-        renderMenu(State.CurrentMenu)
+        -- Trigger cleanup for the menu we are leaving
+        if State.CurrentMenu.OnClose then
+            State.CurrentMenu.OnClose()
+        end
+        
+        local prev = table.remove(State.History)
+        openMenu(prev, true)
     end
 end
 
@@ -608,10 +614,15 @@ local function handleMenuInput(name, state, input)
     if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
     
     if input.KeyCode == Enum.KeyCode.Insert then
-        local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
         State.Visible = not State.Visible
         MainFrame.Visible = State.Visible
         
+        -- If closing, trigger cleanup for the current menu
+        if not State.Visible and State.CurrentMenu and State.CurrentMenu.OnClose then
+            State.CurrentMenu.OnClose()
+        end
+        
+        local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
         if State.Visible then
             if hum then
                 oldws = hum.WalkSpeed
@@ -814,16 +825,25 @@ function UILibrary:CreateWindow(title, subtitle)
                 end
             end
 
-            pm:AddButton("Spectate", "Watch this player", "eye", function()
+            pm:AddToggle("Spectate", "Watch this player", (workspace.CurrentCamera.CameraSubject == (p.Character and p.Character:FindFirstChild("Humanoid"))), "eye", function(v)
                 local cam = workspace.CurrentCamera
-                if cam.CameraSubject == (p.Character and p.Character:FindFirstChild("Humanoid")) then
-                    cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
-                    Lib:Notify("Spectate", "Stopped spectating " .. p.Name)
-                else
+                if v then
                     cam.CameraSubject = p.Character:FindFirstChild("Humanoid")
                     Lib:Notify("Spectate", "Now spectating " .. p.Name)
+                else
+                    cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
+                    Lib:Notify("Spectate", "Stopped spectating " .. p.Name)
                 end
             end)
+
+            -- Reset camera when leaving this specific player's menu
+            pm._menuData.OnClose = function()
+                local cam = workspace.CurrentCamera
+                local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+                if cam.CameraSubject ~= hum then
+                    cam.CameraSubject = hum
+                end
+            end
             
             pm:AddButton("Teleport", "Teleport to this player", nil, function()
                 local char = Player.Character
