@@ -698,6 +698,40 @@ function UILibrary:CreateWindow(title, subtitle)
         self:Unload()
     end)
 
+    -- // PLAYERS MENU // --
+    local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "player", true)
+    
+    local function refreshPlayers()
+        PlayersMenu:Clear()
+        for _, p in ipairs(game.Players:GetPlayers()) do
+            if p == Player then continue end -- Skip self
+            local pm = PlayersMenu:AddMenu(p.DisplayName or p.Name, "Actions for " .. p.Name)
+            
+            pm:AddButton("Teleport", "Teleport to this player", nil, function()
+                local char = Player.Character
+                local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                if char and target then
+                    char:PivotTo(target.CFrame * CFrame.new(0, 0, 3))
+                end
+            end)
+            
+            pm:AddButton("Spectate", "Watch this player", "eye", function()
+                local cam = workspace.CurrentCamera
+                if cam.CameraSubject == (p.Character and p.Character:FindFirstChild("Humanoid")) then
+                    cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
+                    Lib:Notify("Spectate", "Stopped spectating " .. p.Name)
+                else
+                    cam.CameraSubject = p.Character:FindFirstChild("Humanoid")
+                    Lib:Notify("Spectate", "Now spectating " .. p.Name)
+                end
+            end)
+        end
+    end
+
+    refreshPlayers()
+    game.Players.PlayerAdded:Connect(refreshPlayers)
+    game.Players.PlayerRemoving:Connect(refreshPlayers)
+
     Developer:AddButton("DarkDex", "Load darkdex explorer", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
     end)
@@ -829,6 +863,10 @@ function UILibrary._wrapMenu(menuData)
         table.insert(menuData.Options, {Name = name, Description = desc, Icon = icon, Type = "menu", SubMenu = sub})
         if State.CurrentMenu == menuData then renderMenu(menuData) end
         return UILibrary._wrapMenu(sub)
+    end
+    function api:Clear()
+        table.clear(menuData.Options)
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     return api
 end
