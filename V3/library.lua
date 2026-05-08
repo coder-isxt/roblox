@@ -1281,6 +1281,12 @@ function UILibrary:CreateWindow(title, subtitle)
         end
     end)
 
+    ProtectionsMenu:AddLabel("Bypass")
+
+    ProtectionsMenu:AddButton("Adonis AntiExploit", "Bypasses Adonis Anti Exploit kicks", function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/V3/bypass.lua"))()
+    end)
+
     Developer:AddButton("DarkDex", "Load darkdex explorer", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
     end)
