@@ -417,41 +417,55 @@ syncUIToConfig = function()
     for _, menu in ipairs(State.AllMenus) do
         local menuKey = menu.Subtitle or menu.Title
         local savedMenu = State.LoadedMenuStates and State.LoadedMenuStates[menuKey]
+        local combined = getCombinedOptions(menu)
         
-        for _, opt in ipairs(menu.Options) do
+        for _, opt in ipairs(combined) do
             local changed = false
-            -- 1. Try to sync from MenuStates first (for specific menu values)
+            
+            -- 1. Sync from Saved Menu States
             if savedMenu and savedMenu[opt.Name] ~= nil then
                 local val = deserializeValue(savedMenu[opt.Name])
-                opt.Value = val
-                if opt.Type == "multichoice" then opt.Index = val end
+                if opt.Type == "multichoice" then
+                    opt.Index = val
+                else
+                    opt.Value = val
+                end
                 changed = true
             end
             
-            -- 2. Special Sync for Built-ins (State.Config mapping)
-            if opt.Name == "Auto Save" then opt.Value = State.Config.AutoSave; changed = true
-            elseif opt.Name == "Use Banner" then opt.Value = State.Config.Banner.UseBanner; changed = true
-            elseif opt.Name == "Disable Title" then opt.Value = State.Config.Banner.DisableTitle; changed = true
-            elseif opt.Name == "Fly Keybind" then opt.Value = State.Config.Binds.Fly; changed = true
-            elseif opt.Name == "Sprint Keybind" then opt.Value = State.Config.Binds.Sprint; changed = true
-            elseif opt.Name == "Banner Scale" then
-                local scales = {"Crop", "Fit", "Stretch", "Tile"}
-                for i, s in ipairs(scales) do
-                    if s == State.Config.Banner.Scale then
-                        opt.Index = i
-                        changed = true
-                        break
-                    end
+            -- 2. Master Mapping for Core Features (Ensures logic is linked)
+            local name = opt.Name
+            local sc = State.Config
+            
+            if name == "Auto Save" then opt.Value = sc.AutoSave; changed = true
+            elseif name == "Use Banner" then opt.Value = sc.Banner.UseBanner; changed = true
+            elseif name == "Disable Title" then opt.Value = sc.Banner.DisableTitle; changed = true
+            elseif name == "Banner Scale" then
+                for i, s in ipairs({"Crop", "Fit", "Stretch", "Tile"}) do
+                    if s == sc.Banner.Scale then opt.Index = i; changed = true; break end
                 end
+            elseif name == "Fly Keybind" then opt.Value = sc.Binds.Fly; changed = true
+            elseif name == "Sprint Keybind" then opt.Value = sc.Binds.Sprint; changed = true
+            elseif name == "Flight Master" then opt.Value = sc.Fly.Master; changed = true
+            elseif name == "Flight Speed" then opt.Value = sc.Fly.Speed; changed = true
+            elseif name == "Sprint Master" then opt.Value = sc.Sprint.Master; changed = true
+            elseif name == "Sprint Speed" then opt.Value = sc.Sprint.Speed; changed = true
+            elseif name == "Anti-Fling" then opt.Value = sc.Protections.AntiFling; changed = true
+            elseif name == "Anti-AFK" then opt.Value = sc.Protections.AntiAFK; changed = true
+            elseif name == "Noclip" then opt.Value = sc.Movement.Noclip; changed = true
+            elseif name == "Infinite Jump" then opt.Value = sc.Movement.InfiniteJump; changed = true
+            elseif name == "No Camera Collision" then opt.Value = sc.Movement.NoCameraCollision; changed = true
             end
             
-            -- 3. Trigger Callbacks for non-toggles (toggles usually just set state)
+            -- 3. Force Logic Refresh (Callbacks)
             if changed and opt.Callback then
-                if opt.Type == "multichoice" and opt.Options then
-                    opt.Callback(opt.Options[opt.Index] or opt.Options[1])
-                elseif opt.Type == "slider" or opt.Type == "toggle" then
-                    opt.Callback(opt.Value)
-                end
+                task.spawn(function()
+                    if opt.Type == "multichoice" and opt.Options then
+                        opt.Callback(opt.Options[opt.Index] or opt.Options[1])
+                    else
+                        opt.Callback(opt.Value)
+                    end
+                end)
             end
             
             -- 4. Visual Update
