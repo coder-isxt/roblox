@@ -29,6 +29,7 @@ local Config = {
     TextSize = 18,
     MenuWidth = 320,
     MaxItemsVisible = 12,
+    CornerRadius = UDim.new(0, 8),
 }
 
 -- // STATE // --
@@ -74,6 +75,10 @@ MainStroke.Color = Config.Theme.Accent
 MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 MainStroke.Parent = MainFrame
 
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = Config.CornerRadius
+MainCorner.Parent = MainFrame
+
 -- // HEADER (BANNER) // --
 local Banner = Instance.new("Frame")
 Banner.Name = "Banner"
@@ -82,6 +87,10 @@ Banner.BackgroundColor3 = Config.Theme.Banner
 Banner.BorderSizePixel = 0
 Banner.ClipsDescendants = true
 Banner.Parent = MainFrame
+
+local BannerCorner = Instance.new("UICorner")
+BannerCorner.CornerRadius = Config.CornerRadius
+BannerCorner.Parent = Banner
 
 -- Pulse Line Decoration
 local PulseLine = Instance.new("Frame")
@@ -117,6 +126,10 @@ SubHeader.Position = UDim2.new(0, 0, 0, 100)
 SubHeader.BackgroundColor3 = Config.Theme.SubHeader
 SubHeader.BorderSizePixel = 0
 SubHeader.Parent = MainFrame
+
+local SubCorner = Instance.new("UICorner")
+SubCorner.CornerRadius = Config.CornerRadius
+SubCorner.Parent = SubHeader
 
 local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, 0, 1, 0)
@@ -165,6 +178,10 @@ Footer.BackgroundColor3 = Config.Theme.SubHeader
 Footer.BorderSizePixel = 0
 Footer.Parent = MainFrame
 
+local FooterCorner = Instance.new("UICorner")
+FooterCorner.CornerRadius = Config.CornerRadius
+FooterCorner.Parent = Footer
+
 local ItemCount = Instance.new("TextLabel")
 ItemCount.Size = UDim2.new(0.4, 0, 1, 0)
 ItemCount.Position = UDim2.new(0, 10, 0, 0)
@@ -198,6 +215,10 @@ InputStroke.Parent = InputPopup
 InputPopup.Visible = false
 InputPopup.Parent = ScreenGui
 
+local InputCorner = Instance.new("UICorner")
+InputCorner.CornerRadius = Config.CornerRadius
+InputCorner.Parent = InputPopup
+
 local InputPlaceholder = Instance.new("TextLabel")
 InputPlaceholder.Size = UDim2.new(1, 0, 0, 30)
 InputPlaceholder.Position = UDim2.new(0, 0, 0, 10)
@@ -229,6 +250,10 @@ DescFrame.BackgroundTransparency = 0.4
 DescFrame.BorderSizePixel = 0
 DescFrame.Parent = MainFrame
 
+local DescCorner = Instance.new("UICorner")
+DescCorner.CornerRadius = Config.CornerRadius
+DescCorner.Parent = DescFrame
+
 local DescText = Instance.new("TextLabel")
 DescText.Size = UDim2.new(1, -20, 1, 0)
 DescText.Position = UDim2.new(0, 10, 0, 0)
@@ -240,6 +265,20 @@ DescText.Font = Config.Font
 DescText.TextWrapped = true
 DescText.TextXAlignment = Enum.TextXAlignment.Left
 DescText.Parent = DescFrame
+
+-- // NOTIFICATION CONTAINER // --
+local NotifyContainer = Instance.new("Frame")
+NotifyContainer.Name = "Notifications"
+NotifyContainer.Size = UDim2.new(0, 300, 1, -20)
+NotifyContainer.Position = UDim2.new(1, -310, 0, 10)
+NotifyContainer.BackgroundTransparency = 1
+NotifyContainer.Parent = ScreenGui
+
+local NotifyLayout = Instance.new("UIListLayout")
+NotifyLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+NotifyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+NotifyLayout.Padding = UDim.new(0, 10)
+NotifyLayout.Parent = NotifyContainer
 
 -- // INTERNAL FUNCTIONS // --
 local function getCombinedOptions(menu)
@@ -361,6 +400,10 @@ local function renderMenu(menu)
         frame.BackgroundTransparency = 1
         frame.BorderSizePixel = 0
         frame.Parent = OptionsContainer
+        
+        local frameCorner = Instance.new("UICorner")
+        frameCorner.CornerRadius = UDim.new(0, 4)
+        frameCorner.Parent = frame
 
         local label = Instance.new("TextLabel")
         label.Size = UDim2.new(0.6, 0, 1, 0)
