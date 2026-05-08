@@ -1243,6 +1243,10 @@ function BuiltIn.Settings(lib)
         updateBannerUI()
     end)
 
+    Theme:AddMultiChoice("Banner Scale", "How the image fits the header", {"Crop", "Fit", "Stretch", "Tile"}, 1, nil, function(v)
+        BannerTexture.ScaleType = Enum.ScaleType[v]
+    end)
+
     Theme:AddToggle("Disable Title", "Hide the text in the banner", false, nil, function(v)
         BannerTitle.Visible = not v
         --SubTitle.Visible = not v
