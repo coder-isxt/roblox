@@ -770,6 +770,8 @@ end
 function UILibrary:CreateWindow(title, subtitle)
     State.CurrentMenu = createMenuData(title, subtitle)
     
+    -- // PLAYERS MENU // --
+    local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "player", true)
     -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
     local Settings = self:AddMenu("Settings", "Menu configuration and exit", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal developer tools", "globe")
@@ -783,8 +785,7 @@ function UILibrary:CreateWindow(title, subtitle)
         self:Unload()
     end)
 
-    -- // PLAYERS MENU // --
-    local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "player", true)
+    
     
     local function refreshPlayers()
         PlayersMenu:Clear()
