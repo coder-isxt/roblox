@@ -219,8 +219,41 @@ function UILibrary:CreateWindow(options)
 
     Utility:MakeDraggable(Content, Main)
 
+    -- Close button
+    local CloseBtn = Utility:Create("TextButton", {
+        Parent = Content,
+        AnchorPoint = Vector2.new(1,0),
+        Position = UDim2.new(1,-8,0,8),
+        Size = UDim2.fromOffset(28,28),
+        BackgroundColor3 = Theme.SidebarItem,
+        BorderSizePixel = 0,
+        Text = "✕",
+        Font = Enum.Font.GothamBold,
+        TextColor3 = Theme.SubText,
+        TextSize = 14,
+        AutoButtonColor = false
+    })
+
+    Utility:Create("UICorner", {
+        CornerRadius = UDim.new(0,6),
+        Parent = CloseBtn
+    })
+
+    CloseBtn.MouseEnter:Connect(function()
+        Utility:Tween(CloseBtn, 0.1, {BackgroundColor3 = Color3.fromRGB(200,50,50), TextColor3 = Color3.fromRGB(255,255,255)})
+    end)
+
+    CloseBtn.MouseLeave:Connect(function()
+        Utility:Tween(CloseBtn, 0.1, {BackgroundColor3 = Theme.SidebarItem, TextColor3 = Theme.SubText})
+    end)
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+
     Window.Tabs = {}
     Window.Gui = ScreenGui
+    Window.Visible = true
 
     -- Add user profile at bottom of sidebar
     local Profile = Utility:Create("Frame", {
@@ -885,6 +918,21 @@ function UILibrary:CreateWindow(options)
     function Window:Destroy()
         ScreenGui:Destroy()
     end
+
+    -- Show/Hide toggle
+    function Window:Toggle()
+        Window.Visible = not Window.Visible
+        Main.Visible = Window.Visible
+    end
+
+    local toggleKey = options.ToggleKey or Enum.KeyCode.RightShift
+
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == toggleKey then
+            Window:Toggle()
+        end
+    end)
 
     return Window
 end
