@@ -50,6 +50,8 @@ local State = {
     SliderHoldingLeft = false,
     SliderHoldingRight = false,
     LastSlideTime = 0,
+    Binding = nil,
+    Keybinds = {},
 }
 
 local function createMenuData(title, subtitle)
@@ -561,6 +563,8 @@ local function renderMenu(menu)
         
         if optData.Type == "slider" then
             valueLabel.Text = "< " .. tostring(optData.Value) .. " >"
+        elseif optData.Type == "keybind" then
+            valueLabel.Text = (State.Binding == optData) and "[...]" or "[" .. (optData.Value and optData.Value.Name or "NONE") .. "]"
         elseif optData.Type == "input" then
             valueLabel.Text = tostring(optData.Value or "")
         else
@@ -699,6 +703,9 @@ local function handleMenuInput(name, state, input)
             openMenu(opt.SubMenu)
         elseif opt.Type == "input" then
             openInputPopup(opt)
+        elseif opt.Type == "keybind" then
+            State.Binding = opt
+            opt.UI.ValueLabel.Text = "[...]"
         end
         return Enum.ContextActionResult.Sink
     end
@@ -722,6 +729,41 @@ UserInputService.InputEnded:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Left or input.KeyCode == Enum.KeyCode.Right then
         State.SliderHoldingLeft = false
         State.SliderHoldingRight = false
+    end
+end)
+
+-- // GLOBAL KEYBIND HANDLER // --
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if State.Binding then
+        -- Reserved keys that shouldn't be used as binds
+        local reserved = {
+            [Enum.KeyCode.Insert] = true,
+            [Enum.KeyCode.Backspace] = true,
+            [Enum.KeyCode.Return] = true,
+            [Enum.KeyCode.Up] = true,
+            [Enum.KeyCode.Down] = true,
+            [Enum.KeyCode.Left] = true,
+            [Enum.KeyCode.Right] = true,
+        }
+        
+        if input.UserInputType == Enum.UserInputType.Keyboard and not reserved[input.KeyCode] then
+            local opt = State.Binding
+            opt.Value = input.KeyCode
+            opt.UI.ValueLabel.Text = "[" .. input.KeyCode.Name .. "]"
+            State.Binding = nil
+            Lib:Notify("Keybinds", "Bound " .. opt.Name .. " to " .. input.KeyCode.Name)
+        end
+        return
+    end
+
+    if gpe then return end
+    
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        for _, bind in ipairs(State.Keybinds) do
+            if bind.Value == input.KeyCode then
+                bind.Callback()
+            end
+        end
     end
 end)
 
@@ -792,6 +834,9 @@ end
 
 function UILibrary:CreateWindow(title, subtitle)
     State.CurrentMenu = createMenuData(title, subtitle)
+
+    -- // LOCAL MENU // --
+    local LocalMenu = self:AddMenu("Local", "Manage local player options", "player", true)
     
     -- // PLAYERS MENU // --
     local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "players", true)
@@ -1033,6 +1078,21 @@ function UILibrary:AddInput(name, desc, placeholder, icon, callback)
     renderMenu(State.CurrentMenu)
 end
 
+function UILibrary:AddKeybind(name, desc, default, icon, callback)
+    if type(icon) == "function" then callback = icon; icon = nil end
+    local bind = {
+        Name = name,
+        Description = desc,
+        Icon = icon,
+        Type = "keybind",
+        Value = default or Enum.KeyCode.None,
+        Callback = callback
+    }
+    table.insert(State.CurrentMenu.Options, bind)
+    table.insert(State.Keybinds, bind)
+    renderMenu(State.CurrentMenu)
+end
+
 -- Helper to wrap menu data into an API object
 function UILibrary._wrapMenu(menuData)
     local api = {}
@@ -1072,6 +1132,20 @@ function UILibrary._wrapMenu(menuData)
             Value = "",
             Callback = callback
         })
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+    function api:AddKeybind(name, desc, default, icon, callback)
+        if type(icon) == "function" then callback = icon; icon = nil end
+        local bind = {
+            Name = name,
+            Description = desc,
+            Icon = icon,
+            Type = "keybind",
+            Value = default or Enum.KeyCode.None,
+            Callback = callback
+        }
+        table.insert(menuData.Options, bind)
+        table.insert(State.Keybinds, bind)
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddMenu(name, desc, icon)
