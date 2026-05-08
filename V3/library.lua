@@ -37,6 +37,8 @@ local Config = {
         ["player"] = "rbxassetid://86951848379193",
         ["gear"] = "rbxassetid://106265837716775",
         ["globe"] = "rbxassetid://101268280882288",
+        ["players"] = "rbxassetid://94079975328593",
+        
     }
 }
 
@@ -279,7 +281,7 @@ DescText.Parent = DescFrame
 -- // PLAYER STATS PANEL // --
 local StatsPanel = Instance.new("Frame")
 StatsPanel.Name = "StatsPanel"
-StatsPanel.Size = UDim2.new(0, 200, 0, 280)
+StatsPanel.Size = UDim2.new(0, 200, 0, 320)
 StatsPanel.BackgroundColor3 = Config.Theme.Background
 StatsPanel.Visible = false
 StatsPanel.Parent = ScreenGui
@@ -728,13 +730,23 @@ RunService.Heartbeat:Connect(function()
         local pos = root and root.Position or Vector3.zero
         local dist = root and (Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and math.floor((root.Position - Player.Character.HumanoidRootPart.Position).Magnitude) or 0) or 0
         
+        local leaderstatsStr = ""
+        local leaderstats = p:FindFirstChild("leaderstats")
+        if leaderstats then
+            for _, v in ipairs(leaderstats:GetChildren()) do
+                if v:IsA("IntValue") or v:IsA("NumberValue") or v:IsA("StringValue") then
+                    leaderstatsStr = leaderstatsStr .. string.format("\n<font color=\"#00f5ff\"><b>%s:</b></font> %s", v.Name:upper(), tostring(v.Value))
+                end
+            end
+        end
+
         StatsInfo.Text = string.format([[
 <font color="#00f5ff"><b>DISPLAY:</b></font> %s
 <font color="#00f5ff"><b>USER:</b></font> @%s
 <font color="#00f5ff"><b>HEALTH:</b></font> %d / %d
-<font color="#00f5ff"><b>DIST:</b></font> %d studs
-<font color="#00f5ff"><b>POS:</b></font> %.1f, %.1f, %.1f]], 
-            p.DisplayName, p.Name, health, maxHealth, dist, pos.X, pos.Y, pos.Z)
+<font color="#00f5ff"><b>DISTANCE:</b></font> %d studs
+<font color="#00f5ff"><b>POSITION:</b></font> %.1f, %.1f, %.1f%s]], 
+            p.DisplayName, p.Name, health, maxHealth, dist, pos.X, pos.Y, pos.Z, leaderstatsStr)
     end
     
     if State.SliderHoldingLeft or State.SliderHoldingRight then
@@ -771,7 +783,7 @@ function UILibrary:CreateWindow(title, subtitle)
     State.CurrentMenu = createMenuData(title, subtitle)
     
     -- // PLAYERS MENU // --
-    local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "player", true)
+    local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "players", true)
     -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
     local Settings = self:AddMenu("Settings", "Menu configuration and exit", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal developer tools", "globe")
