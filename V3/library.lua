@@ -641,7 +641,12 @@ local function handleMenuInput(name, state, input)
             end
         else
             if hum then
-                hum.WalkSpeed = oldws or 16
+                -- Check if any movement mods should be active
+                if State.UpdateSprint then 
+                    State.UpdateSprint() 
+                else
+                    hum.WalkSpeed = oldws or 16
+                end
             end
         end
         return Enum.ContextActionResult.Sink
@@ -1047,8 +1052,11 @@ function UILibrary:CreateWindow(title, subtitle)
         updateSprint()
     end)
     
+    -- Export to state so input handler can see it
+    State.UpdateSprint = updateSprint 
+    
     local SprintKeybind = LocalMenu:AddKeybind("Sprint Keybind", "Hold to sprint", Enum.KeyCode.C, nil, function()
-        -- Callback not needed for hold logic, but system requires one
+        -- Callback not needed for hold logic
     end)
     
     RunService.Heartbeat:Connect(function()
@@ -1161,6 +1169,8 @@ function UILibrary:CreateWindow(title, subtitle)
             Lib:Notify("Settings", "FPS Boost Disabled")
         end
     end)
+
+    Settings:AddLabel("Other")
 
     Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
         self:Unload()
@@ -1369,6 +1379,7 @@ function UILibrary:AddKeybind(name, desc, default, icon, callback)
     table.insert(State.CurrentMenu.Options, bind)
     table.insert(State.Keybinds, bind)
     renderMenu(State.CurrentMenu)
+    return bind
 end
 
 -- Helper to wrap menu data into an API object
@@ -1425,6 +1436,7 @@ function UILibrary._wrapMenu(menuData)
         table.insert(menuData.Options, bind)
         table.insert(State.Keybinds, bind)
         if State.CurrentMenu == menuData then renderMenu(menuData) end
+        return bind
     end
     function api:AddLabel(text)
         table.insert(menuData.Options, {Name = text, Type = "label"})
