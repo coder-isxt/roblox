@@ -1446,6 +1446,10 @@ function BuiltIn.Settings(lib)
             
             local cfgSub = ConfigSub:AddMenu(name, "Manage " .. name .. " configuration")
             
+            cfgSub:AddButton("Save", "Overwrite this file with current settings", nil, function()
+                UILibrary.saveCurrentConfig(name)
+            end)
+
             cfgSub:AddButton("Load", "Apply these settings now", nil, function()
                 local data = http:JSONDecode(readfile(file))
                 if data and data.State then
