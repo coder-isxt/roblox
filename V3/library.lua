@@ -640,6 +640,14 @@ ContextActionService:BindAction("fracturecontrols", handleMenuInput, false,
     Enum.KeyCode.Backspace
 )
 
+-- // SAFETY RESET // --
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Left or input.KeyCode == Enum.KeyCode.Right then
+        State.SliderHoldingLeft = false
+        State.SliderHoldingRight = false
+    end
+end)
+
 -- // CONTINUOUS SLIDER INPUT // --
 RunService.Heartbeat:Connect(function()
     if not State.Visible or not State.CurrentMenu then return end
@@ -652,10 +660,14 @@ RunService.Heartbeat:Connect(function()
             local opt = combined[menu.SelectedIndex]
             
             if opt and opt.Type == "slider" then
+                local oldVal = opt.Value
                 local dir = State.SliderHoldingLeft and -1 or 1
                 opt.Value = math.clamp(opt.Value + (dir * opt.Increment), opt.Min, opt.Max)
-                opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
-                opt.Callback(opt.Value)
+                
+                if opt.Value ~= oldVal then
+                    opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
+                    opt.Callback(opt.Value)
+                end
             end
         end
     end
@@ -677,7 +689,7 @@ function UILibrary:CreateWindow(title, subtitle)
     local Settings = self:AddMenu("Settings", "Menu configuration and exit", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal developer tools", "globe")
     
-    Settings:AddSlider("Menu Side", "Dock menu to left (1) or right (2)", 1, 2, Config.Side, 1, "gear", function(v)
+    Settings:AddSlider("Menu Side", "Dock menu to left (1) or right (2)", 1, 2, Config.Side, 1, nil, function(v)
         Config.Side = v
         updateMenuPosition()
     end)
