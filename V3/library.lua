@@ -38,7 +38,7 @@ local Config = {
         ["gear"] = "rbxassetid://106265837716775",
         ["globe"] = "rbxassetid://101268280882288",
         ["players"] = "rbxassetid://94079975328593",
-        
+        ["shield"] = "rbxassetid://82452497198733",
     }
 }
 
@@ -795,6 +795,10 @@ function UILibrary:CreateWindow(title, subtitle)
     
     -- // PLAYERS MENU // --
     local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "players", true)
+
+    -- // PROTECTIONS MENU // --
+    local ProtectionsMenu = self:AddMenu("Protections", "Security and anti-exploit tools", "shield", true)
+
     -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
     local Settings = self:AddMenu("Settings", "Menu configuration and exit", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal developer tools", "globe")
@@ -806,6 +810,39 @@ function UILibrary:CreateWindow(title, subtitle)
 
     Settings:AddButton("Unload", "Completely remove the menu and clean up", nil, function()
         self:Unload()
+    end)
+
+    local originalSettings = {
+        Shadows = game:GetService("Lighting").GlobalShadows,
+        Quality = settings().Rendering.QualityLevel
+    }
+    
+    Settings:AddToggle("FPS Boost", "Maximize performance by lowering graphics", false, nil, function(v)
+        local lighting = game:GetService("Lighting")
+        if v then
+            originalSettings.Shadows = lighting.GlobalShadows
+            originalSettings.Quality = settings().Rendering.QualityLevel
+            
+            lighting.GlobalShadows = false
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+            
+            for _, effect in ipairs(lighting:GetChildren()) do
+                if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") then
+                    effect.Enabled = false
+                end
+            end
+            Lib:Notify("Settings", "FPS Boost Enabled")
+        else
+            lighting.GlobalShadows = originalSettings.Shadows
+            settings().Rendering.QualityLevel = originalSettings.Quality
+            
+            for _, effect in ipairs(lighting:GetChildren()) do
+                if effect:IsA("PostEffect") or effect:IsA("BlurEffect") or effect:IsA("BloomEffect") or effect:IsA("SunRaysEffect") then
+                    effect.Enabled = true
+                end
+            end
+            Lib:Notify("Settings", "FPS Boost Disabled")
+        end
     end)
 
     
@@ -860,6 +897,56 @@ function UILibrary:CreateWindow(title, subtitle)
     refreshPlayers()
     game.Players.PlayerAdded:Connect(refreshPlayers)
     game.Players.PlayerRemoving:Connect(refreshPlayers)
+    
+    
+    
+    local AntiFlingConnection
+    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents players from flinging you", false, "shield", function(v)
+        if v then
+            AntiFlingConnection = RunService.Stepped:Connect(function()
+                local char = Player.Character
+                if char then
+                    for _, part in ipairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanTouch = false
+                            -- Prevent massive velocity spikes
+                            if part.Velocity.Magnitude > 50 or part.RotVelocity.Magnitude > 50 then
+                                part.Velocity = Vector3.new(0, 0, 0)
+                                part.RotVelocity = Vector3.new(0, 0, 0)
+                            end
+                        end
+                    end
+                end
+            end)
+            Lib:Notify("Protections", "Anti-Fling Enabled")
+        else
+            if AntiFlingConnection then AntiFlingConnection:Disconnect() end
+            local char = Player.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanTouch = true
+                    end
+                end
+            end
+            Lib:Notify("Protections", "Anti-Fling Disabled")
+        end
+    end)
+
+    local AntiAFKConnection
+    ProtectionsMenu:AddToggle("Anti-AFK", "Prevents being kicked for idling", false, nil, function(v)
+        if v then
+            AntiAFKConnection = Player.Idled:Connect(function()
+                local vu = game:GetService("VirtualUser")
+                vu:CaptureController()
+                vu:ClickButton2(Vector2.new())
+            end)
+            Lib:Notify("Protections", "Anti-AFK Enabled")
+        else
+            if AntiAFKConnection then AntiAFKConnection:Disconnect() end
+            Lib:Notify("Protections", "Anti-AFK Disabled")
+        end
+    end)
 
     Developer:AddButton("DarkDex", "Load darkdex explorer", function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
