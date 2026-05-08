@@ -1438,7 +1438,6 @@ function BuiltIn.Settings(lib)
     end
 
     -- Hook Shutdown Events
-    game:BindToClose(triggerAutoSave)
     game:GetService("Players").LocalPlayer.Removing:Connect(triggerAutoSave)
     ScreenGui.Destroying:Connect(triggerAutoSave)
 
