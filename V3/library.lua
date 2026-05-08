@@ -210,8 +210,17 @@ local function handleMenuInput(name, state, input)
     if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
     
     if input.KeyCode == Enum.KeyCode.Insert then
+        local old = game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 0
+        if old == 0 then
+            old = 16
+        end
         State.Visible = not State.Visible
         MainFrame.Visible = State.Visible
+        if State.Visible then
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 0
+        else
+            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = old
+        end
         return Enum.ContextActionResult.Sink
     end
     
