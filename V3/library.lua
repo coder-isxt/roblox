@@ -7,6 +7,7 @@ UILibrary.__index = UILibrary
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
 local Player = Players.LocalPlayer
 
 -- // CONFIGURATION // --
@@ -135,6 +136,14 @@ DescText.Parent = DescFrame
 
 -- // INTERNAL FUNCTIONS // --
 
+local function updateMainFrameSize()
+    local optionsHeight = #State.Options * 35
+    local totalHeight = 80 + 30 + optionsHeight + 40 -- Banner + SubHeader + Options + Desc
+    MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, totalHeight)
+    OptionsContainer.Size = UDim2.new(1, 0, 0, optionsHeight)
+    DescFrame.Position = UDim2.new(0, 0, 0, 110 + optionsHeight + 5)
+end
+
 local function updateSelection()
     for i, option in ipairs(State.Options) do
         local isSelected = (i == State.SelectedIndex)
@@ -154,9 +163,7 @@ local function updateSelection()
     end
 
     ItemCount.Text = State.SelectedIndex .. " / " .. #State.Options
-    
-    -- Position description frame always at bottom
-    DescFrame.Position = UDim2.new(0, 0, 0, 110 + OptionsContainer.Size.Y.Offset + 5)
+    updateMainFrameSize()
 end
 
 local function createOption(name, type, desc)
@@ -187,8 +194,6 @@ local function createOption(name, type, desc)
     valueLabel.Font = Config.Font
     valueLabel.TextXAlignment = Enum.TextXAlignment.Right
     valueLabel.Parent = frame
-
-    OptionsContainer.Size = UDim2.new(1, 0, 0, #State.Options * 35)
     
     return {
         Frame = frame,
@@ -199,25 +204,30 @@ local function createOption(name, type, desc)
     }
 end
 
--- // INPUT // --
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
+-- // INPUT HANDLING WITH CONTEXT ACTION SERVICE // --
+
+local function handleMenuInput(name, state, input)
+    if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
     
     if input.KeyCode == Enum.KeyCode.Insert then
         State.Visible = not State.Visible
         MainFrame.Visible = State.Visible
+        return Enum.ContextActionResult.Sink
     end
-
-    if not State.Visible or #State.Options == 0 then return end
-
+    
+    if not State.Visible then return Enum.ContextActionResult.Pass end
+    
+    -- Consume navigation keys when menu is visible
     if input.KeyCode == Enum.KeyCode.Up then
         State.SelectedIndex = State.SelectedIndex - 1
         if State.SelectedIndex < 1 then State.SelectedIndex = #State.Options end
         updateSelection()
+        return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Down then
         State.SelectedIndex = State.SelectedIndex + 1
         if State.SelectedIndex > #State.Options then State.SelectedIndex = 1 end
         updateSelection()
+        return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Return then
         local opt = State.Options[State.SelectedIndex]
         if opt.Type == "button" then
@@ -227,8 +237,14 @@ UserInputService.InputBegan:Connect(function(input, gp)
             opt.ValueLabel.Text = opt.Value and "[ON]" or "[OFF]"
             opt.Callback(opt.Value)
         end
+        return Enum.ContextActionResult.Sink
     end
-end)
+    
+    return Enum.ContextActionResult.Pass
+end
+
+-- Bind menu controls
+ContextActionService:BindAction("GTAMenuControls", handleMenuInput, false, Enum.KeyCode.Insert, Enum.KeyCode.Up, Enum.KeyCode.Down, Enum.KeyCode.Return)
 
 -- // PUBLIC API // --
 
