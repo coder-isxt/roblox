@@ -174,11 +174,11 @@ ItemCount.Parent = Footer
 
 local LogoImage = Instance.new("ImageLabel")
 LogoImage.Name = "Logo"
-LogoImage.Size = UDim2.new(0, 25, 0, 25)
-LogoImage.Position = UDim2.new(0.5, -12, 0.5, -12)
+LogoImage.Size = UDim2.new(0, 30, 0, 30)
+LogoImage.Position = UDim2.new(0.5, -15, 0.5, -15)
 LogoImage.BackgroundTransparency = 1
 LogoImage.Image = "rbxassetid://90406832214310"
-LogoImage.ImageColor3 = Config.Theme.PulseColor
+LogoImage.ZIndex = 25
 LogoImage.Parent = Footer
 
 -- // DESCRIPTION BOX // --
