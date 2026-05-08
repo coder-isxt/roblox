@@ -44,25 +44,46 @@ local Config = {
 
 -- // STATE // --
 local State = {
-    Visible = false,
-    History = {},
     CurrentMenu = nil,
-    SliderHoldingLeft = false,
-    SliderHoldingRight = false,
-    LastSlideTime = 0,
+    History = {},
+    Open = false,
+    Side = Config.Side, -- 1: Left, 2: Right
+    WatchingPlayer = nil,
     Binding = nil,
     Keybinds = {},
+    AllMenus = {} -- Track all menus for config saving
 }
 
 local function createMenuData(title, subtitle)
-    return {
+    local menu = {
         Title = title,
         Subtitle = subtitle,
         Options = {},
-        SystemOptions = {}, -- Built-ins go here
-        SelectedIndex = 1,
-        OnClose = nil
+        SelectedIndex = 1
     }
+    table.insert(State.AllMenus, menu)
+    return menu
+end
+
+-- // SERIALIZATION HELPERS // --
+local function serializeValue(val)
+    if typeof(val) == "Color3" then
+        return {Type = "Color3", r = val.R, g = val.G, b = val.B}
+    elseif typeof(val) == "EnumItem" then
+        return {Type = "Enum", EnumType = tostring(val.EnumType), Name = val.Name}
+    end
+    return val
+end
+
+local function deserializeValue(val)
+    if type(val) == "table" and val.Type then
+        if val.Type == "Color3" then
+            return Color3.new(val.r, val.g, val.b)
+        elseif val.Type == "Enum" then
+            return Enum[val.EnumType][val.Name]
+        end
+    end
+    return val
 end
 
 -- // CREATE SCREEN GUI // --
@@ -123,14 +144,21 @@ BannerTexture.ScaleType = Enum.ScaleType.Crop
 BannerTexture.Parent = Banner
 
 -- Track state for banner logic
-local BannerState = {
-    UseBanner = true,
-    CurrentID = "81459253942868"
+State.Config = {
+    Banner = {
+        UseBanner = true,
+        CurrentID = "81459253942868"
+    },
+    Fly = { Master = false, Active = false, Speed = 100 },
+    Sprint = { Master = false, Active = false, Speed = 50 },
+    Protections = { AntiFling = false, AntiAFK = false },
+    Movement = { Noclip = false, InfiniteJump = false, NoCameraCollision = false }
 }
 
 local function updateBannerUI()
-    if BannerState.UseBanner and BannerState.CurrentID ~= "" and BannerState.CurrentID ~= "0" then
-        BannerTexture.Image = "rbxassetid://" .. BannerState.CurrentID
+    local b = State.Config.Banner
+    if b.UseBanner and b.CurrentID ~= "" and b.CurrentID ~= "0" then
+        BannerTexture.Image = "rbxassetid://" .. b.CurrentID
         BannerTexture.Visible = true
         PulseLine.Visible = false
     else
@@ -1030,11 +1058,11 @@ function BuiltIn.Local(lib)
     
     -- Flight System
     LocalMenu:AddLabel("Flight")
-    local FlyState = { Master = false, Active = false, Speed = 100 }
+    local fs = State.Config.Fly
     local FlyConnection
     
     local function stopFlight()
-        FlyState.Active = false
+        fs.Active = false
         if FlyConnection then FlyConnection:Disconnect() end
         local char = Player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
@@ -1044,12 +1072,12 @@ function BuiltIn.Local(lib)
     
     local function startFlight()
         stopFlight()
-        FlyState.Active = true
+        fs.Active = true
         FlyConnection = RunService.RenderStepped:Connect(function()
             local char = Player.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             local cam = workspace.CurrentCamera
-            if not root or not FlyState.Master then stopFlight(); return end
+            if not root or not fs.Master then stopFlight(); return end
             
             local moveDir = Vector3.new(0,0,0)
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
@@ -1062,7 +1090,7 @@ function BuiltIn.Local(lib)
             root.Velocity = Vector3.new(0,0,0)
             local targetRotation = CFrame.new(root.CFrame.Position, root.CFrame.Position + cam.CFrame.LookVector)
             if moveDir.Magnitude > 0 then
-                root.CFrame = targetRotation + (moveDir.Unit * (FlyState.Speed / 10))
+                root.CFrame = targetRotation + (moveDir.Unit * (fs.Speed / 10))
             else
                 root.CFrame = targetRotation
             end
@@ -1070,50 +1098,50 @@ function BuiltIn.Local(lib)
     end
     
     LocalMenu:AddToggle("Fly", "Master switch for flying", false, nil, function(v)
-        FlyState.Master = v
+        fs.Master = v
         if not v then stopFlight() end
     end)
     
     LocalMenu:AddSlider("Fly Speed", "Adjust flight velocity", 20, 300, 100, 10, nil, function(v)
-        FlyState.Speed = v
+        fs.Speed = v
     end)
     
     LocalMenu:AddKeybind("Fly Keybind", "Toggle flight on/off", Enum.KeyCode.Z, nil, function()
-        if not FlyState.Master then 
+        if not fs.Master then 
             UILibrary:Notify("Flight", "Turn on Flight Master first!")
             return 
         end
-        if FlyState.Active then stopFlight(); UILibrary:Notify("Flight", "Flight Disabled")
+        if fs.Active then stopFlight(); UILibrary:Notify("Flight", "Flight Disabled")
         else startFlight(); UILibrary:Notify("Flight", "Flight Enabled") end
     end)
 
     -- Sprint System
     LocalMenu:AddLabel("Movement")
-    local SprintState = { Master = false, Active = false, Speed = 50 }
+    local ss = State.Config.Sprint
     local function updateSprint()
         local char = Player.Character
         local hum = char and char:FindFirstChild("Humanoid")
         if not hum then return end
-        if SprintState.Master and SprintState.Active then hum.WalkSpeed = SprintState.Speed
+        if ss.Master and ss.Active then hum.WalkSpeed = ss.Speed
         else hum.WalkSpeed = oldws or 16 end
     end
     
     LocalMenu:AddToggle("Sprint", "Master switch for sprinting", false, nil, function(v)
-        SprintState.Master = v
+        ss.Master = v
         updateSprint()
     end)
     
     LocalMenu:AddSlider("Sprint Speed", "Adjust running velocity", 16, 200, 50, 2, nil, function(v)
-        SprintState.Speed = v
+        ss.Speed = v
         updateSprint()
     end)
     
     local SprintKeybind = LocalMenu:AddKeybind("Sprint Keybind", "Hold to sprint", Enum.KeyCode.C, nil, function() end)
     RunService.Heartbeat:Connect(function()
-        if not SprintState.Master then return end
+        if not ss.Master then return end
         local isPressed = UserInputService:IsKeyDown(SprintKeybind.Value or Enum.KeyCode.None)
-        if isPressed ~= SprintState.Active then
-            SprintState.Active = isPressed
+        if isPressed ~= ss.Active then
+            ss.Active = isPressed
             updateSprint()
         end
     end)
@@ -1122,7 +1150,9 @@ function BuiltIn.Local(lib)
     Player.CharacterAdded:Connect(function() task.wait(1); updateSprint() end)
 
     -- Extra Movement
+    local ms = State.Config.Movement
     LocalMenu:AddToggle("Noclip", "Walk through walls", false, nil, function(v)
+        ms.Noclip = v
         if v then
             _G.NoclipConn = RunService.Stepped:Connect(function()
                 if Player.Character then
@@ -1139,6 +1169,7 @@ function BuiltIn.Local(lib)
     end)
     
     LocalMenu:AddToggle("Infinite Jump", "Jump in mid-air", false, nil, function(v)
+        ms.InfiniteJump = v
         if v then
             _G.InfJumpConn = UserInputService.JumpRequest:Connect(function()
                 local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
@@ -1153,6 +1184,7 @@ function BuiltIn.Local(lib)
 
     LocalMenu:AddLabel("Camera")
     LocalMenu:AddToggle("No Camera Collision", "Camera goes through walls", false, nil, function(v)
+        ms.NoCameraCollision = v
         Player.DevCameraOcclusionMode = v and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
         UILibrary:Notify("Movement", "Camera Collision " .. (v and "Disabled" or "Enabled"))
     end)
@@ -1191,8 +1223,10 @@ end
 
 function BuiltIn.Protections(lib)
     local ProtectionsMenu = lib:AddMenu("Protections", "Security and anti-exploit", "shield", true)
-    
+    local ps = State.Config.Protections
+
     ProtectionsMenu:AddToggle("Anti-Fling", "Prevents flinging", false, nil, function(v)
+        ps.AntiFling = v
         if v then
             _G.AntiFling = RunService.Stepped:Connect(function()
                 if Player.Character then
@@ -1212,6 +1246,7 @@ function BuiltIn.Protections(lib)
     end)
     
     ProtectionsMenu:AddToggle("Anti-AFK", "Prevents idle kick", false, nil, function(v)
+        ps.AntiAFK = v
         if v then
             _G.AntiAFK = Player.Idled:Connect(function()
                 game:GetService("VirtualUser"):CaptureController()
@@ -1234,6 +1269,63 @@ function BuiltIn.Settings(lib)
     local Settings = lib:AddMenu("Settings", "Menu configuration", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal Developer tools", "globe")
     local Theme = Settings:AddMenu("Theme", "Customize the menu theme", nil)
+    local ConfigMenu = Settings:AddMenu("Config", "Save your settings", nil)
+
+    -- Config Logic
+    local SelectedConfigName = "default"
+    ConfigMenu:AddInput("Config Name", "Name of the file", "default", nil, function(v)
+        SelectedConfigName = v
+    end)
+    
+    ConfigMenu:AddButton("Save Config", "Save your settings to file", nil, function()
+        local http = game:GetService("HttpService")
+        local success, err = pcall(function()
+            if not isfolder("Fracture") then makefolder("Fracture") end
+            if not isfolder("Fracture/Configs") then makefolder("Fracture/Configs") end
+            
+            -- Dynamic Menu State Gathering
+            local menuStates = {}
+            for _, menu in ipairs(State.AllMenus) do
+                local menuKey = menu.Subtitle or menu.Title
+                local states = {}
+                for _, opt in ipairs(menu.Options) do
+                    if opt.Type == "toggle" then
+                        states[opt.Name] = opt.Value
+                    elseif opt.Type == "slider" then
+                        states[opt.Name] = opt.Value
+                    elseif opt.Type == "keybind" then
+                        states[opt.Name] = serializeValue(opt.Value)
+                    elseif opt.Type == "multichoice" then
+                        states[opt.Name] = opt.Index
+                    end
+                end
+                if next(states) then
+                    menuStates[menuKey] = states
+                end
+            end
+
+            local saveTable = {
+                Theme = {},
+                State = State.Config,
+                MenuSide = Config.Side,
+                MenuStates = menuStates
+            }
+            
+            -- Serialize Theme Colors
+            for k, v in pairs(Config.Theme) do
+                saveTable.Theme[k] = serializeValue(v)
+            end
+            
+            writefile("Fracture/Configs/" .. SelectedConfigName .. ".json", http:JSONEncode(saveTable))
+        end)
+        
+        if success then
+            UILibrary:Notify("Config", "Saved config: " .. SelectedConfigName)
+        else
+            UILibrary:Notify("Config", "Failed to save: " .. tostring(err))
+        end
+    end)
+
     local Presets = Theme:AddMenu("Presets", "Theme presets", nil)
     
     Presets:AddButton("Default", "Standard premium look", nil, function()
@@ -1247,11 +1339,11 @@ function BuiltIn.Settings(lib)
     TextSelected = Color3.fromRGB(10, 10, 10),    -- dark text on purple
     Accent = Color3.fromRGB(140, 60, 255),        -- primary accent purple
         })
-        BannerState.UseBanner = true
-        BannerState.CurrentID = "81459253942868"
+        })
+        State.Config.Banner.UseBanner = true
+        State.Config.Banner.CurrentID = "81459253942868"
         updateBannerUI()
         BannerTitle.Visible = false
-        SubTitle.Visible = false
         UILibrary:Notify("Presets", "Default theme applied")
     end)
     
@@ -1266,7 +1358,8 @@ function BuiltIn.Settings(lib)
         TextSelected = Color3.fromRGB(0, 0, 0),
         Accent = Color3.fromRGB(0, 245, 255),
         })
-        BannerState.UseBanner = false
+        })
+        State.Config.Banner.UseBanner = false
         updateBannerUI()
         BannerTitle.Visible = true
         SubTitle.Visible = true
