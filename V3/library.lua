@@ -832,6 +832,99 @@ function UILibrary:Unload()
     ScreenGui:Destroy()
 end
 
+function UILibrary:Notify(title, text, duration)
+    local duration = duration or 5
+    
+    -- Outer frame for UIListLayout
+    local NotifyFrame = Instance.new("Frame")
+    NotifyFrame.Size = UDim2.new(1, 0, 0, 60)
+    NotifyFrame.BackgroundTransparency = 1
+    NotifyFrame.BorderSizePixel = 0
+    NotifyFrame.Parent = NotifyContainer
+    
+    -- Inner frame for sliding animations
+    local Main = Instance.new("Frame")
+    Main.Name = "Main"
+    Main.Size = UDim2.new(1, 0, 1, 0)
+    Main.Position = UDim2.new(1.2, 0, 0, 0) -- Start off-screen to the right
+    Main.BackgroundColor3 = Config.Theme.Background
+    Main.BorderSizePixel = 0
+    Main.Parent = NotifyFrame
+    
+    local NotifyCorner = Instance.new("UICorner")
+    NotifyCorner.CornerRadius = Config.CornerRadius
+    NotifyCorner.Parent = Main
+    
+    local NotifyStroke = Instance.new("UIStroke")
+    NotifyStroke.Thickness = 1.5
+    NotifyStroke.Color = Config.Theme.Accent
+    NotifyStroke.Transparency = 0.5
+    NotifyStroke.Parent = Main
+    
+    local NotifyTitle = Instance.new("TextLabel")
+    NotifyTitle.Size = UDim2.new(1, -15, 0, 25)
+    NotifyTitle.Position = UDim2.new(0, 10, 0, 5)
+    NotifyTitle.BackgroundTransparency = 1
+    NotifyTitle.Text = title:upper()
+    NotifyTitle.TextColor3 = Config.Theme.Accent
+    NotifyTitle.TextSize = 14
+    NotifyTitle.Font = Config.TitleFont
+    NotifyTitle.TextXAlignment = Enum.TextXAlignment.Left
+    NotifyTitle.Parent = Main
+    
+    local NotifyBody = Instance.new("TextLabel")
+    NotifyBody.Size = UDim2.new(1, -15, 1, -30)
+    NotifyBody.Position = UDim2.new(0, 10, 0, 25)
+    NotifyBody.BackgroundTransparency = 1
+    NotifyBody.Text = text
+    NotifyBody.TextColor3 = Color3.fromRGB(200, 200, 200)
+    NotifyBody.TextSize = 14
+    NotifyBody.Font = Config.Font
+    NotifyBody.TextXAlignment = Enum.TextXAlignment.Left
+    NotifyBody.TextYAlignment = Enum.TextYAlignment.Top
+    NotifyBody.TextWrapped = true
+    NotifyBody.Parent = Main
+
+    local TimerBar = Instance.new("Frame")
+    TimerBar.Name = "TimerBar"
+    TimerBar.Size = UDim2.new(1, 0, 0, 2)
+    TimerBar.Position = UDim2.new(0, 0, 1, -2)
+    TimerBar.BackgroundColor3 = Config.Theme.Accent
+    TimerBar.BorderSizePixel = 0
+    TimerBar.Parent = Main
+    
+    local TimerCorner = Instance.new("UICorner")
+    TimerCorner.CornerRadius = UDim.new(0, 2)
+    TimerCorner.Parent = TimerBar
+    
+    -- Animations
+    TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        Position = UDim2.new(0, 0, 0, 0)
+    }):Play()
+    
+    TweenService:Create(TimerBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+        Size = UDim2.new(0, 0, 0, 2)
+    }):Play()
+    
+    task.delay(duration, function()
+        local out = TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            Position = UDim2.new(1.2, 0, 0, 0),
+            BackgroundTransparency = 1
+        })
+        
+        -- Fade out text and stroke too
+        TweenService:Create(NotifyTitle, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        TweenService:Create(NotifyBody, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        TweenService:Create(NotifyStroke, TweenInfo.new(0.4), {Transparency = 1}):Play()
+        TweenService:Create(TimerBar, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+        
+        out:Play()
+        out.Completed:Connect(function()
+            NotifyFrame:Destroy()
+        end)
+    end)
+end
+
 function UILibrary:CreateWindow(title, subtitle)
     State.CurrentMenu = createMenuData(title, subtitle)
 
@@ -1230,99 +1323,6 @@ function UILibrary._wrapMenu(menuData)
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     return api
-end
-
-function UILibrary:Notify(title, text, duration)
-    local duration = duration or 5
-    
-    -- Outer frame for UIListLayout
-    local NotifyFrame = Instance.new("Frame")
-    NotifyFrame.Size = UDim2.new(1, 0, 0, 60)
-    NotifyFrame.BackgroundTransparency = 1
-    NotifyFrame.BorderSizePixel = 0
-    NotifyFrame.Parent = NotifyContainer
-    
-    -- Inner frame for sliding animations
-    local Main = Instance.new("Frame")
-    Main.Name = "Main"
-    Main.Size = UDim2.new(1, 0, 1, 0)
-    Main.Position = UDim2.new(1.2, 0, 0, 0) -- Start off-screen to the right
-    Main.BackgroundColor3 = Config.Theme.Background
-    Main.BorderSizePixel = 0
-    Main.Parent = NotifyFrame
-    
-    local NotifyCorner = Instance.new("UICorner")
-    NotifyCorner.CornerRadius = Config.CornerRadius
-    NotifyCorner.Parent = Main
-    
-    local NotifyStroke = Instance.new("UIStroke")
-    NotifyStroke.Thickness = 1.5
-    NotifyStroke.Color = Config.Theme.Accent
-    NotifyStroke.Transparency = 0.5
-    NotifyStroke.Parent = Main
-    
-    local NotifyTitle = Instance.new("TextLabel")
-    NotifyTitle.Size = UDim2.new(1, -15, 0, 25)
-    NotifyTitle.Position = UDim2.new(0, 10, 0, 5)
-    NotifyTitle.BackgroundTransparency = 1
-    NotifyTitle.Text = title:upper()
-    NotifyTitle.TextColor3 = Config.Theme.Accent
-    NotifyTitle.TextSize = 14
-    NotifyTitle.Font = Config.TitleFont
-    NotifyTitle.TextXAlignment = Enum.TextXAlignment.Left
-    NotifyTitle.Parent = Main
-    
-    local NotifyBody = Instance.new("TextLabel")
-    NotifyBody.Size = UDim2.new(1, -15, 1, -30)
-    NotifyBody.Position = UDim2.new(0, 10, 0, 25)
-    NotifyBody.BackgroundTransparency = 1
-    NotifyBody.Text = text
-    NotifyBody.TextColor3 = Color3.fromRGB(200, 200, 200)
-    NotifyBody.TextSize = 14
-    NotifyBody.Font = Config.Font
-    NotifyBody.TextXAlignment = Enum.TextXAlignment.Left
-    NotifyBody.TextYAlignment = Enum.TextYAlignment.Top
-    NotifyBody.TextWrapped = true
-    NotifyBody.Parent = Main
-
-    local TimerBar = Instance.new("Frame")
-    TimerBar.Name = "TimerBar"
-    TimerBar.Size = UDim2.new(1, 0, 0, 2)
-    TimerBar.Position = UDim2.new(0, 0, 1, -2)
-    TimerBar.BackgroundColor3 = Config.Theme.Accent
-    TimerBar.BorderSizePixel = 0
-    TimerBar.Parent = Main
-    
-    local TimerCorner = Instance.new("UICorner")
-    TimerCorner.CornerRadius = UDim.new(0, 2)
-    TimerCorner.Parent = TimerBar
-    
-    -- Animations
-    TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 0, 0, 0)
-    }):Play()
-    
-    TweenService:Create(TimerBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-        Size = UDim2.new(0, 0, 0, 2)
-    }):Play()
-    
-    task.delay(duration, function()
-        local out = TweenService:Create(Main, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-            Position = UDim2.new(1.2, 0, 0, 0),
-            BackgroundTransparency = 1
-        })
-        
-        -- Fade out text and stroke too
-        TweenService:Create(NotifyTitle, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
-        TweenService:Create(NotifyBody, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
-        TweenService:Create(NotifyStroke, TweenInfo.new(0.4), {Transparency = 1}):Play()
-        TweenService:Create(TimerBar, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
-        
-        out:Play()
-        out.Completed:Connect(function()
-            NotifyFrame:Destroy()
-        end)
-    end)
 end
 
 return UILibrary
