@@ -1353,6 +1353,117 @@ function BuiltIn.Settings(lib)
     end)
 
     ConfigSub:AddLabel("Configs")
+    
+    local function refreshConfigs()
+        local http = game:GetService("HttpService")
+        -- Clear everything after the "Configs" label
+        local labelIdx = 0
+        for i, opt in ipairs(ConfigSub._menuData.Options) do
+            if opt.Name == "Configs" and opt.Type == "label" then
+                labelIdx = i
+                break
+            end
+        end
+        
+        if labelIdx > 0 then
+            for i = #ConfigSub._menuData.Options, labelIdx + 1, -1 do
+                table.remove(ConfigSub._menuData.Options, i)
+            end
+        end
+
+        if not isfolder("Fracture/Configs") then return end
+        
+        local autoLoadFile = ""
+        if isfile("Fracture/autoload.json") then
+            local success, content = pcall(readfile, "Fracture/autoload.json")
+            if success then
+                autoLoadFile = content:gsub('"', "")
+            end
+        end
+
+        for _, file in ipairs(listfiles("Fracture/Configs")) do
+            local name = file:match("([^/\\]+)%.json$")
+            if not name then continue end
+            
+            local cfgSub = ConfigSub:AddMenu(name, "Manage " .. name .. " configuration")
+            
+            cfgSub:AddButton("Load", "Apply these settings now", nil, function()
+                local data = http:JSONDecode(readfile(file))
+                if data and data.State then
+                    -- Deep merge state
+                    for k, v in pairs(data.State) do
+                        if type(v) == "table" then
+                            for k2, v2 in pairs(v) do
+                                State.Config[k][k2] = deserializeValue(v2)
+                            end
+                        else
+                            State.Config[k] = v
+                        end
+                    end
+                    
+                    -- Apply Theme Preset
+                    if State.Config.SelectedPreset then
+                        for _, opt in ipairs(Theme._menuData.Options) do
+                            if opt.Name == "Presets" then
+                                for _, preset in ipairs(opt.SubMenu.Options) do
+                                    if preset.Name == State.Config.SelectedPreset then
+                                        preset.Callback()
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    
+                    updateBannerUI()
+                    UILibrary:Notify("Config", "Loaded: " .. name)
+                end
+            end)
+            
+            cfgSub:AddInput("Rename", "Change filename", name, nil, function(new)
+                local sanitized = new:gsub('[\\/:*?"<>|]', ""):gsub("%s+", "_")
+                if sanitized ~= "" and sanitized ~= name then
+                    writefile("Fracture/Configs/" .. sanitized .. ".json", readfile(file))
+                    delfile(file)
+                    if autoLoadFile == name then writefile("Fracture/autoload.json", http:JSONEncode(sanitized)) end
+                    refreshConfigs()
+                end
+            end)
+            
+            cfgSub:AddButton("Remove", "Delete this file permanently", nil, function()
+                delfile(file)
+                if autoLoadFile == name then delfile("Fracture/autoload.json") end
+                refreshConfigs()
+                goBack()
+            end)
+            
+            cfgSub:AddToggle("Load on Startup", "Automatically load this config", (name == autoLoadFile), nil, function(v)
+                if v then
+                    writefile("Fracture/autoload.json", http:JSONEncode(name))
+                else
+                    if isfile("Fracture/autoload.json") then
+                        local current = readfile("Fracture/autoload.json"):gsub('"', "")
+                        if current == name then delfile("Fracture/autoload.json") end
+                    end
+                end
+                refreshConfigs() -- Refresh to update other toggles
+            end)
+        end
+        
+        -- If we are currently in the ConfigSub menu, we need to re-render it to show new configs
+        if State.CurrentMenu == ConfigSub._menuData then
+            renderMenu(ConfigSub._menuData)
+        end
+    end
+
+    -- Initial load
+    task.spawn(refreshConfigs)
+    
+    -- Update Save button to refresh list
+    local originalSave = ConfigSub._menuData.Options[2].Callback
+    ConfigSub._menuData.Options[2].Callback = function()
+        originalSave()
+        refreshConfigs()
+    end
 
 
 
@@ -1448,6 +1559,35 @@ function UILibrary:CreateWindow(title, subtitle)
     BuiltIn.Players(self)
     BuiltIn.Protections(self)
     BuiltIn.Settings(self)
+
+    -- Startup Auto-load
+    task.spawn(function()
+        if isfolder("Fracture/Configs") and isfile("Fracture/autoload.json") then
+            local http = game:GetService("HttpService")
+            local name = readfile("Fracture/autoload.json"):gsub('"', "")
+            local path = "Fracture/Configs/" .. name .. ".json"
+            
+            if isfile(path) then
+                local data = http:JSONDecode(readfile(path))
+                if data and data.State then
+                    -- Apply loaded state
+                    for k, v in pairs(data.State) do
+                        if type(v) == "table" then
+                            for k2, v2 in pairs(v) do
+                                State.Config[k][k2] = deserializeValue(v2)
+                            end
+                        else
+                            State.Config[k] = v
+                        end
+                    end
+                    -- Wait for UI to be ready then apply theme
+                    task.wait(0.1)
+                    updateBannerUI()
+                    UILibrary:Notify("Fracture", "Auto-loaded config: " .. name)
+                end
+            end
+        end
+    end)
 
     renderMenu(State.CurrentMenu)
     updateMenuPosition()
