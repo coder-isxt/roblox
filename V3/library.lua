@@ -833,9 +833,9 @@ end
 -- // INPUT HANDLING WITH CONTEXT ACTION SERVICE // --
 
 local function handleMenuInput(name, state, input)
-    if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
-    
     if input.KeyCode == Enum.KeyCode.Insert then
+        if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
+        
         local wasVisible = StatsPanel.Visible
         State.Visible = not State.Visible
         MainFrame.Visible = State.Visible
@@ -853,57 +853,50 @@ local function handleMenuInput(name, state, input)
             triggerAutoSave()
         end
         
-        local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
-        if State.Visible then
-            if hum then
-                oldws = hum.WalkSpeed
-                hum.WalkSpeed = 0
-            end
-        else
-            if hum then
-                -- Check if any movement mods should be active
-                if State.UpdateSprint then 
-                    State.UpdateSprint() 
-                else
-                    hum.WalkSpeed = oldws or 16
-                end
-            end
-        end
         return Enum.ContextActionResult.Sink
     end
     
     if not State.Visible then return Enum.ContextActionResult.Pass end
     
-    local menu = State.CurrentMenu
-    if not menu then return Enum.ContextActionResult.Pass end
+    -- Block movement for menu keys while open (sink all states)
+    local menuKeys = {
+        [Enum.KeyCode.Up] = true,
+        [Enum.KeyCode.Down] = true,
+        [Enum.KeyCode.Left] = true,
+        [Enum.KeyCode.Right] = true,
+        [Enum.KeyCode.Return] = true,
+        [Enum.KeyCode.Backspace] = true
+    }
     
-    local combined = getCombinedOptions(menu)
+    if not menuKeys[input.KeyCode] then return Enum.ContextActionResult.Pass end
+    
+    -- Only handle logic on Begin, but sink everything
+    if state == Enum.UserInputState.Begin then
+        local menu = State.CurrentMenu
+        if not menu then return Enum.ContextActionResult.Sink end
+        
+        local combined = getCombinedOptions(menu)
+        if #combined == 0 and input.KeyCode ~= Enum.KeyCode.Backspace then return Enum.ContextActionResult.Sink end
 
-    if input.KeyCode == Enum.KeyCode.Up then
-        repeat
-            menu.SelectedIndex = menu.SelectedIndex - 1
-            if menu.SelectedIndex < 1 then menu.SelectedIndex = #combined end
-        until combined[menu.SelectedIndex].Type ~= "label"
-        
-        updateSelection()
-        return Enum.ContextActionResult.Sink
-    elseif input.KeyCode == Enum.KeyCode.Down then
-        repeat
-            menu.SelectedIndex = menu.SelectedIndex + 1
-            if menu.SelectedIndex > #combined then menu.SelectedIndex = 1 end
-        until combined[menu.SelectedIndex].Type ~= "label"
-        
-        updateSelection()
-        return Enum.ContextActionResult.Sink
-    elseif input.KeyCode == Enum.KeyCode.Backspace then
-        goBack()
-        return Enum.ContextActionResult.Sink
-    elseif input.KeyCode == Enum.KeyCode.Left then
-        if state == Enum.UserInputState.Begin then
+        if input.KeyCode == Enum.KeyCode.Up then
+            repeat
+                menu.SelectedIndex = menu.SelectedIndex - 1
+                if menu.SelectedIndex < 1 then menu.SelectedIndex = #combined end
+            until combined[menu.SelectedIndex].Type ~= "label"
+            updateSelection()
+        elseif input.KeyCode == Enum.KeyCode.Down then
+            repeat
+                menu.SelectedIndex = menu.SelectedIndex + 1
+                if menu.SelectedIndex > #combined then menu.SelectedIndex = 1 end
+            until combined[menu.SelectedIndex].Type ~= "label"
+            updateSelection()
+        elseif input.KeyCode == Enum.KeyCode.Backspace then
+            goBack()
+        elseif input.KeyCode == Enum.KeyCode.Left then
             local opt = combined[menu.SelectedIndex]
             if opt and opt.Type == "slider" then
                 State.SliderHoldingLeft = true
-                State.LastSlideTime = tick() + 0.3 -- Initial delay before repeat
+                State.LastSlideTime = tick() + 0.3
                 opt.Value = math.clamp(opt.Value - opt.Increment, opt.Min, opt.Max)
                 opt.UI.ValueLabel.Text = "< " .. tostring(opt.Value) .. " >"
                 opt.Callback(opt.Value)
@@ -913,12 +906,7 @@ local function handleMenuInput(name, state, input)
                 opt.UI.ValueLabel.Text = "< " .. tostring(opt.Options[opt.Index]) .. " >"
                 opt.Callback(opt.Options[opt.Index])
             end
-        elseif state == Enum.UserInputState.End then
-            State.SliderHoldingLeft = false
-        end
-        return Enum.ContextActionResult.Sink
-    elseif input.KeyCode == Enum.KeyCode.Right then
-        if state == Enum.UserInputState.Begin then
+        elseif input.KeyCode == Enum.KeyCode.Right then
             local opt = combined[menu.SelectedIndex]
             if opt and opt.Type == "slider" then
                 State.SliderHoldingRight = true
@@ -932,33 +920,36 @@ local function handleMenuInput(name, state, input)
                 opt.UI.ValueLabel.Text = "< " .. tostring(opt.Options[opt.Index]) .. " >"
                 opt.Callback(opt.Options[opt.Index])
             end
-        elseif state == Enum.UserInputState.End then
-            State.SliderHoldingRight = false
-        end
-        return Enum.ContextActionResult.Sink
-    elseif input.KeyCode == Enum.KeyCode.Return then
-        if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
-        local opt = combined[menu.SelectedIndex]
-        if opt.Type == "button" then
-            opt.Callback()
-        elseif opt.Type == "toggle" then
-            opt.Value = not opt.Value
-            if opt.UI.Checkbox then
-                opt.UI.Checkbox.BackgroundColor3 = opt.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
+        elseif input.KeyCode == Enum.KeyCode.Return then
+            local opt = combined[menu.SelectedIndex]
+            if opt.Type == "button" then
+                opt.Callback()
+            elseif opt.Type == "toggle" then
+                opt.Value = not opt.Value
+                if opt.UI.Checkbox then
+                    opt.UI.Checkbox.BackgroundColor3 = opt.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
+                end
+                opt.Callback(opt.Value)
+            elseif opt.Type == "menu" then
+                openMenu(opt.SubMenu)
+            elseif opt.Type == "input" then
+                openInputPopup(opt)
+            elseif opt.Type == "keybind" then
+                State.Binding = opt
+                opt.UI.ValueLabel.Text = "[...]"
+            elseif opt.Type == "multichoice" then
+                opt.Callback(opt.Options[opt.Index])
             end
-            opt.Callback(opt.Value)
-        elseif opt.Type == "menu" then
-            openMenu(opt.SubMenu)
-        elseif opt.Type == "input" then
-            openInputPopup(opt)
-        elseif opt.Type == "keybind" then
-            State.Binding = opt
-            opt.UI.ValueLabel.Text = "[...]"
-        elseif opt.Type == "multichoice" then
-            opt.Callback(opt.Options[opt.Index])
         end
-        return Enum.ContextActionResult.Sink
     end
+
+    -- Stop slider holding if key is released
+    if state == Enum.UserInputState.End then
+        if input.KeyCode == Enum.KeyCode.Left then State.SliderHoldingLeft = false end
+        if input.KeyCode == Enum.KeyCode.Right then State.SliderHoldingRight = false end
+    end
+    
+    return Enum.ContextActionResult.Sink
     
     return Enum.ContextActionResult.Pass
 end
