@@ -139,6 +139,23 @@ local function updateBannerUI()
     end
 end
 
+local function applyTheme(themeData)
+    for k, v in pairs(themeData) do
+        Config.Theme[k] = v
+    end
+    
+    -- Update Static Elements
+    MainFrame.BackgroundColor3 = Config.Theme.Background
+    MainStroke.Color = Config.Theme.Accent
+    Banner.BackgroundColor3 = Config.Theme.Banner
+    PulseLine.BackgroundColor3 = Config.Theme.PulseColor
+    
+    -- Refresh current menu UI
+    if State.CurrentMenu then
+        renderMenu(State.CurrentMenu)
+    end
+end
+
 local PulseGradient = Instance.new("UIGradient")
 PulseGradient.Transparency = NumberSequence.new({
     NumberSequenceKeypoint.new(0, 1),
@@ -1217,6 +1234,42 @@ function BuiltIn.Settings(lib)
     local Settings = lib:AddMenu("Settings", "Menu configuration", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal Developer tools", "globe")
     local Theme = Settings:AddMenu("Theme", "Customize the menu theme", nil)
+    local Presets = Theme:AddMenu("Presets", "Theme presets", nil)
+    
+    Presets:AddButton("Default", "Standard premium look", nil, function()
+        applyTheme({
+            Accent = Color3.fromRGB(0, 245, 255),
+            Background = Color3.fromRGB(15, 15, 15),
+            Banner = Color3.fromRGB(10, 10, 10),
+            Selected = Color3.fromRGB(30, 30, 30),
+            Text = Color3.fromRGB(255, 255, 255),
+            TextSelected = Color3.fromRGB(0, 245, 255),
+            PulseColor = Color3.fromRGB(0, 245, 255)
+        })
+        BannerState.UseBanner = true
+        BannerState.CurrentID = "81459253942868"
+        updateBannerUI()
+        BannerTitle.Visible = false
+        SubTitle.Visible = false
+        UILibrary:Notify("Presets", "Default theme applied")
+    end)
+    
+    Presets:AddButton("Impulse", "Classic minimalist look", nil, function()
+        applyTheme({
+            Accent = Color3.fromRGB(0, 245, 255),
+            Background = Color3.fromRGB(15, 15, 15),
+            Banner = Color3.fromRGB(10, 10, 10),
+            Selected = Color3.fromRGB(30, 30, 30),
+            Text = Color3.fromRGB(255, 255, 255),
+            TextSelected = Color3.fromRGB(0, 245, 255),
+            PulseColor = Color3.fromRGB(0, 245, 255)
+        })
+        BannerState.UseBanner = false
+        updateBannerUI()
+        BannerTitle.Visible = true
+        SubTitle.Visible = true
+        UILibrary:Notify("Presets", "Impulse theme applied")
+    end)
     
     Settings:AddSlider("Menu Side", "Dock side", 1, 2, Config.Side, 1, nil, function(v)
         Config.Side = v
