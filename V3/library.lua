@@ -1269,15 +1269,15 @@ function BuiltIn.Settings(lib)
     local Settings = lib:AddMenu("Settings", "Menu configuration", "gear", true)
     local Developer = Settings:AddMenu("Developer", "Universal Developer tools", "globe")
     local Theme = Settings:AddMenu("Theme", "Customize the menu theme", nil)
-    local ConfigMenu = Settings:AddMenu("Config", "Save your settings", nil)
+    local ConfigSub = Settings:AddMenu("Config", "Save your settings", nil)
 
     -- Config Logic
     local SelectedConfigName = "default"
-    ConfigMenu:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
+    ConfigSub:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
         SelectedConfigName = v
     end)
     
-    ConfigMenu:AddButton("Save Config", "Save your settings to file", nil, function()
+    ConfigSub:AddButton("Save Config", "Save your settings to file", nil, function()
         local http = game:GetService("HttpService")
         local success, err = pcall(function()
             if not isfolder("Fracture") then makefolder("Fracture") end
