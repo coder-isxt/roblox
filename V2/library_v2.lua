@@ -34,7 +34,7 @@ local GUI_NAME = "Zyntra V2"
 local OPEN_DROPDOWNS = {}
 
 local C = {
-        Main = Color3.fromRGB(15, 15, 20),
+    Main = Color3.fromRGB(15, 15, 20),
     Top = Color3.fromRGB(18, 18, 24),
 
     Sidebar = Color3.fromRGB(18, 18, 24),
