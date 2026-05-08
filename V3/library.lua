@@ -922,6 +922,27 @@ local function handleMenuInput(name, state, input)
             end
         elseif input.KeyCode == Enum.KeyCode.Return then
             local opt = combined[menu.SelectedIndex]
+            
+            -- Visual Flash Feedback
+            if opt.UI and opt.UI.Frame then
+                local flash = Instance.new("Frame")
+                flash.Size = UDim2.new(1, 0, 1, 0)
+                flash.BackgroundColor3 = Color3.new(1, 1, 1)
+                flash.BackgroundTransparency = 0.4
+                flash.BorderSizePixel = 0
+                flash.ZIndex = opt.UI.Frame.ZIndex + 1
+                flash.Parent = opt.UI.Frame
+                
+                local corner = Instance.new("UICorner")
+                corner.CornerRadius = UDim.new(0, 4)
+                corner.Parent = flash
+                
+                TweenService:Create(flash, TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                    BackgroundTransparency = 1
+                }):Play()
+                game:GetService("Debris"):AddItem(flash, 0.25)
+            end
+
             if opt.Type == "button" then
                 opt.Callback()
             elseif opt.Type == "toggle" then
@@ -950,8 +971,6 @@ local function handleMenuInput(name, state, input)
     end
     
     return Enum.ContextActionResult.Sink
-    
-    return Enum.ContextActionResult.Pass
 end
 
 -- Bind menu controls
@@ -1697,10 +1716,40 @@ function UILibrary:CreateWindow(title, subtitle)
                 local cam = workspace.CurrentCamera
                 if v then
                     cam.CameraSubject = p.Character:FindFirstChild("Humanoid")
-                    Lib:Notify("Spectate", "Now spectating " .. p.Name)
+                    UILibrary:Notify("Spectate", "Now spectating " .. p.Name)
                 else
                     cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
-                    Lib:Notify("Spectate", "Stopped spectating " .. p.Name)
+                    UILibrary:Notify("Spectate", "Stopped spectating " .. p.Name)
+                end
+            end)
+
+            pm:AddToggle("Glow", "Orange character outline", (p.Character and p.Character:FindFirstChild("FractureGlow") ~= nil), nil, function(v)
+                local function apply(char)
+                    if not char then return end
+                    local hl = char:FindFirstChild("FractureGlow") or Instance.new("Highlight")
+                    hl.Name = "FractureGlow"
+                    hl.FillTransparency = 1
+                    hl.OutlineColor = Color3.fromRGB(255, 140, 0)
+                    hl.OutlineTransparency = 0
+                    hl.Enabled = v
+                    hl.Parent = char
+                end
+
+                if v then
+                    apply(p.Character)
+                    if _G["Glow_" .. p.UserId] then _G["Glow_" .. p.UserId]:Disconnect() end
+                    _G["Glow_" .. p.UserId] = p.CharacterAdded:Connect(function(char)
+                        task.wait(0.5)
+                        apply(char)
+                    end)
+                else
+                    if _G["Glow_" .. p.UserId] then 
+                        _G["Glow_" .. p.UserId]:Disconnect() 
+                        _G["Glow_" .. p.UserId] = nil
+                    end
+                    if p.Character and p.Character:FindFirstChild("FractureGlow") then
+                        p.Character.FractureGlow:Destroy()
+                    end
                 end
             end)
 
@@ -1720,7 +1769,130 @@ function UILibrary:CreateWindow(title, subtitle)
                     char:PivotTo(target.CFrame * CFrame.new(0, 0, 3))
                 end
             end)
+
+            local Troll = pm:AddMenu("Troll", "Aggressive player actions")
             
+            Troll:AddButton("Fling", "Send this player into the outside world", nil, function()
+                local char = Player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local targetChar = p.Character
+                local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                
+                if hrp and targetHrp then
+                    local oldPos = hrp.CFrame
+                    UILibrary:Notify("Troll", "Flinging " .. p.Name)
+                    
+                    -- Physics Overrides (Extreme Power)
+                    local bam = Instance.new("BodyAngularVelocity")
+                    bam.P = 1e9 -- Maximum power
+                    bam.AngularVelocity = Vector3.new(0, 99999, 0)
+                    bam.MaxTorque = Vector3.new(0, 1e9, 0)
+                    bam.Parent = hrp
+                    
+                    local bg = Instance.new("BodyGyro")
+                    bg.P = 1e9
+                    bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+                    bg.CFrame = hrp.CFrame
+                    bg.Parent = hrp
+                    
+                    -- Selective Noclip (Keep HRP solid for impact)
+                    local noclip = RunService.Stepped:Connect(function()
+                        for _, part in ipairs(char:GetDescendants()) do
+                            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then 
+                                part.CanCollide = false 
+                            end
+                        end
+                    end)
+                    
+                    -- Strike (Lock-on + Velocity Injection)
+                    local start = tick()
+                    while tick() - start < 0.65 do
+                        if targetHrp and targetHrp.Parent then
+                            hrp.CFrame = targetHrp.CFrame
+                            -- Inject extreme velocity every frame for maximum impact
+                            hrp.Velocity = Vector3.new(99999, 99999, 99999)
+                        end
+                        RunService.Heartbeat:Wait()
+                    end
+                    
+                    -- Cleanup & Return
+                    noclip:Disconnect()
+                    bam:Destroy()
+                    bg:Destroy()
+                    hrp.CFrame = oldPos
+                    hrp.Velocity = Vector3.zero
+                    hrp.RotVelocity = Vector3.zero
+                else
+                    UILibrary:Notify("Error", "Target character not found")
+                end
+            end)
+            
+            Troll:AddToggle("Blocker", "Constantly block their path", false, nil, function(v)
+                local id = "Blocker_" .. p.UserId
+                if v then
+                    if _G[id] then _G[id]:Disconnect() end
+                    _G[id] = RunService.Heartbeat:Connect(function()
+                        local char = Player.Character
+                        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                        local targetChar = p.Character
+                        local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                        
+                        if hrp and targetHrp then
+                            -- Position 3 studs in front, rotated to face them
+                            hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, -3) * CFrame.Angles(0, math.pi, 0)
+                            
+                            -- Noclip while blocking
+                            for _, part in ipairs(char:GetDescendants()) do
+                                if part:IsA("BasePart") then part.CanCollide = false end
+                            end
+                            hrp.Velocity = Vector3.zero
+                        end
+                    end)
+                    UILibrary:Notify("Troll", "Blocking " .. p.Name)
+                else
+                    if _G[id] then 
+                        _G[id]:Disconnect() 
+                        _G[id] = nil 
+                    end
+                    UILibrary:Notify("Troll", "Stopped blocking " .. p.Name)
+                end
+            end)
+
+            Troll:AddToggle("Orbit", "Circle around the player", false, nil, function(v)
+                local id = "Orbit_" .. p.UserId
+                if v then
+                    if _G[id] then _G[id]:Disconnect() end
+                    local angle = 0
+                    _G[id] = RunService.Heartbeat:Connect(function()
+                        local char = Player.Character
+                        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                        local targetChar = p.Character
+                        local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                        
+                        if hrp and targetHrp then
+                            angle = angle + 0.15 -- Rotation speed
+                            local radius = 6
+                            local offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+                            
+                            -- Set position and face the target
+                            hrp.CFrame = CFrame.new(targetHrp.Position + offset, targetHrp.Position)
+                            
+                            -- Noclip during orbit
+                            for _, part in ipairs(char:GetDescendants()) do
+                                if part:IsA("BasePart") then part.CanCollide = false end
+                            end
+                            hrp.Velocity = Vector3.zero
+                        end
+                    end)
+                    UILibrary:Notify("Troll", "Orbiting " .. p.Name)
+                else
+                    if _G[id] then 
+                        _G[id]:Disconnect() 
+                        _G[id] = nil 
+                    end
+                    UILibrary:Notify("Troll", "Stopped orbiting " .. p.Name)
+                end
+            end)
             
         end
     end
