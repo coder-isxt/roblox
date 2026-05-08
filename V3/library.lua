@@ -614,10 +614,12 @@ updateSelection = function()
                 DescText.Text = optData.Description or ""
                 
                 -- Update Stats Panel
-                if optData.PlayerObj then
+                local playerContext = optData.PlayerObj or menu.PlayerObj
+                
+                if playerContext then
                     StatsPanel.Visible = true
-                    State.WatchingPlayer = optData.PlayerObj
-                    StatsAvatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. optData.PlayerObj.UserId .. "&w=150&h=150"
+                    State.WatchingPlayer = playerContext
+                    StatsAvatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. playerContext.UserId .. "&w=150&h=150"
                 else
                     StatsPanel.Visible = false
                     State.WatchingPlayer = nil
@@ -794,6 +796,7 @@ applyTheme = function(themeData)
     Banner.BackgroundColor3 = Config.Theme.Banner
     PulseLine.BackgroundColor3 = Config.Theme.PulseColor
     ScrollIndicator.BackgroundColor3 = Config.Theme.Accent
+    StatsStroke.Color = Config.Theme.Accent
     
     -- Refresh current menu UI
     if State.CurrentMenu then
@@ -833,8 +836,12 @@ local function handleMenuInput(name, state, input)
     if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
     
     if input.KeyCode == Enum.KeyCode.Insert then
+        local wasVisible = StatsPanel.Visible
         State.Visible = not State.Visible
         MainFrame.Visible = State.Visible
+        if wasVisible and not MainFrame.Visible then
+            StatsPanel.Visible = State.Visible
+        end
         
         -- If closing, trigger cleanup for the current menu
         if not State.Visible then
@@ -1036,17 +1043,17 @@ RunService.Heartbeat:Connect(function()
         if leaderstats then
             for _, v in ipairs(leaderstats:GetChildren()) do
                 if v:IsA("IntValue") or v:IsA("NumberValue") or v:IsA("StringValue") then
-                    leaderstatsStr = leaderstatsStr .. string.format("\n<font color=\"#00f5ff\"><b>%s:</b></font> %s", v.Name:upper(), tostring(v.Value))
+                    leaderstatsStr = leaderstatsStr .. string.format("\n<font color=\"#8c3cff\"><b>%s:</b></font> %s", v.Name:upper(), tostring(v.Value))
                 end
             end
         end
 
         StatsInfo.Text = string.format([[
-<font color="#00f5ff"><b>DISPLAY:</b></font> %s
-<font color="#00f5ff"><b>USER:</b></font> @%s
-<font color="#00f5ff"><b>HEALTH:</b></font> %d / %d
-<font color="#00f5ff"><b>DISTANCE:</b></font> %d studs
-<font color="#00f5ff"><b>POSITION:</b></font> %.1f, %.1f, %.1f%s]], 
+<font color="#8c3cff"><b>DISPLAY:</b></font> %s
+<font color="#8c3cff"><b>USER:</b></font> @%s
+<font color="#8c3cff"><b>HEALTH:</b></font> %d / %d
+<font color="#8c3cff"><b>DISTANCE:</b></font> %d studs
+<font color="#8c3cff"><b>POSITION:</b></font> %.1f, %.1f, %.1f%s]], 
             p.DisplayName, p.Name, health, maxHealth, dist, pos.X, pos.Y, pos.Z, leaderstatsStr)
     end
     
@@ -1337,40 +1344,6 @@ function BuiltIn.Local(lib)
         Player.DevCameraOcclusionMode = v and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
         UILibrary:Notify("Movement", "Camera Collision " .. (v and "Disabled" or "Enabled"))
     end)
-end
-
-function BuiltIn.Players(lib)
-    local PlayersMenu = lib:AddMenu("Players", "Manage players in the server", "players", true)
-    
-    local function refreshPlayers()
-        local options = PlayersMenu._menuData.Options
-        for i = #options, 1, -1 do
-            if options[i].PlayerObj then
-                table.remove(options, i)
-            end
-        end
-        
-        for _, p in ipairs(game.Players:GetPlayers()) do
-            if p == Player then continue end
-            local pm = PlayersMenu:AddMenu(p.DisplayName .. " (@" .. p.Name .. ")", "View actions for " .. p.Name, nil)
-            pm._menuData.PlayerObj = p
-            
-            pm:AddButton("Teleport", "Teleport to player", nil, function()
-                local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
-                local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                if root and target then root:PivotTo(target.CFrame * CFrame.new(0, 0, 3)) end
-            end)
-            
-            pm:AddToggle("Spectate", "Watch this player", false, nil, function(v)
-                local cam = workspace.CurrentCamera
-                cam.CameraSubject = v and p.Character:FindFirstChild("Humanoid") or Player.Character:FindFirstChild("Humanoid")
-            end)
-        end
-    end
-    
-    refreshPlayers()
-    game.Players.PlayerAdded:Connect(refreshPlayers)
-    game.Players.PlayerRemoving:Connect(refreshPlayers)
 end
 
 function BuiltIn.Protections(lib)
@@ -1709,7 +1682,62 @@ function UILibrary:CreateWindow(title, subtitle)
 
     -- Load Built-ins
     BuiltIn.Local(self)
-    BuiltIn.Players(self)
+
+    local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "players", true)
+    
+    local function refreshPlayers()
+        PlayersMenu:Clear()
+        for _, p in ipairs(game.Players:GetPlayers()) do
+            if p == Player then continue end -- Skip self
+            local pm = PlayersMenu:AddMenu(p.DisplayName .. " (@" .. p.Name .. ")", "Actions for " .. p.Name)
+            
+            -- Store player object in the menu itself and the option
+            pm._menuData.PlayerObj = p
+            
+            local combined = getCombinedOptions(PlayersMenu._menuData)
+            for _, opt in ipairs(combined) do
+                if opt.SubMenu == pm._menuData then
+                    opt.PlayerObj = p
+                    break
+                end
+            end
+
+            pm:AddToggle("Spectate", "Watch this player", (workspace.CurrentCamera.CameraSubject == (p.Character and p.Character:FindFirstChild("Humanoid"))), "eye", function(v)
+                local cam = workspace.CurrentCamera
+                if v then
+                    cam.CameraSubject = p.Character:FindFirstChild("Humanoid")
+                    Lib:Notify("Spectate", "Now spectating " .. p.Name)
+                else
+                    cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
+                    Lib:Notify("Spectate", "Stopped spectating " .. p.Name)
+                end
+            end)
+
+            -- Reset camera when leaving this specific player's menu
+            pm._menuData.OnClose = function()
+                local cam = workspace.CurrentCamera
+                local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+                if cam.CameraSubject ~= hum then
+                    cam.CameraSubject = hum
+                end
+            end
+            
+            pm:AddButton("Teleport", "Teleport to this player", nil, function()
+                local char = Player.Character
+                local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                if char and target then
+                    char:PivotTo(target.CFrame * CFrame.new(0, 0, 3))
+                end
+            end)
+            
+            
+        end
+    end
+
+    refreshPlayers()
+    game.Players.PlayerAdded:Connect(refreshPlayers)
+    game.Players.PlayerRemoving:Connect(refreshPlayers)
+    
     BuiltIn.Protections(self)
     BuiltIn.Settings(self)
 
