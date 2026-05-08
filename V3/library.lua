@@ -355,10 +355,10 @@ local function updateMenuPosition()
         Position = targetPos
     }):Play()
 
-    -- Update StatsPanel Position
+    -- Update StatsPanel Position (Aligned to top of MainFrame)
     local statsTarget = (Config.Side == 1)
-        and UDim2.new(0, Config.MenuWidth + 60, 0, 185)
-        or UDim2.new(1, -(Config.MenuWidth + 260), 0, 185)
+        and UDim2.new(0, Config.MenuWidth + 60, 0, 50)
+        or UDim2.new(1, -(Config.MenuWidth + 260), 0, 50)
     
     StatsPanel.Position = statsTarget
 end
