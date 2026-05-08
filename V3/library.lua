@@ -7,12 +7,7 @@ UILibrary.__index = UILibrary
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local ContextActionService = game:GetService("ContextActionService")
-local Player = Players.LocalPlayer
-
-local ws = Player.Character.Humanoid.WalkSpeed
-
-local oldws
+local oldws = 16
 
 -- // CONFIGURATION // --
 local Config = {
@@ -45,6 +40,7 @@ local function createMenuData(title, subtitle)
         Title = title,
         Subtitle = subtitle,
         Options = {},
+        SystemOptions = {}, -- Built-ins go here
         SelectedIndex = 1
     }
 end
@@ -206,27 +202,32 @@ DescText.TextXAlignment = Enum.TextXAlignment.Left
 DescText.Parent = DescFrame
 
 -- // INTERNAL FUNCTIONS // --
+local function getCombinedOptions(menu)
+    local combined = {}
+    for _, v in ipairs(menu.Options) do table.insert(combined, v) end
+    for _, v in ipairs(menu.SystemOptions) do table.insert(combined, v) end
+    return combined
+end
 
 local function updateMainFrameSize()
     local menu = State.CurrentMenu
-    local optionsCount = #menu.Options
+    local combined = getCombinedOptions(menu)
+    local optionsCount = #combined
     
     -- Fixed window size for scrolling
     local visibleCount = math.min(optionsCount, Config.MaxItemsVisible)
-    local optionsHeight = math.max(visibleCount * 35, 40) -- Increased min height for empty state
+    local optionsHeight = math.max(visibleCount * 35, 40)
     
     local totalHeight = 100 + 30 + optionsHeight + 35 + 45
     MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, totalHeight)
     OptionsContainer.Size = UDim2.new(1, -15, 0, optionsHeight)
     
     Footer.Position = UDim2.new(0, 0, 0, 130 + optionsHeight)
-    DescFrame.Position = UDim2.new(0, 0, 0, 130 + optionsHeight + 35) -- Tighter gap
+    DescFrame.Position = UDim2.new(0, 0, 0, 130 + optionsHeight + 35)
     
     ScrollbarFrame.Visible = optionsCount > 0
     if optionsCount > 0 then
         ScrollbarFrame.Size = UDim2.new(0, 8, 0, optionsHeight)
-        
-        -- Calculate scroll indicator position relative to visible items
         local progress = (menu.SelectedIndex - 1) / math.max(1, optionsCount - 1)
         local pos = progress * (optionsHeight - 40)
         ScrollIndicator.Position = UDim2.new(0, 0, 0, pos)
@@ -235,7 +236,8 @@ end
 
 local function updateSelection()
     local menu = State.CurrentMenu
-    local count = #menu.Options
+    local combined = getCombinedOptions(menu)
+    local count = #combined
     
     if count == 0 then
         menu.SelectedIndex = 1
@@ -245,14 +247,13 @@ local function updateSelection()
         return
     end
 
-    -- Scrolling Logic: Calculate visible range
     local start = 1
     if count > Config.MaxItemsVisible then
         start = math.clamp(menu.SelectedIndex - math.floor(Config.MaxItemsVisible / 2), 1, count - Config.MaxItemsVisible + 1)
     end
     local finish = math.min(count, start + Config.MaxItemsVisible - 1)
 
-    for i, optData in ipairs(menu.Options) do
+    for i, optData in ipairs(combined) do
         local isSelected = (i == menu.SelectedIndex)
         local isVisible = (i >= start and i <= finish)
         local frame = optData.UI.Frame
@@ -285,8 +286,10 @@ local function renderMenu(menu)
         if child:IsA("Frame") then child:Destroy() end
     end
 
+    local combined = getCombinedOptions(menu)
+
     -- Rebuild UI from data
-    for i, optData in ipairs(menu.Options) do
+    for i, optData in ipairs(combined) do
         local frame = Instance.new("Frame")
         frame.Size = UDim2.new(1, 0, 0, 35)
         frame.BackgroundTransparency = 1
@@ -360,17 +363,19 @@ local function handleMenuInput(name, state, input)
     if state ~= Enum.UserInputState.Begin then return Enum.ContextActionResult.Pass end
     
     if input.KeyCode == Enum.KeyCode.Insert then
-        oldws = ws
-        local old = game.Players.LocalPlayer.Character.Humanoid.WalkSpeed
-        if old == 0 then
-            old = 16
-        end
+        local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
         State.Visible = not State.Visible
         MainFrame.Visible = State.Visible
+        
         if State.Visible then
-            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 0
+            if hum then
+                oldws = hum.WalkSpeed
+                hum.WalkSpeed = 0
+            end
         else
-            game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = old
+            if hum then
+                hum.WalkSpeed = oldws or 16
+            end
         end
         return Enum.ContextActionResult.Sink
     end
@@ -379,22 +384,24 @@ local function handleMenuInput(name, state, input)
     
     local menu = State.CurrentMenu
     if not menu then return Enum.ContextActionResult.Pass end
+    
+    local combined = getCombinedOptions(menu)
 
     if input.KeyCode == Enum.KeyCode.Up then
         menu.SelectedIndex = menu.SelectedIndex - 1
-        if menu.SelectedIndex < 1 then menu.SelectedIndex = #menu.Options end
+        if menu.SelectedIndex < 1 then menu.SelectedIndex = #combined end
         updateSelection()
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Down then
         menu.SelectedIndex = menu.SelectedIndex + 1
-        if menu.SelectedIndex > #menu.Options then menu.SelectedIndex = 1 end
+        if menu.SelectedIndex > #combined then menu.SelectedIndex = 1 end
         updateSelection()
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Backspace then
         goBack()
         return Enum.ContextActionResult.Sink
     elseif input.KeyCode == Enum.KeyCode.Return then
-        local opt = menu.Options[menu.SelectedIndex]
+        local opt = combined[menu.SelectedIndex]
         if opt.Type == "button" then
             opt.Callback()
         elseif opt.Type == "toggle" then
@@ -417,19 +424,17 @@ ContextActionService:BindAction("fracturecontrols", handleMenuInput, false, Enum
 -- // PUBLIC API // --
 
 function UILibrary:Unload()
-    ws = oldws
+    local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+    if hum then hum.WalkSpeed = oldws or 16 end
     ContextActionService:UnbindAction("fracturecontrols")
     ScreenGui:Destroy()
 end
 
 function UILibrary:CreateWindow(title, subtitle)
-    oldws = ws
     State.CurrentMenu = createMenuData(title, subtitle)
     
-    renderMenu(State.CurrentMenu)
-
-    -- Add Built-in Settings Menu
-    local Settings = self:AddMenu("Settings", "Menu configuration and exit")
+    -- Add Built-in Settings Menu to SystemOptions (Always at bottom)
+    local Settings = self:AddMenu("Settings", "Menu configuration and exit", true)
     local Developer = Settings:AddMenu("Developer", "Universal developer tools")
     Settings:AddButton("Unload", "Completely remove the menu and clean up", function()
         self:Unload()
@@ -443,7 +448,7 @@ function UILibrary:CreateWindow(title, subtitle)
         loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
     end)
     
-    
+    renderMenu(State.CurrentMenu)
     return self
 end
 
@@ -469,10 +474,11 @@ function UILibrary:AddToggle(name, desc, default, callback)
     renderMenu(State.CurrentMenu)
 end
 
-function UILibrary:AddMenu(name, desc)
+function UILibrary:AddMenu(name, desc, isSystem)
     local subMenu = createMenuData(State.CurrentMenu.Title, name)
+    local targetTable = isSystem and State.CurrentMenu.SystemOptions or State.CurrentMenu.Options
     
-    table.insert(State.CurrentMenu.Options, {
+    table.insert(targetTable, {
         Name = name,
         Description = desc,
         Type = "menu",
@@ -480,28 +486,6 @@ function UILibrary:AddMenu(name, desc)
     })
     
     renderMenu(State.CurrentMenu)
-    
-    -- Return a proxy object that allows adding to the subMenu
-    local proxy = {}
-    function proxy:AddButton(n, d, c)
-        table.insert(subMenu.Options, {Name = n, Description = d, Type = "button", Callback = c})
-    end
-    function proxy:AddToggle(n, d, def, c)
-        table.insert(subMenu.Options, {Name = n, Description = d, Type = "toggle", Value = def, ValueText = def and "[ON]" or "[OFF]", Callback = c})
-    end
-    function proxy:AddMenu(n, d)
-        -- Support recursive submenus
-        local deepMenu = createMenuData(subMenu.Title, n)
-        table.insert(subMenu.Options, {Name = n, Description = d, Type = "menu", SubMenu = deepMenu})
-        
-        local deepProxy = {}
-        deepProxy.AddButton = proxy.AddButton
-        deepProxy.AddToggle = proxy.AddToggle
-        deepProxy.AddMenu = proxy.AddMenu -- This needs to be correctly scoped, but this is a simple way
-        -- For a truly recursive API, we can define a common "Menu" class
-        return UILibrary._wrapMenu(deepMenu)
-    end
-    
     return UILibrary._wrapMenu(subMenu)
 end
 
