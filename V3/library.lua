@@ -119,7 +119,7 @@ BannerTexture.Name = "BannerTexture"
 BannerTexture.Size = UDim2.new(1, 0, 1, 0)
 BannerTexture.BackgroundTransparency = 1
 BannerTexture.Image = "rbxassetid://81459253942868"
-BannerTexture.ScaleType = Enum.ScaleType.Fit
+BannerTexture.ScaleType = Enum.ScaleType.Crop
 BannerTexture.Parent = Banner
 
 -- Track state for banner logic
