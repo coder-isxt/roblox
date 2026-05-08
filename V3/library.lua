@@ -491,7 +491,7 @@ local function handleMenuInput(name, state, input)
     elseif input.KeyCode == Enum.KeyCode.Backspace then
         goBack()
         return Enum.ContextActionResult.Sink
-    if input.KeyCode == Enum.KeyCode.Left then
+    elseif input.KeyCode == Enum.KeyCode.Left then
         if state == Enum.UserInputState.Begin then
             local opt = combined[menu.SelectedIndex]
             if opt and opt.Type == "slider" then
