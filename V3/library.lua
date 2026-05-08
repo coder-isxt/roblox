@@ -823,9 +823,7 @@ local function handleMenuInput(name, state, input)
             end
             
             -- AUTO SAVE LOGIC
-            if State.Config.AutoSave then
-                UILibrary.saveCurrentConfig(State.SelectedConfig or "default", true)
-            end
+            triggerAutoSave()
         end
         
         local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
@@ -1432,6 +1430,17 @@ function BuiltIn.Settings(lib)
         end
         return success
     end
+
+    local function triggerAutoSave()
+        if State.Config and State.Config.AutoSave then
+            UILibrary.saveCurrentConfig(State.SelectedConfig or "default", true)
+        end
+    end
+
+    -- Hook Shutdown Events
+    game:BindToClose(triggerAutoSave)
+    game:GetService("Players").LocalPlayer.Removing:Connect(triggerAutoSave)
+    ScreenGui.Destroying:Connect(triggerAutoSave)
 
     ConfigSub:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
         -- Sanitize filename: remove common illegal characters
