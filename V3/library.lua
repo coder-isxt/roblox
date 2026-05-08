@@ -411,6 +411,16 @@ local function updateSelection()
         updateMainFrameSize()
         return
     end
+    
+    -- Ensure we aren't selecting a label (especially on menu open)
+    if combined[menu.SelectedIndex] and combined[menu.SelectedIndex].Type == "label" then
+        for i, opt in ipairs(combined) do
+            if opt.Type ~= "label" then
+                menu.SelectedIndex = i
+                break
+            end
+        end
+    end
 
     local start = 1
     if count > Config.MaxItemsVisible then
