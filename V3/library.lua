@@ -1238,13 +1238,14 @@ function BuiltIn.Settings(lib)
     
     Presets:AddButton("Default", "Standard premium look", nil, function()
         applyTheme({
-            Accent = Color3.fromRGB(0, 245, 255),
-            Background = Color3.fromRGB(15, 15, 15),
-            Banner = Color3.fromRGB(10, 10, 10),
-            Selected = Color3.fromRGB(30, 30, 30),
-            Text = Color3.fromRGB(255, 255, 255),
-            TextSelected = Color3.fromRGB(0, 245, 255),
-            PulseColor = Color3.fromRGB(0, 245, 255)
+            Banner = Color3.fromRGB(8, 8, 12),            -- deep dark purple-black
+    PulseColor = Color3.fromRGB(166, 77, 255),    -- neon fracture purple
+    SubHeader = Color3.fromRGB(18, 18, 26),       -- darker panel purple tint
+    Background = Color3.fromRGB(12, 12, 18),      -- main background
+    Selected = Color3.fromRGB(190, 120, 255),     -- bright selected glow
+    Text = Color3.fromRGB(245, 245, 255),         -- soft white
+    TextSelected = Color3.fromRGB(10, 10, 10),    -- dark text on purple
+    Accent = Color3.fromRGB(140, 60, 255),        -- primary accent purple
         })
         BannerState.UseBanner = true
         BannerState.CurrentID = "81459253942868"
@@ -1256,13 +1257,14 @@ function BuiltIn.Settings(lib)
     
     Presets:AddButton("Impulse", "Classic minimalist look", nil, function()
         applyTheme({
-            Accent = Color3.fromRGB(0, 245, 255),
-            Background = Color3.fromRGB(15, 15, 15),
             Banner = Color3.fromRGB(10, 10, 10),
-            Selected = Color3.fromRGB(30, 30, 30),
-            Text = Color3.fromRGB(255, 255, 255),
-            TextSelected = Color3.fromRGB(0, 245, 255),
-            PulseColor = Color3.fromRGB(0, 245, 255)
+        PulseColor = Color3.fromRGB(0, 245, 255),
+        SubHeader = Color3.fromRGB(20, 20, 20),
+        Background = Color3.fromRGB(15, 15, 15),
+        Selected = Color3.fromRGB(0, 245, 255),
+        Text = Color3.fromRGB(255, 255, 255),
+        TextSelected = Color3.fromRGB(0, 0, 0),
+        Accent = Color3.fromRGB(0, 245, 255),
         })
         BannerState.UseBanner = false
         updateBannerUI()
