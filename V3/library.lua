@@ -1021,16 +1021,16 @@ function UILibrary:CreateWindow(title, subtitle)
     
     LocalMenu:AddKeybind("Fly Keybind", "Toggle flight on/off", Enum.KeyCode.Z, nil, function()
         if not FlyState.Master then 
-            Lib:Notify("Flight", "Turn on Flight Master first!")
+            UILibrary:Notify("Flight", "Turn on Flight Master first!")
             return 
         end
         
         if FlyState.Active then
             stopFlight()
-            Lib:Notify("Flight", "Flight Disabled")
+            UILibrary:Notify("Flight", "Flight Disabled")
         else
             startFlight()
-            Lib:Notify("Flight", "Flight Enabled")
+            UILibrary:Notify("Flight", "Flight Enabled")
         end
     end)
     
@@ -1168,7 +1168,7 @@ function UILibrary:CreateWindow(title, subtitle)
                     effect.Enabled = false
                 end
             end
-            Lib:Notify("Settings", "FPS Boost Enabled")
+            UILibrary:Notify("Settings", "FPS Boost Enabled")
         else
             lighting.GlobalShadows = originalSettings.Shadows
             settings().Rendering.QualityLevel = originalSettings.Quality
@@ -1178,7 +1178,7 @@ function UILibrary:CreateWindow(title, subtitle)
                     effect.Enabled = true
                 end
             end
-            Lib:Notify("Settings", "FPS Boost Disabled")
+            UILibrary:Notify("Settings", "FPS Boost Disabled")
         end
     end)
 
@@ -1263,7 +1263,7 @@ function UILibrary:CreateWindow(title, subtitle)
                     end
                 end
             end)
-            Lib:Notify("Protections", "Anti-Fling Enabled")
+            UILibrary:Notify("Protections", "Anti-Fling Enabled")
         else
             if AntiFlingConnection then AntiFlingConnection:Disconnect() end
             local char = Player.Character
@@ -1274,7 +1274,7 @@ function UILibrary:CreateWindow(title, subtitle)
                     end
                 end
             end
-            Lib:Notify("Protections", "Anti-Fling Disabled")
+            UILibrary:Notify("Protections", "Anti-Fling Disabled")
         end
     end)
 
@@ -1286,10 +1286,10 @@ function UILibrary:CreateWindow(title, subtitle)
                 vu:CaptureController()
                 vu:ClickButton2(Vector2.new())
             end)
-            Lib:Notify("Protections", "Anti-AFK Enabled")
+            UILibrary:Notify("Protections", "Anti-AFK Enabled")
         else
             if AntiAFKConnection then AntiAFKConnection:Disconnect() end
-            Lib:Notify("Protections", "Anti-AFK Disabled")
+            UILibrary:Notify("Protections", "Anti-AFK Disabled")
         end
     end)
 
