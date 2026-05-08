@@ -109,18 +109,16 @@ end
 local function guiParent()
     if typeof(gethui) == "function" then
         local ok, v = pcall(gethui)
-        if ok and typeof(v) == "Instance" then return v end
+        if ok and v then return v end
     end
     local ok, cg = pcall(function() return game:GetService("CoreGui") end)
     if ok and cg then return cg end
     return Players.LocalPlayer:WaitForChild("PlayerGui")
 end
 
-local function protect(sg)
-    if syn and typeof(syn.protect_gui) == "function" then
-        pcall(syn.protect_gui, sg)
-    elseif typeof(protectgui) == "function" then
-        pcall(protectgui, sg)
+local function protect(gui)
+    if typeof(syn) == "table" and syn.protect_gui then
+        pcall(syn.protect_gui, gui)
     end
 end
 
@@ -140,12 +138,12 @@ function Window:SetVisible(v)
     
     if shouldShow then
         self.Main.Visible = true
-        self.CanvasGroup.GroupTransparency = 1
+        self.Main.GroupTransparency = 1
         self.UIScale.Scale = 0.95
-        tw(self.CanvasGroup, 0.5, {GroupTransparency = 0}, Enum.EasingStyle.Exponential):Play()
+        tw(self.Main, 0.5, {GroupTransparency = 0}, Enum.EasingStyle.Exponential):Play()
         tw(self.UIScale, 0.5, {Scale = 1}, Enum.EasingStyle.Exponential):Play()
     else
-        local t = tw(self.CanvasGroup, 0.4, {GroupTransparency = 1}, Enum.EasingStyle.Exponential)
+        local t = tw(self.Main, 0.4, {GroupTransparency = 1}, Enum.EasingStyle.Exponential)
         tw(self.UIScale, 0.4, {Scale = 0.95}, Enum.EasingStyle.Exponential):Play()
         t:Play()
         t.Completed:Connect(function()
@@ -157,52 +155,54 @@ function Window:SetVisible(v)
 end
 
 function Window:PlayInitializeAnimation()
-    local overlay = mk("Frame", {
-        Parent = self.ScreenGui,
-        BackgroundColor3 = C.Main,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = 100,
-    })
-    
-    local loader = mk("Frame", {
-        Parent = overlay,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = C.Panel,
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        Size = UDim2.fromOffset(250, 4),
-    })
-    corner(loader, 2)
-    
-    local fill = mk("Frame", {
-        Parent = loader,
-        BackgroundColor3 = C.Accent,
-        Size = UDim2.new(0, 0, 1, 0),
-    })
-    corner(fill, 2)
-    
-    local text = mk("TextLabel", {
-        Parent = overlay,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0.5, 0, 0.5, -20),
-        Size = UDim2.fromOffset(200, 20),
-        Font = FONT_BOLD,
-        Text = "ZYNTRA V3",
-        TextColor3 = C.Text,
-        TextSize = 18,
-        TextTransparency = 1,
-    })
-    
-    tw(text, 0.5, {TextTransparency = 0}):Play()
-    task.wait(0.5)
-    tw(fill, 1.2, {Size = UDim2.new(1, 0, 1, 0)}, Enum.EasingStyle.Quart):Play()
-    task.wait(1.4)
-    tw(overlay, 0.6, {BackgroundTransparency = 1}):Play()
-    tw(text, 0.4, {TextTransparency = 1}):Play()
-    tw(loader, 0.4, {BackgroundTransparency = 1}):Play()
-    tw(fill, 0.4, {BackgroundTransparency = 1}):Play()
-    task.delay(0.6, function() overlay:Destroy() end)
+    task.spawn(function()
+        local overlay = mk("Frame", {
+            Parent = self.ScreenGui,
+            BackgroundColor3 = C.Main,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 1, 0),
+            ZIndex = 100,
+        })
+        
+        local loader = mk("Frame", {
+            Parent = overlay,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundColor3 = C.Panel,
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.fromOffset(250, 4),
+        })
+        corner(loader, 2)
+        
+        local fill = mk("Frame", {
+            Parent = loader,
+            BackgroundColor3 = C.Accent,
+            Size = UDim2.new(0, 0, 1, 0),
+        })
+        corner(fill, 2)
+        
+        local text = mk("TextLabel", {
+            Parent = overlay,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0.5, 0, 0.5, -20),
+            Size = UDim2.fromOffset(200, 20),
+            Font = FONT_BOLD,
+            Text = "ZYNTRA V3",
+            TextColor3 = C.Text,
+            TextSize = 18,
+            TextTransparency = 1,
+        })
+        
+        tw(text, 0.5, {TextTransparency = 0}):Play()
+        task.wait(0.5)
+        tw(fill, 0.8, {Size = UDim2.new(1, 0, 1, 0)}, Enum.EasingStyle.Quart):Play()
+        task.wait(1.0)
+        tw(overlay, 0.4, {BackgroundTransparency = 1}):Play()
+        tw(text, 0.3, {TextTransparency = 1}):Play()
+        tw(loader, 0.3, {BackgroundTransparency = 1}):Play()
+        tw(fill, 0.3, {BackgroundTransparency = 1}):Play()
+        task.delay(0.4, function() overlay:Destroy() end)
+    end)
 end
 
 function Window:SetTitle(s)
@@ -238,16 +238,25 @@ function UILibrary:CreateWindow(options)
         Name = GUI_NAME,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         ResetOnSpawn = false,
+        DisplayOrder = 100,
+        Enabled = true,
+        IgnoreGuiInset = true,
     })
     protect(sg)
-    sg.Parent = guiParent()
+    
+    local parent = guiParent()
+    if not parent then
+        warn("[Zyntra V3] Could not find a suitable GUI parent!")
+        return nil
+    end
+    sg.Parent = parent
     
     local main = mk("Frame", {
         Name = "Main",
         Parent = sg,
         BackgroundColor3 = C.Main,
         BorderSizePixel = 0,
-        Position = UDim2.new(0.5, -300, 0.5, -200),
+        Position = UDim2.new(0.5, -300, 0.5, -210),
         Size = UDim2.fromOffset(600, 420),
         ClipsDescendants = false,
         Visible = true,
@@ -255,7 +264,7 @@ function UILibrary:CreateWindow(options)
     corner(main, 14)
     stroke(main, C.Stroke, 0.4, 1)
     
-    -- Drop Shadow Simulation
+    -- Shadow
     local shadow = mk("ImageLabel", {
         Name = "Shadow",
         Parent = main,
@@ -268,14 +277,12 @@ function UILibrary:CreateWindow(options)
         ZIndex = -1,
     })
     
-    local canvas = mk("CanvasGroup", {
-        Name = "Canvas",
+    local canvas = mk("Frame", {
+        Name = "Container",
         Parent = main,
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        GroupTransparency = 0,
     })
-    corner(canvas, 12)
     
     local uiScale = mk("UIScale", {
         Parent = main,
@@ -448,6 +455,7 @@ function UILibrary:CreateWindow(options)
     
     windowObj:PlayInitializeAnimation()
     
+    print("[Zyntra V3] Window created successfully.")
     self._window = windowObj
     return windowObj
 end
@@ -591,7 +599,11 @@ function Window:AddTab(name, icon)
     end)
     
     if #self.Tabs == 0 then
-        task.defer(function() tabObj:Select() end)
+        task.defer(function() 
+            task.wait(0.1)
+            print("[Zyntra V3] Selecting initial tab:", name)
+            tabObj:Select() 
+        end)
     end
     
     table.insert(self.Tabs, tabObj)
