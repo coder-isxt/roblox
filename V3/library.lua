@@ -147,9 +147,16 @@ BannerTexture.Parent = Banner
 
 -- Track state for banner logic
 State.Config = {
+    SelectedPreset = "Default",
     Banner = {
         UseBanner = true,
-        CurrentID = "81459253942868"
+        CurrentID = "81459253942868",
+        DisableTitle = false,
+        Scale = "Crop"
+    },
+    Binds = {
+        Fly = Enum.KeyCode.Z,
+        Sprint = Enum.KeyCode.C
     },
     Fly = { Master = false, Active = false, Speed = 100 },
     Sprint = { Master = false, Active = false, Speed = 50 },
@@ -167,6 +174,8 @@ local function updateBannerUI()
         BannerTexture.Visible = false
         PulseLine.Visible = true
     end
+    
+    BannerTitle.Visible = not b.DisableTitle
 end
 
 local function applyTheme(themeData)
@@ -577,11 +586,10 @@ local function openInputPopup(optData)
     
     local connection
     connection = InputBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            optData.Value = InputBox.Text
-            optData.UI.ValueLabel.Text = optData.Value
-            optData.Callback(optData.Value)
-        end
+        optData.Value = InputBox.Text
+        optData.UI.ValueLabel.Text = optData.Value
+        optData.Callback(optData.Value)
+        
         InputPopup.Visible = false
         connection:Disconnect()
     end)
@@ -877,8 +885,13 @@ UserInputService.InputBegan:Connect(function(input, gpe)
             local opt = State.Binding
             opt.Value = input.KeyCode
             opt.UI.ValueLabel.Text = "[" .. input.KeyCode.Name .. "]"
+            
+            -- Sync to State.Config for built-ins
+            if opt.Name == "Fly Keybind" then State.Config.Binds.Fly = input.KeyCode end
+            if opt.Name == "Sprint Keybind" then State.Config.Binds.Sprint = input.KeyCode end
+            
             State.Binding = nil
-            Lib:Notify("Keybinds", "Bound " .. opt.Name .. " to " .. input.KeyCode.Name)
+            UILibrary:Notify("Keybinds", "Bound " .. opt.Name .. " to " .. input.KeyCode.Name)
         end
         return
     end
@@ -1115,7 +1128,7 @@ function BuiltIn.Local(lib)
         fs.Speed = v
     end)
     
-    LocalMenu:AddKeybind("Fly Keybind", "Toggle flight on/off", Enum.KeyCode.Z, nil, function()
+    LocalMenu:AddKeybind("Fly Keybind", "Toggle flight on/off", State.Config.Binds.Fly, nil, function()
         if not fs.Master then 
             UILibrary:Notify("Flight", "Turn on Flight Master first!")
             return 
@@ -1145,7 +1158,7 @@ function BuiltIn.Local(lib)
         updateSprint()
     end)
     
-    local SprintKeybind = LocalMenu:AddKeybind("Sprint Keybind", "Hold to sprint", Enum.KeyCode.C, nil, function() end)
+    local SprintKeybind = LocalMenu:AddKeybind("Sprint Keybind", "Hold to sprint", State.Config.Binds.Sprint, nil, function() end)
     RunService.Heartbeat:Connect(function()
         if not ss.Master then return end
         local isPressed = UserInputService:IsKeyDown(SprintKeybind.Value or Enum.KeyCode.None)
@@ -1283,7 +1296,11 @@ function BuiltIn.Settings(lib)
     -- Config Logic
     local SelectedConfigName = "default"
     ConfigSub:AddInput("Config Name", "Name of the file", "Config name...", nil, function(v)
-        SelectedConfigName = v
+        -- Sanitize filename: remove common illegal characters
+        local sanitized = v:gsub('[\\/:*?"<>|]', "")
+        sanitized = sanitized:gsub("%s+", "_") -- Replace spaces with underscores
+        
+        SelectedConfigName = sanitized ~= "" and sanitized or "default"
     end)
     
     ConfigSub:AddButton("Save Config", "Save your settings to file", nil, function()
@@ -1316,16 +1333,10 @@ function BuiltIn.Settings(lib)
             end
 
             local saveTable = {
-                Theme = {},
                 State = State.Config,
                 MenuSide = Config.Side,
                 MenuStates = menuStates
             }
-            
-            -- Serialize Theme Colors
-            for k, v in pairs(Config.Theme) do
-                saveTable.Theme[k] = serializeValue(v)
-            end
             
             writefile("Fracture/Configs/" .. SelectedConfigName .. ".json", http:JSONEncode(saveTable))
         end)
@@ -1340,37 +1351,39 @@ function BuiltIn.Settings(lib)
     local Presets = Theme:AddMenu("Presets", "Theme presets", nil)
     
     Presets:AddButton("Default", "Standard premium look", nil, function()
+        State.Config.SelectedPreset = "Default"
         applyTheme({
             Banner = Color3.fromRGB(8, 8, 12),            -- deep dark purple-black
-    PulseColor = Color3.fromRGB(166, 77, 255),    -- neon fracture purple
-    SubHeader = Color3.fromRGB(18, 18, 26),       -- darker panel purple tint
-    Background = Color3.fromRGB(12, 12, 18),      -- main background
-    Selected = Color3.fromRGB(190, 120, 255),     -- bright selected glow
-    Text = Color3.fromRGB(245, 245, 255),         -- soft white
-    TextSelected = Color3.fromRGB(10, 10, 10),    -- dark text on purple
-    Accent = Color3.fromRGB(140, 60, 255),        -- primary accent purple
+            PulseColor = Color3.fromRGB(166, 77, 255),    -- neon fracture purple
+            SubHeader = Color3.fromRGB(18, 18, 26),       -- darker panel purple tint
+            Background = Color3.fromRGB(12, 12, 18),      -- main background
+            Selected = Color3.fromRGB(190, 120, 255),     -- bright selected glow
+            Text = Color3.fromRGB(245, 245, 255),         -- soft white
+            TextSelected = Color3.fromRGB(10, 10, 10),    -- dark text on purple
+            Accent = Color3.fromRGB(140, 60, 255),        -- primary accent purple
         })
         State.Config.Banner.UseBanner = true
         State.Config.Banner.CurrentID = "81459253942868"
+        State.Config.Banner.DisableTitle = true
         updateBannerUI()
-        BannerTitle.Visible = false
         UILibrary:Notify("Presets", "Default theme applied")
     end)
     
     Presets:AddButton("Impulse", "Classic minimalist look", nil, function()
+        State.Config.SelectedPreset = "Impulse"
         applyTheme({
             Banner = Color3.fromRGB(10, 10, 10),
-        PulseColor = Color3.fromRGB(0, 245, 255),
-        SubHeader = Color3.fromRGB(20, 20, 20),
-        Background = Color3.fromRGB(15, 15, 15),
-        Selected = Color3.fromRGB(0, 245, 255),
-        Text = Color3.fromRGB(255, 255, 255),
-        TextSelected = Color3.fromRGB(0, 0, 0),
-        Accent = Color3.fromRGB(0, 245, 255),
+            PulseColor = Color3.fromRGB(0, 245, 255),
+            SubHeader = Color3.fromRGB(20, 20, 20),
+            Background = Color3.fromRGB(15, 15, 15),
+            Selected = Color3.fromRGB(0, 245, 255),
+            Text = Color3.fromRGB(255, 255, 255),
+            TextSelected = Color3.fromRGB(0, 0, 0),
+            Accent = Color3.fromRGB(0, 245, 255),
         })
         State.Config.Banner.UseBanner = false
+        State.Config.Banner.DisableTitle = false
         updateBannerUI()
-        BannerTitle.Visible = true
         SubTitle.Visible = true
         UILibrary:Notify("Presets", "Impulse theme applied")
     end)
@@ -1391,22 +1404,23 @@ function BuiltIn.Settings(lib)
     Settings:AddButton("Unload", "Close menu", nil, function() lib:Unload() end)
     
     Theme:AddToggle("Use Banner", "Show the image in the header", true, nil, function(v)
-        BannerState.UseBanner = v
+        State.Config.Banner.UseBanner = v
         updateBannerUI()
     end)
 
     Theme:AddInput("Banner Image", "Paste a Roblox Image ID", "Texture id...", nil, function(v)
-        BannerState.CurrentID = v:gsub("%D", "")
+        State.Config.Banner.CurrentID = v:gsub("%D", "")
         updateBannerUI()
     end)
 
     Theme:AddMultiChoice("Banner Scale", "How the image fits the header", {"Crop", "Fit", "Stretch", "Tile"}, 1, nil, function(v)
+        State.Config.Banner.Scale = v
         BannerTexture.ScaleType = Enum.ScaleType[v]
     end)
 
     Theme:AddToggle("Disable Title", "Hide the text in the banner", false, nil, function(v)
-        BannerTitle.Visible = not v
-        --SubTitle.Visible = not v
+        State.Config.Banner.DisableTitle = v
+        updateBannerUI()
     end)
 
     Developer:AddButton("DarkDex", "Load explorer", nil, function()
