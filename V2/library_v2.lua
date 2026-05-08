@@ -32,6 +32,21 @@ local FONT = Enum.Font.Gotham
 local FONT_BOLD = Enum.Font.GothamMedium
 local GUI_NAME = "Zyntra V2"
 local OPEN_DROPDOWNS = {}
+local ICON_REGISTRY = {}
+
+-- Built-in Icon Registry (Roblox asset IDs)
+local BUILT_IN_ICONS = {
+    -- Common UI icons
+    ["globe"] = "rbxassetid://94728509222023",
+    ["gear"] = "rbxassetid://83434272843246",
+    ["home"] = "rbxassetid://100729737189286",
+    ["eye"] = "rbxassetid://125181249951484",
+}
+
+-- Register built-in icons on library load
+for iconName, assetId in pairs(BUILT_IN_ICONS) do
+    ICON_REGISTRY[iconName] = assetId
+end
 
 local C = {
     Main = Color3.fromRGB(15, 15, 20),
@@ -342,12 +357,16 @@ function UILibrary:IsFlingProtectSuspended()
     return os.clock() < (self._suspendFlingProtectUntil or 0)
 end
 
-function UILibrary:RegisterIcon()
-    return false
+function UILibrary:RegisterIcon(name, assetId)
+    if type(name) ~= "string" or type(assetId) ~= "string" then
+        return false
+    end
+    ICON_REGISTRY[name] = assetId
+    return true
 end
 
-function UILibrary:GetIcon()
-    return nil
+function UILibrary:GetIcon(name)
+    return ICON_REGISTRY[name]
 end
 
 function UILibrary:SetIconResolver()
@@ -5397,12 +5416,13 @@ local function asOptions(list)
 end
 
 function Section:CreateButton(a, b)
-    local text, cb, textAlign, tooltipText
+    local text, cb, textAlign, tooltipText, icon
     if typeof(a) == "table" then
         text = tostring(a.Name or a.Text or "Button")
         cb = a.Callback or b
         textAlign = a.TextXAlignment
         tooltipText = a.Tooltip or a.Description or a.Hint
+        icon = a.Icon
     else
         text = tostring(a or "Button")
         cb = b
@@ -5423,6 +5443,26 @@ function Section:CreateButton(a, b)
         Scale = 1
     })
 
+    local iconImage = nil
+    local iconSize = 16
+    
+    if icon then
+        local iconAssetId = icon
+        if type(icon) == "string" and not icon:match("^rbxasset://") and not icon:match("^http") then
+            iconAssetId = ICON_REGISTRY[icon] or icon
+        end
+        iconImage = mk("ImageLabel", {
+            Parent = shell,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            Position = UDim2.new(0, 12, 0.5, -iconSize/2),
+            Image = iconAssetId,
+            ImageColor3 = col.Text,
+            ZIndex = 2,
+        })
+    end
+
+    local textOffset = icon and (iconSize + 8) or 0
     local btn = mk("TextButton", {
         Parent = shell,
         BackgroundColor3 = buttonBaseColor,
@@ -5434,6 +5474,10 @@ function Section:CreateButton(a, b)
         TextColor3 = col.Text,
         TextXAlignment = textAlign or Enum.TextXAlignment.Center,
         Text = renderButtonText(text),
+    })
+    mk("UIPadding", {
+        Parent = btn,
+        PaddingLeft = UDim.new(0, textOffset),
     })
     corner(btn, 6)
     stroke(btn, col.Stroke, CONTROL_STROKE_TRANSPARENCY)
@@ -5473,12 +5517,13 @@ end
 
 -- UI Control Builders
 function Section:CreateToggle(a, b, c)
-    local text, default, cb, tooltipText
+    local text, default, cb, tooltipText, icon
     if typeof(a) == "table" then
         text = tostring(a.Name or a.Text or "Toggle")
         default = a.CurrentValue == true or a.Default == true
         cb = a.Callback or b
         tooltipText = a.Tooltip or a.Description or a.Hint
+        icon = a.Icon
     else
         text = tostring(a or "Toggle")
         default = c == true
@@ -5490,11 +5535,31 @@ function Section:CreateToggle(a, b, c)
     local shell = controlShell(self, 38)
     local back = controlBack(shell, 38, col)
 
+    local iconImage = nil
+    local iconSize = 16
+    
+    if icon then
+        local iconAssetId = icon
+        if type(icon) == "string" and not icon:match("^rbxasset://") and not icon:match("^http") then
+            iconAssetId = ICON_REGISTRY[icon] or icon
+        end
+        iconImage = mk("ImageLabel", {
+            Parent = back,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            Position = UDim2.new(0, 12, 0.5, -iconSize/2),
+            Image = iconAssetId,
+            ImageColor3 = col.Text,
+            ZIndex = 2,
+        })
+    end
+
+    local textOffset = icon and (iconSize + 8) or 0
     mk("TextLabel", {
         Parent = back,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 0),
-        Size = UDim2.new(1, -60, 1, 0),
+        Position = UDim2.new(0, 12 + textOffset, 0, 0),
+        Size = UDim2.new(1, -60 - textOffset, 1, 0),
         Font = FONT,
         TextSize = 13,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -6196,19 +6261,41 @@ function Section:CreateKeybind(a, b, c)
 end
 
 function Section:CreateLabel(text)
-    local labelText = text
-    local tooltipText = nil
+    local labelText, tooltipText, icon
     if typeof(text) == "table" then
         labelText = text.Text or text.Name or ""
         tooltipText = text.Tooltip or text.Description or text.Hint
+        icon = text.Icon
     end
 
     local col = self.Window.Colors or C
     local shell = controlShell(self, 24)
+
+    local iconImage = nil
+    local iconSize = 16
+    
+    if icon then
+        local iconAssetId = icon
+        if type(icon) == "string" and not icon:match("^rbxasset://") and not icon:match("^http") then
+            iconAssetId = ICON_REGISTRY[icon] or icon
+        end
+        iconImage = mk("ImageLabel", {
+            Parent = shell,
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            Position = UDim2.new(0, 12, 0, 4),
+            Image = iconAssetId,
+            ImageColor3 = col.SubText,
+            ZIndex = 2,
+        })
+    end
+
+    local textOffset = icon and (iconSize + 8) or 0
     local lbl = mk("TextLabel", {
         Parent = shell,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 12 + textOffset, 0, 0),
+        Size = UDim2.new(1, -12 - textOffset, 1, 0),
         Font = FONT,
         TextSize = 13,
         TextColor3 = col.SubText,
@@ -7017,7 +7104,7 @@ function UILibrary:CreateWindow(arg)
         Active = true,
         Visible = false,
     })
-    corner(main, 10)
+    corner(main, 16)
     local mainStroke = stroke(main, colors.Stroke, 0.45, 1)
     local mainScale = mk("UIScale", {
         Parent = main,
@@ -7028,7 +7115,7 @@ function UILibrary:CreateWindow(arg)
         MinSize = Vector2.new(820, 500),
     })
 
-    local sidebarWidth = 244
+    local sidebarWidth = 280
     local shell = mk("Frame", {
         Parent = main,
         BackgroundTransparency = 1,
