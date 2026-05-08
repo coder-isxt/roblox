@@ -1234,7 +1234,7 @@ function UILibrary:CreateWindow(title, subtitle)
     
     
     local AntiFlingConnection
-    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents players from flinging you", false, "shield", function(v)
+    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents players from flinging you", false, nil, function(v)
         if v then
             AntiFlingConnection = RunService.Stepped:Connect(function()
                 local char = Player.Character
