@@ -13,18 +13,20 @@ local Player = Players.LocalPlayer
 -- // CONFIGURATION // --
 local Config = {
     Theme = {
-        Banner = Color3.fromRGB(22, 100, 180), -- Classic Blue Banner
-        SubHeader = Color3.fromRGB(0, 0, 0),
-        Background = Color3.fromRGB(0, 0, 0), -- Transparent Black
-        Selected = Color3.fromRGB(255, 255, 255), -- White highlight
+        Banner = Color3.fromRGB(10, 10, 10),
+        PulseColor = Color3.fromRGB(0, 245, 255),
+        SubHeader = Color3.fromRGB(20, 20, 20),
+        Background = Color3.fromRGB(15, 15, 15),
+        Selected = Color3.fromRGB(0, 245, 255),
         Text = Color3.fromRGB(255, 255, 255),
-        TextSelected = Color3.fromRGB(0, 0, 0), -- Inverted text
-        Accent = Color3.fromRGB(22, 100, 180),
+        TextSelected = Color3.fromRGB(0, 0, 0),
+        Accent = Color3.fromRGB(0, 245, 255),
     },
-    Font = Enum.Font.RobotoMono, -- Closest to GTA sans-serif
+    Font = Enum.Font.SourceSansBold,
+    TitleFont = Enum.Font.GothamBold,
     TextSize = 18,
-    MenuWidth = 300,
-    MaxItemsVisible = 10,
+    MenuWidth = 320,
+    MaxItemsVisible = 12,
 }
 
 -- // STATE // --
@@ -44,67 +46,87 @@ ScreenGui.Parent = game:GetService("CoreGui") or Player:WaitForChild("PlayerGui"
 -- // MAIN CONTAINER // --
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, 0)
+MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, 500)
 MainFrame.Position = UDim2.new(0, 50, 0, 50)
-MainFrame.BackgroundTransparency = 1
+MainFrame.BackgroundColor3 = Config.Theme.Background
+MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
 -- // HEADER (BANNER) // --
 local Banner = Instance.new("Frame")
 Banner.Name = "Banner"
-Banner.Size = UDim2.new(1, 0, 0, 80)
+Banner.Size = UDim2.new(1, 0, 0, 100)
 Banner.BackgroundColor3 = Config.Theme.Banner
 Banner.BorderSizePixel = 0
+Banner.ClipsDescendants = true
 Banner.Parent = MainFrame
+
+-- Pulse Line Decoration
+local PulseLine = Instance.new("Frame")
+PulseLine.Size = UDim2.new(1.5, 0, 0, 2)
+PulseLine.Position = UDim2.new(-0.25, 0, 0.5, 0)
+PulseLine.BackgroundColor3 = Config.Theme.PulseColor
+PulseLine.BorderSizePixel = 0
+PulseLine.Parent = Banner
+
+local PulseGradient = Instance.new("UIGradient")
+PulseGradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 1),
+    NumberSequenceKeypoint.new(0.5, 0),
+    NumberSequenceKeypoint.new(1, 1)
+})
+PulseGradient.Parent = PulseLine
 
 local BannerTitle = Instance.new("TextLabel")
 BannerTitle.Size = UDim2.new(1, 0, 1, 0)
 BannerTitle.BackgroundTransparency = 1
-BannerTitle.Text = "GTA V MENU"
-BannerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-BannerTitle.TextSize = 35
-BannerTitle.Font = Enum.Font.GothamBold
+BannerTitle.Text = "IMPULSE"
+BannerTitle.TextColor3 = Config.Theme.PulseColor
+BannerTitle.TextSize = 55
+BannerTitle.Font = Config.TitleFont
 BannerTitle.Parent = Banner
 
--- // SUB-HEADER (ITEM COUNT) // --
+-- // SUB-HEADER // --
 local SubHeader = Instance.new("Frame")
 SubHeader.Name = "SubHeader"
 SubHeader.Size = UDim2.new(1, 0, 0, 30)
-SubHeader.Position = UDim2.new(0, 0, 0, 80)
+SubHeader.Position = UDim2.new(0, 0, 0, 100)
 SubHeader.BackgroundColor3 = Config.Theme.SubHeader
 SubHeader.BorderSizePixel = 0
 SubHeader.Parent = MainFrame
 
 local SubTitle = Instance.new("TextLabel")
-SubTitle.Size = UDim2.new(0.6, 0, 1, 0)
-SubTitle.Position = UDim2.new(0, 10, 0, 0)
+SubTitle.Size = UDim2.new(1, 0, 1, 0)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "HOME"
-SubTitle.TextColor3 = Config.Theme.Accent
+SubTitle.Text = "Home"
+SubTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 SubTitle.TextSize = 16
 SubTitle.Font = Config.Font
-SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+SubTitle.TextXAlignment = Enum.TextXAlignment.Center
 SubTitle.Parent = SubHeader
 
-local ItemCount = Instance.new("TextLabel")
-ItemCount.Size = UDim2.new(0.35, 0, 1, 0)
-ItemCount.Position = UDim2.new(0.6, 0, 0, 0)
-ItemCount.BackgroundTransparency = 1
-ItemCount.Text = "0 / 0"
-ItemCount.TextColor3 = Config.Theme.Accent
-ItemCount.TextSize = 16
-ItemCount.Font = Config.Font
-ItemCount.TextXAlignment = Enum.TextXAlignment.Right
-ItemCount.Parent = SubHeader
+-- // LEFT SCROLLBAR // --
+local ScrollbarFrame = Instance.new("Frame")
+ScrollbarFrame.Name = "Scrollbar"
+ScrollbarFrame.Size = UDim2.new(0, 8, 1, -165)
+ScrollbarFrame.Position = UDim2.new(0, 2, 0, 135)
+ScrollbarFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ScrollbarFrame.BorderSizePixel = 0
+ScrollbarFrame.Parent = MainFrame
+
+local ScrollIndicator = Instance.new("Frame")
+ScrollIndicator.Size = UDim2.new(1, 0, 0, 40)
+ScrollIndicator.BackgroundColor3 = Config.Theme.Accent
+ScrollIndicator.BorderSizePixel = 0
+ScrollIndicator.Parent = ScrollbarFrame
 
 -- // OPTIONS CONTAINER // --
 local OptionsContainer = Instance.new("Frame")
 OptionsContainer.Name = "Options"
-OptionsContainer.Size = UDim2.new(1, 0, 0, 0)
-OptionsContainer.Position = UDim2.new(0, 0, 0, 110)
-OptionsContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-OptionsContainer.BackgroundTransparency = 0.2
+OptionsContainer.Size = UDim2.new(1, -15, 0, 0)
+OptionsContainer.Position = UDim2.new(0, 15, 0, 135)
+OptionsContainer.BackgroundTransparency = 1
 OptionsContainer.BorderSizePixel = 0
 OptionsContainer.ClipsDescendants = true
 OptionsContainer.Parent = MainFrame
@@ -113,12 +135,41 @@ local UIListLayout = Instance.new("UIListLayout")
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = OptionsContainer
 
+-- // FOOTER // --
+local Footer = Instance.new("Frame")
+Footer.Name = "Footer"
+Footer.Size = UDim2.new(1, 0, 0, 35)
+Footer.BackgroundColor3 = Config.Theme.SubHeader
+Footer.BorderSizePixel = 0
+Footer.Parent = MainFrame
+
+local ItemCount = Instance.new("TextLabel")
+ItemCount.Size = UDim2.new(0.4, 0, 1, 0)
+ItemCount.Position = UDim2.new(0, 10, 0, 0)
+ItemCount.BackgroundTransparency = 1
+ItemCount.Text = "1 / 1"
+ItemCount.TextColor3 = Color3.fromRGB(200, 200, 200)
+ItemCount.TextSize = 14
+ItemCount.Font = Config.Font
+ItemCount.TextXAlignment = Enum.TextXAlignment.Left
+ItemCount.Parent = Footer
+
+local LogoPlaceholder = Instance.new("TextLabel")
+LogoPlaceholder.Size = UDim2.new(0.2, 0, 1, 0)
+LogoPlaceholder.Position = UDim2.new(0.4, 0, 0, 0)
+LogoPlaceholder.BackgroundTransparency = 1
+LogoPlaceholder.Text = "⚡"
+LogoPlaceholder.TextColor3 = Config.Theme.PulseColor
+LogoPlaceholder.TextSize = 20
+LogoPlaceholder.Font = Config.Font
+LogoPlaceholder.Parent = Footer
+
 -- // DESCRIPTION BOX // --
 local DescFrame = Instance.new("Frame")
 DescFrame.Name = "Description"
 DescFrame.Size = UDim2.new(1, 0, 0, 40)
 DescFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-DescFrame.BackgroundTransparency = 0.2
+DescFrame.BackgroundTransparency = 0.4
 DescFrame.BorderSizePixel = 0
 DescFrame.Parent = MainFrame
 
@@ -126,7 +177,7 @@ local DescText = Instance.new("TextLabel")
 DescText.Size = UDim2.new(1, -20, 1, 0)
 DescText.Position = UDim2.new(0, 10, 0, 0)
 DescText.BackgroundTransparency = 1
-DescText.Text = "Menu Description Here"
+DescText.Text = ""
 DescText.TextColor3 = Color3.fromRGB(255, 255, 255)
 DescText.TextSize = 14
 DescText.Font = Config.Font
@@ -138,17 +189,20 @@ DescText.Parent = DescFrame
 
 local function updateMainFrameSize()
     local optionsHeight = #State.Options * 35
-    local totalHeight = 80 + 30 + optionsHeight + 40 -- Banner + SubHeader + Options + Desc
+    local totalHeight = 100 + 30 + optionsHeight + 35 + 45 -- Banner + SubHeader + Options + Footer + Desc
     MainFrame.Size = UDim2.new(0, Config.MenuWidth, 0, totalHeight)
-    OptionsContainer.Size = UDim2.new(1, 0, 0, optionsHeight)
-    DescFrame.Position = UDim2.new(0, 0, 0, 110 + optionsHeight + 5)
+    OptionsContainer.Size = UDim2.new(1, -15, 0, optionsHeight)
+    Footer.Position = UDim2.new(0, 0, 0, 130 + optionsHeight)
+    DescFrame.Position = UDim2.new(0, 0, 0, 130 + optionsHeight + 40)
+    
+    ScrollbarFrame.Size = UDim2.new(0, 8, 0, optionsHeight)
+    ScrollIndicator.Position = UDim2.new(0, 0, 0, (State.SelectedIndex - 1) * 35)
 end
 
 local function updateSelection()
     for i, option in ipairs(State.Options) do
         local isSelected = (i == State.SelectedIndex)
         
-        -- Smooth color transition
         TweenService:Create(option.Frame, TweenInfo.new(0.1), {
             BackgroundColor3 = isSelected and Config.Theme.Selected or Color3.fromRGB(0,0,0),
             BackgroundTransparency = isSelected and 0 or 1
@@ -156,6 +210,7 @@ local function updateSelection()
 
         option.Label.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
         option.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
+        option.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
         
         if isSelected then
             DescText.Text = option.Description or ""
@@ -184,9 +239,20 @@ local function createOption(name, type, desc)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
+    local arrow = Instance.new("TextLabel")
+    arrow.Size = UDim2.new(0, 20, 1, 0)
+    arrow.Position = UDim2.new(1, -25, 0, 0)
+    arrow.BackgroundTransparency = 1
+    arrow.Text = ">"
+    arrow.TextColor3 = Color3.fromRGB(150, 150, 150)
+    arrow.TextSize = 14
+    arrow.Font = Enum.Font.SourceSansBold
+    arrow.TextXAlignment = Enum.TextXAlignment.Right
+    arrow.Parent = frame
+
     local valueLabel = Instance.new("TextLabel")
     valueLabel.Size = UDim2.new(0.35, 0, 1, 0)
-    valueLabel.Position = UDim2.new(0.6, -5, 0, 0)
+    valueLabel.Position = UDim2.new(0.6, -30, 0, 0)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = ""
     valueLabel.TextColor3 = Config.Theme.Text
@@ -198,6 +264,7 @@ local function createOption(name, type, desc)
     return {
         Frame = frame,
         Label = label,
+        Arrow = arrow,
         ValueLabel = valueLabel,
         Type = type,
         Description = desc or "No description provided."
