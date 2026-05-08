@@ -10,6 +10,10 @@ local TweenService = game:GetService("TweenService")
 local ContextActionService = game:GetService("ContextActionService")
 local Player = Players.LocalPlayer
 
+local ws = Player.Character.Humanoid.WalkSpeed
+
+local oldws
+
 -- // CONFIGURATION // --
 local Config = {
     Theme = {
@@ -412,16 +416,20 @@ ContextActionService:BindAction("fracturecontrols", handleMenuInput, false, Enum
 -- // PUBLIC API // --
 
 function UILibrary:Unload()
+    ws = oldws
     ContextActionService:UnbindAction("fracturecontrols")
     ScreenGui:Destroy()
 end
 
 function UILibrary:CreateWindow(title, subtitle)
+    oldws = ws
     State.CurrentMenu = createMenuData(title, subtitle)
     
+    renderMenu(State.CurrentMenu)
+
     -- Add Built-in Settings Menu
     local Settings = self:AddMenu("Settings", "Menu configuration and exit")
-    local Developer = self:AddMenu("Developer", "Universal developer tools")
+    local Developer = Settings:AddMenu("Developer", "Universal developer tools")
     Settings:AddButton("Unload", "Completely remove the menu and clean up", function()
         self:Unload()
     end)
@@ -434,7 +442,7 @@ function UILibrary:CreateWindow(title, subtitle)
         loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
     end)
     
-    renderMenu(State.CurrentMenu)
+    
     return self
 end
 
