@@ -55,6 +55,9 @@ local State = {
     AllMenus = {} -- Track all menus for config saving
 }
 
+-- Forward Declarations
+local renderMenu, updateSelection, syncUIToConfig, applyTheme, updateBannerUI, goBack, openMenu, openInputPopup
+
 local function createMenuData(title, subtitle)
     local menu = {
         Title = title,
@@ -397,7 +400,7 @@ NotifyLayout.Parent = NotifyContainer
 
 
 -- // INTERNAL FUNCTIONS // --
-local function syncUIToConfig()
+syncUIToConfig = function()
     -- Map menu states to config
     for _, menu in ipairs(State.AllMenus) do
         local menuKey = menu.Subtitle or menu.Title
@@ -490,7 +493,7 @@ local function updateMainFrameSize()
     end
 end
 
-local function updateSelection()
+updateSelection = function()
     local menu = State.CurrentMenu
     local combined = getCombinedOptions(menu)
     local count = #combined
@@ -587,7 +590,7 @@ local function updateSelection()
     updateMainFrameSize()
 end
 
-local function openInputPopup(optData)
+openInputPopup = function(optData)
     InputPopup.Visible = true
     InputPlaceholder.Text = optData.Placeholder or "Enter Value"
     InputBox.Text = tostring(optData.Value or "")
@@ -604,7 +607,7 @@ local function openInputPopup(optData)
     end)
 end
 
-local function renderMenu(menu)
+renderMenu = function(menu)
     -- Clear current UI
     for _, child in ipairs(OptionsContainer:GetChildren()) do
         if child:IsA("Frame") then child:Destroy() end
@@ -713,7 +716,7 @@ local function renderMenu(menu)
     updateSelection()
 end
 
-local function updateBannerUI()
+updateBannerUI = function()
     local b = State.Config.Banner
     if b.UseBanner and b.CurrentID ~= "" and b.CurrentID ~= "0" then
         BannerTexture.Image = "rbxassetid://" .. b.CurrentID
@@ -728,7 +731,7 @@ local function updateBannerUI()
     BannerTitle.Visible = not b.DisableTitle
 end
 
-local function applyTheme(themeData)
+applyTheme = function(themeData)
     for k, v in pairs(themeData) do
         Config.Theme[k] = v
     end
@@ -746,7 +749,7 @@ local function applyTheme(themeData)
     end
 end
 
-local function openMenu(menu, isBack)
+openMenu = function(menu, isBack)
     if not isBack and State.CurrentMenu then
         table.insert(State.History, State.CurrentMenu)
     end
@@ -754,7 +757,7 @@ local function openMenu(menu, isBack)
     renderMenu(menu)
 end
 
-local function goBack()
+goBack = function()
     if #State.History > 0 then
         -- Trigger cleanup for the menu we are leaving
         if State.CurrentMenu.OnClose then
