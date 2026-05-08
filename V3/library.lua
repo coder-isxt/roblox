@@ -118,7 +118,7 @@ BannerTexture.Name = "BannerTexture"
 BannerTexture.Size = UDim2.new(1, 0, 1, 0)
 BannerTexture.BackgroundTransparency = 1
 BannerTexture.Image = ""
-BannerTexture.ScaleType = Enum.ScaleType.Crop
+BannerTexture.ScaleType = Enum.ScaleType.Fit
 BannerTexture.Parent = Banner
 
 local PulseGradient = Instance.new("UIGradient")
@@ -1201,7 +1201,7 @@ function BuiltIn.Settings(lib)
     Settings:AddLabel("Other")
     Settings:AddButton("Unload", "Close menu", nil, function() lib:Unload() end)
     
-    Theme:AddInput("Banner Texture", "Paste a Roblox Image ID", "Texture id...", nil, function(v)
+    Theme:AddInput("Banner Image", "Paste a Roblox Image ID", "Texture id...", nil, function(v)
         local id = v:gsub("%D", "")
         if id == "" or id == "0" then
             BannerTexture.Image = ""
