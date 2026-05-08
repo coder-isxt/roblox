@@ -111,15 +111,33 @@ PulseLine.Size = UDim2.new(1.5, 0, 0, 2)
 PulseLine.Position = UDim2.new(-0.25, 0, 0.5, 0)
 PulseLine.BackgroundColor3 = Config.Theme.PulseColor
 PulseLine.BorderSizePixel = 0
+PulseLine.Visible = false
 PulseLine.Parent = Banner
 
 local BannerTexture = Instance.new("ImageLabel")
 BannerTexture.Name = "BannerTexture"
 BannerTexture.Size = UDim2.new(1, 0, 1, 0)
 BannerTexture.BackgroundTransparency = 1
-BannerTexture.Image = ""
+BannerTexture.Image = "rbxassetid://81459253942868"
 BannerTexture.ScaleType = Enum.ScaleType.Fit
 BannerTexture.Parent = Banner
+
+-- Track state for banner logic
+local BannerState = {
+    UseBanner = true,
+    CurrentID = "81459253942868"
+}
+
+local function updateBannerUI()
+    if BannerState.UseBanner and BannerState.CurrentID ~= "" and BannerState.CurrentID ~= "0" then
+        BannerTexture.Image = "rbxassetid://" .. BannerState.CurrentID
+        BannerTexture.Visible = true
+        PulseLine.Visible = false
+    else
+        BannerTexture.Visible = false
+        PulseLine.Visible = true
+    end
+end
 
 local PulseGradient = Instance.new("UIGradient")
 PulseGradient.Transparency = NumberSequence.new({
@@ -1201,15 +1219,19 @@ function BuiltIn.Settings(lib)
     Settings:AddLabel("Other")
     Settings:AddButton("Unload", "Close menu", nil, function() lib:Unload() end)
     
+    Theme:AddToggle("Use Banner", "Show the image in the header", true, nil, function(v)
+        BannerState.UseBanner = v
+        updateBannerUI()
+    end)
+
     Theme:AddInput("Banner Image", "Paste a Roblox Image ID", "Texture id...", nil, function(v)
-        local id = v:gsub("%D", "")
-        if id == "" or id == "0" then
-            BannerTexture.Image = ""
-            PulseLine.Visible = true
-        else
-            BannerTexture.Image = "rbxassetid://" .. id
-            PulseLine.Visible = false
-        end
+        BannerState.CurrentID = v:gsub("%D", "")
+        updateBannerUI()
+    end)
+
+    Theme:AddToggle("Disable Title", "Hide the text in the banner", false, nil, function(v)
+        BannerTitle.Visible = not v
+        --SubTitle.Visible = not v
     end)
 
     Developer:AddButton("DarkDex", "Load explorer", nil, function()
