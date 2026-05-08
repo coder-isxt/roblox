@@ -271,6 +271,14 @@ local function updateSelection()
             optData.UI.ValueLabel.TextColor3 = isSelected and Config.Theme.TextSelected or Config.Theme.Text
             optData.UI.Arrow.TextColor3 = isSelected and Config.Theme.TextSelected or Color3.fromRGB(150, 150, 150)
             
+            if optData.UI.Checkbox then
+                if isSelected then
+                    optData.UI.Checkbox.BackgroundColor3 = optData.Value and Color3.new(0,0,0) or Color3.fromRGB(40, 40, 40)
+                else
+                    optData.UI.Checkbox.BackgroundColor3 = optData.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
+                end
+            end
+            
             if isSelected then
                 DescText.Text = optData.Description or ""
             end
@@ -319,11 +327,27 @@ local function renderMenu(menu)
         arrow.TextXAlignment = Enum.TextXAlignment.Right
         arrow.Parent = frame
 
+        local checkbox = nil
+        if optData.Type == "toggle" then
+            checkbox = Instance.new("Frame")
+            checkbox.Name = "Checkbox"
+            checkbox.Size = UDim2.new(0, 16, 0, 16)
+            checkbox.Position = UDim2.new(1, -30, 0.5, -8)
+            checkbox.BackgroundColor3 = optData.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
+            checkbox.BorderSizePixel = 0
+            checkbox.Parent = frame
+            
+            local checkStroke = Instance.new("UIStroke")
+            checkStroke.Thickness = 1
+            checkStroke.Color = Color3.fromRGB(80, 80, 80)
+            checkStroke.Parent = checkbox
+        end
+
         local valueLabel = Instance.new("TextLabel")
         valueLabel.Size = UDim2.new(0.35, 0, 1, 0)
         valueLabel.Position = UDim2.new(0.6, -30, 0, 0)
         valueLabel.BackgroundTransparency = 1
-        valueLabel.Text = optData.ValueText or ""
+        valueLabel.Text = optData.Type == "button" and (optData.ValueText or "") or ""
         valueLabel.TextColor3 = Config.Theme.Text
         valueLabel.TextSize = Config.TextSize
         valueLabel.Font = Config.Font
@@ -334,7 +358,8 @@ local function renderMenu(menu)
             Frame = frame,
             Label = label,
             Arrow = arrow,
-            ValueLabel = valueLabel
+            ValueLabel = valueLabel,
+            Checkbox = checkbox
         }
     end
 
@@ -407,8 +432,9 @@ local function handleMenuInput(name, state, input)
             opt.Callback()
         elseif opt.Type == "toggle" then
             opt.Value = not opt.Value
-            opt.ValueText = opt.Value and "[ON]" or "[OFF]"
-            opt.UI.ValueLabel.Text = opt.ValueText
+            if opt.UI.Checkbox then
+                opt.UI.Checkbox.BackgroundColor3 = opt.Value and Config.Theme.Accent or Color3.fromRGB(40, 40, 40)
+            end
             opt.Callback(opt.Value)
         elseif opt.Type == "menu" then
             openMenu(opt.SubMenu)
