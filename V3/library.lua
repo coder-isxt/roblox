@@ -185,8 +185,8 @@ State.Config = {
     },
     Fly = { Master = false, Active = false, Speed = 100 },
     Sprint = { Master = false, Active = false, Speed = 50 },
-    Protections = { AntiFling = false, AntiAFK = false },
-    Movement = { Noclip = false, InfiniteJump = false, NoCameraCollision = false },
+    Protections = { AntiFling = false, AntiTouch = false, AntiAFK = false },
+    Movement = { Noclip = false, InfiniteJump = false, NoCameraCollision = false, FOV = 70 },
     Watermark = true
 }
 
@@ -203,7 +203,7 @@ PulseGradient.Parent = PulseLine
 local BannerTitle = Instance.new("TextLabel")
 BannerTitle.Size = UDim2.new(1, 0, 1, 0)
 BannerTitle.BackgroundTransparency = 1
-BannerTitle.Text = "IMPULSE"
+BannerTitle.Text = "FRACTURE"
 BannerTitle.TextColor3 = Config.Theme.PulseColor
 BannerTitle.TextSize = 45
 BannerTitle.Font = Config.TitleFont
@@ -518,6 +518,7 @@ syncUIToConfig = function()
             elseif name == "Noclip" then opt.Value = sc.Movement.Noclip; changed = true
             elseif name == "Infinite Jump" then opt.Value = sc.Movement.InfiniteJump; changed = true
             elseif name == "No Camera Collision" then opt.Value = sc.Movement.NoCameraCollision; changed = true
+            elseif name == "Field of View" then opt.Value = sc.Movement.FOV; changed = true
             elseif name == "Watermark" then opt.Value = sc.Watermark; changed = true
             end
             
@@ -1278,10 +1279,58 @@ end
 
 -- // BUILT-IN FEATURES MODULES // --
 local BuiltIn = {}
+local animID = ""
 
 function BuiltIn.Local(lib)
     local LocalMenu = lib:AddMenu("Local", "Manage local player options", "player", true)
+
+    local animMenu = LocalMenu:AddMenu("Animations", "Play animations on your character", nil, false)
+    animMenu:AddInput("Animation ID", "The animation id you want to play", "Numeric id...", function(v)
+            animID = tostring(v or ""):gsub("%s+", "")
+    end)
+
+    animMenu:AddButton("Play Animation", "Plays the selected animation", function()
+        if animID == "" or not tonumber(animID) then
+            UILibrary:Notify("Animations", "Invalid animation ID")
+            return
+        end
+
+        UILibrary:Notify("Animations", "Attempting to play " .. animID)
+
+        local Anim = Instance.new("Animation")
+        Anim.AnimationId = "rbxassetid://" .. animID
+
+        local track = Player.Character.Humanoid:LoadAnimation(Anim)
+        track:Play(.1, 1, 1)
+    end)
+
+    animMenu:AddButton("Stop All Animations", "Stops every playing animation", function()
+
+        local humanoid = Player.Character and Player.Character:FindFirstChild("Humanoid")
+        if not humanoid then
+            return
+        end
+
+        for _, track in ipairs(humanoid:GetPlayingAnimationTracks()) do
+            track:Stop()
+        end
+
+        UILibrary:Notify("Animations", "Stopped all animations")
+    end)
     
+    LocalMenu:AddLabel("Player")
+    LocalMenu:AddButton("Suicide", "Reset character instantly", function()
+        game.Players.LocalPlayer.Character:BreakJoints()
+        UILibrary:Notify("Status", "Character Reset!")
+    end)
+
+    LocalMenu:AddButton("No Limbs", "Remove limbs of your character", function()
+        game.Players.LocalPlayer.Character["Left Leg"]:Destroy()
+		game.Players.LocalPlayer.Character["Left Arm"]:Destroy()
+		game.Players.LocalPlayer.Character["Right Leg"]:Destroy()
+		game.Players.LocalPlayer.Character["Right Arm"]:Destroy()
+    end)
+
     -- Flight System
     LocalMenu:AddLabel("Flight")
     local fs = State.Config.Fly
@@ -1342,7 +1391,7 @@ function BuiltIn.Local(lib)
     end)
 
     -- Sprint System
-    LocalMenu:AddLabel("Movement")
+    LocalMenu:AddLabel("Sprint")
     local ss = State.Config.Sprint
     local function updateSprint()
         local char = Player.Character
@@ -1375,6 +1424,7 @@ function BuiltIn.Local(lib)
     State.UpdateSprint = updateSprint
     Player.CharacterAdded:Connect(function() task.wait(1); updateSprint() end)
 
+    LocalMenu:AddLabel("Movement")
     -- Extra Movement
     local ms = State.Config.Movement
     LocalMenu:AddToggle("Noclip", "Walk through walls", false, nil, function(v)
@@ -1414,22 +1464,45 @@ function BuiltIn.Local(lib)
         Player.DevCameraOcclusionMode = v and Enum.DevCameraOcclusionMode.Invisicam or Enum.DevCameraOcclusionMode.Zoom
         UILibrary:Notify("Movement", "Camera Collision " .. (v and "Disabled" or "Enabled"))
     end)
+
+    LocalMenu:AddSlider("Field of View", "Adjust camera field of view", 30, 120, ms.FOV or 70, 1, nil, function(v)
+        ms.FOV = v
+        workspace.CurrentCamera.FieldOfView = v
+    end)
 end
 
 function BuiltIn.Protections(lib)
     local ProtectionsMenu = lib:AddMenu("Protections", "Security and anti-exploit", "shield", true)
     local ps = State.Config.Protections
 
-    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents being flung", false, nil, function(v)
+    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents being flung by others", false, nil, function(v)
         ps.AntiFling = v
         if v then
             if _G.AntiFling then _G.AntiFling:Disconnect() end
             _G.AntiFling = RunService.Stepped:Connect(function()
                 local char = Player.Character
                 if char then
-                    for _, part in ipairs(char:GetDescendants()) do
+                    for _, part in ipairs(char:GetChildren()) do
                         if part:IsA("BasePart") then
-                            part.CanTouch = false
+                            part.RotVelocity = Vector3.new(0, 0, 0)
+                        end
+                    end
+                end
+                
+                -- Neutralize players moving at extreme speeds (potential flingers)
+                for _, p in ipairs(game.Players:GetPlayers()) do
+                    if p ~= Player and p.Character then
+                        local root = p.Character:FindFirstChild("HumanoidRootPart")
+                        if root then
+                            if root.Velocity.Magnitude > 100 or root.RotVelocity.Magnitude > 100 then
+                                for _, part in ipairs(p.Character:GetDescendants()) do
+                                    if part:IsA("BasePart") then
+                                        part.CanCollide = false
+                                        part.Velocity = Vector3.zero
+                                        part.RotVelocity = Vector3.zero
+                                    end
+                                end
+                            end
                         end
                     end
                 end
@@ -1442,18 +1515,24 @@ function BuiltIn.Protections(lib)
     end)
 
     ProtectionsMenu:AddToggle("Anti-Touch", "Immune to traps and kill-bricks", false, nil, function(v)
+        ps.AntiTouch = v
         if v then
             if _G.AntiTouch then _G.AntiTouch:Disconnect() end
             _G.AntiTouch = RunService.Stepped:Connect(function()
-                if Player.Character then
-                    for _, part in ipairs(Player.Character:GetDescendants()) do
+                local char = Player.Character
+                if char then
+                    -- Allow seating: don't block touch if already sitting
+                    local hum = char:FindFirstChild("Humanoid")
+                    if hum and hum.Sit then return end
+
+                    for _, part in ipairs(char:GetDescendants()) do
                         if part:IsA("BasePart") then
                             part.CanTouch = false
                         end
                     end
                 end
             end)
-            UILibrary:Notify("Protections", "Anti-Touch Enabled")
+            UILibrary:Notify("Protections", "Anti-Touch Enabled (May block seats)")
         else
             if _G.AntiTouch then _G.AntiTouch:Disconnect(); _G.AntiTouch = nil end
             if Player.Character then
@@ -1514,14 +1593,109 @@ function BuiltIn.Protections(lib)
     end)
     
     ProtectionsMenu:AddLabel("Bypass")
-    ProtectionsMenu:AddButton("Adonis Bypass", "Bypass Adonis Anti-Cheat", nil, function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/coder-isxt/roblox/refs/heads/main/V3/bypass.lua"))()
+    ProtectionsMenu:AddToggle("Adonis Bypass", "Bypass Adonis Anti Exploit", false, nil, function(v)
+        local getreg = debug.getregistry or getreg
+        local type = type
+        local debug_info = debug.info
+        local task = task
+        local filtergc = getgc or get_gc_objects
+        local isfunctionhooked = isfunctionhooked or function() return false end
+        local hookfunction = hookfunction or replaceclosure or detour_function
+        local getrawmetatable = getrawmetatable
+        local setreadonly = setreadonly or make_readonly
+
+        local noop = function() end
+        local RunService = game:GetService("RunService")
+
+        -- We target the internal "Remote" and "Process" tables revealed by the server code
+        local function bypassInternal()
+            local gc = filtergc()
+            for _, v in pairs(gc) do
+                if type(v) == "table" then
+                    -- Adonis internal table detection
+                    local isAdonis = false
+                    if rawget(v, "Detected") and rawget(v, "Process") and rawget(v, "Remote") then
+                        isAdonis = true
+                    end
+                    
+                    if isAdonis then
+                        -- Hook the detection handler
+                        if type(v.Detected) == "function" and not isfunctionhooked(v.Detected) then
+                            local oldDetected
+                            oldDetected = hookfunction(v.Detected, newcclosure(function(action, info, ...)
+                                -- Logs it locally so you know what triggered it, but doesn't report to server
+                                print("[Zyntra] Blocked Adonis Detection:", action, "|", info)
+                                return nil
+                            end))
+                        end
+                        
+                        -- Hook the reporting/logging functions
+                        if type(v.AddLog) == "function" and not isfunctionhooked(v.AddLog) then
+                            hookfunction(v.AddLog, noop)
+                        end
+                    end
+                    
+                    -- Targeted bypass for the Remote table's Fire/Send methods
+                    if rawget(v, "Send") and rawget(v, "Clients") then
+                        local oldSend = v.Send
+                        if type(oldSend) == "function" and not isfunctionhooked(oldSend) then
+                            v.Send = newcclosure(function(self, name, ...)
+                                local args = {...}
+                                -- Only block detection-related sends
+                                if name == "Detected" or name == "Log" or name == "ExploitDetected" then
+                                    print("[Zyntra] Prevented Remote Report:", name)
+                                    return nil
+                                end
+                                return oldSend(self, name, unpack(args))
+                            end)
+                        end
+                    end
+                end
+            end
+        end
+
+        -- Kill specific anti-exploit threads without triggering namecall detectors
+        local function killAntiThreads()
+            local reg = getreg()
+            if not reg then return end
+            for _, v in pairs(reg) do
+                if type(v) == 'thread' then
+                    local ok, source = pcall(debug_info, v, 's')
+                    if ok and source then
+                        -- The server code mentions "ClientCheck" and "Anti" modules
+                        if source:find("Adonis") or source:find("Anti") then
+                            -- Check if it's a core thread we shouldn't kill (like the heartbeat)
+                            if not source:find("Remote") and not source:find("Network") then
+                                pcall(task.cancel, v)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+
+        local function protect()
+            pcall(bypassInternal)
+            pcall(killAntiThreads)
+        end
+
+        -- Start protection
+        protect()
+
+        -- Fast loop to catch dynamic Adonis components
+        task.spawn(function()
+            while task.wait(1.5) do
+                pcall(protect)
+            end
+        end)
+
+        print("[Fracture] Adonis Anti Exploit was Bypassed.")
     end)
 end
 
 function BuiltIn.Settings(lib)
     local Settings = lib:AddMenu("Settings", "Menu configuration", "gear", true)
-    local Developer = Settings:AddMenu("Developer", "Universal Developer tools", "code")
+    local Developer = Settings:AddMenu("Universal", "Universal Scripts for any game", "code")
     local Theme = Settings:AddMenu("Theme", "Customize the menu theme", "globe")
     local ConfigSub = Settings:AddMenu("Config", "Save your settings", "open-folder")
 
@@ -1801,6 +1975,35 @@ function BuiltIn.Settings(lib)
         updateBannerUI()
     end)
 
+
+    
+
+    Developer:AddButton("Shutdown", "Attempts to shutdown the server", nil, function()
+        game:GetService('RunService').Stepped:Connect(function()
+		pcall(function()
+		    for i,v in pairs(game:GetService('Players'):GetPlayers()) do
+		        if v.Character ~= nil and v.Character:FindFirstChild('Head') then
+		            for _,x in pairs(v.Character.Head:GetChildren()) do
+		                if x:IsA('Sound') then x.Playing = true x.CharacterSoundEvent:FireServer(true, true) end
+		            end
+		        end
+		    end
+		end)
+		end)
+    end)
+
+    Developer:AddButton("Check FE", "Checks the state of FE in game", nil, function()
+        if game:GetService("Workspace").FilteringEnabled == true then
+			warn("FE is Enabled (Filtering Enabled)")
+			UILibrary:Notify("Universal", "FE (Filtering Enabled) is enabled")
+		else
+			warn("FE is Disabled (Filtering Disabled) Consider using a different admin script.")
+			UILibrary:Notify("Universal", "FE (Filtering Enabled) is disabled, some player features may not work")
+		end
+    end)
+
+    Developer:AddLabel("Developer")
+
     Developer:AddButton("DarkDex", "Load explorer", nil, function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Dex-with-tags-78265"))()
     end)
@@ -1808,6 +2011,7 @@ function BuiltIn.Settings(lib)
     Developer:AddButton("RemoteSpy", "Load remotespy to see remotes firing", nil, function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/78n/SimpleSpy/main/SimpleSpyBeta.lua"))()
     end)
+
 end
 
 function UILibrary:CreateWindow(title, subtitle)
@@ -1893,8 +2097,50 @@ function UILibrary:CreateWindow(title, subtitle)
                 end
             end)
 
+            pm:AddButton("Bring", "Bring player (you need tools in backpack)", nil, function()
+                local char = Player.Character
+                local target = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+
+                local NOW = char.HumanoidRootPart.CFrame
+                char.Humanoid.Name = 1
+                local l = char["1"]:Clone()
+                l.Parent = char
+                l.Name = "Humanoid"
+                wait(0.1)
+                char["1"]:Destroy()
+                game:GetService("Workspace").CurrentCamera.CameraSubject = char
+                char.Animate.Disabled = true
+                wait(0.1)
+                char.Animate.Disabled = false
+                char.Humanoid.DisplayDistanceType = "None"
+                for i,n in pairs(game:GetService'Players'.LocalPlayer.Backpack:GetChildren())do
+                char.Humanoid:EquipTool(n)
+                end
+                local function tp(player,player2)
+                local char1,char2=player.Character,player2.Character
+                if char1 and char2 then
+                char1.HumanoidRootPart.CFrame = char2.HumanoidRootPart.CFrame
+                end
+                end
+                local function getout(player,player2)
+                local char1,char2=player.Character,player2.Character
+                if char1 and char2 then
+                char1:MoveTo(char2.Head.Position)
+                end
+                end
+                tp(p, Player)
+                wait(0.2)
+                tp(p, Player)
+                wait(0.5)
+                char.HumanoidRootPart.CFrame = NOW
+                wait(0.5)
+                getout(Player, p)
+                wait(0.3)
+                char.HumanoidRootPart.CFrame = NOW
+            end)
+
             local Troll = pm:AddMenu("Troll", "Aggressive player actions", "shield")
-            local Universal = pm:AddMenu("Universal", "Universal player utilities", "globe")
+            local UniversalP = pm:AddMenu("Universal", "Universal player utilities", "globe")
             
             -- Universal Options
             
@@ -1949,6 +2195,77 @@ function UILibrary:CreateWindow(title, subtitle)
                     hrp.CFrame = oldPos
                     hrp.Velocity = Vector3.zero
                     hrp.RotVelocity = Vector3.zero
+                else
+                    UILibrary:Notify("Error", "Target character not found")
+                end
+            end)
+
+            Troll:AddButton("Fling V2", "Send this player into the outside world", nil, function()
+                local char = Player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local targetChar = p.Character
+                local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                
+                if hrp and targetHrp then
+                    local oldPos = hrp.CFrame
+                    UILibrary:Notify("Troll", "Flinging " .. p.Name)
+                    
+                    local y = Instance.new("RocketPropulsion")
+                    y.Parent = hrp
+                    y.CartoonFactor = 1
+                    y.MaxThrust = 800000
+                    y.MaxSpeed = 1000
+                    y.ThrustP = 200000
+                    y.Name = "Fling"
+                    game:GetService("Workspace").CurrentCamera.CameraSubject = p.Character.Head
+                    y.Target = p.Character.HumanoidRootPart
+                    y:Fire()
+                    
+                    task.wait(0.4)
+
+                    hrp.Fling:Destroy()
+                    game:GetService("Workspace").CurrentCamera.CameraSubject = char.Head
+                    wait(0.4)
+                    hrp.Fling:Destroy()
+
+                    hrp.CFrame = oldPos
+                    hrp.Velocity = Vector3.zero
+                    hrp.RotVelocity = Vector3.zero
+                else
+                    UILibrary:Notify("Error", "Target character not found")
+                end
+            end)
+
+            Troll:AddButton("Kill", "Kills both of you. You need tools in your backpack", nil, function()
+                local char = Player.Character
+                local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                local targetChar = p.Character
+                local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                
+                if hrp and targetHrp then
+                    local oldPos = hrp.CFrame
+                    UILibrary:Notify("Troll", "Killing you and " .. p.Name)
+                    
+                    char.Humanoid.Name = 1
+                    local l = char["1"]:Clone()
+                    l.Parent = char
+                    l.Name = "Humanoid"
+                    wait(0.1)
+                    char["1"]:Destroy()
+                    game:GetService("Workspace").CurrentCamera.CameraSubject = char
+                    char.Animate.Disabled = true
+                    wait(0.1)
+                    char.Animate.Disabled = false
+                    char.Humanoid.DisplayDistanceType = "None"
+                    for i,n in pairs(game:GetService'Players'.LocalPlayer.Backpack:GetChildren())do
+                    char.Humanoid:EquipTool(n)
+                    end
+                    wait(0.1)
+                    char.HumanoidRootPart.CFrame = targetHrp.CFrame
+                    wait(0.2)
+                    char.HumanoidRootPart.CFrame = targetHrp.CFrame
+                    wait(0.5)
+                    char.HumanoidRootPart.CFrame = CFrame.new(Vector3.new(-100000,10,-100000))
                 else
                     UILibrary:Notify("Error", "Target character not found")
                 end
@@ -2018,6 +2335,17 @@ function UILibrary:CreateWindow(title, subtitle)
                         _G[id] = nil 
                     end
                     UILibrary:Notify("Troll", "Stopped orbiting " .. p.Name)
+                end
+            end)
+
+
+            UniversalP:AddToggle("Bang", "Bang the player, with animation", false, nil, function(v)
+                if v then
+                   
+                    UILibrary:Notify("Troll", "Blocking " .. p.Name)
+                else
+                    
+                    UILibrary:Notify("Troll", "Stopped blocking " .. p.Name)
                 end
             end)
             
