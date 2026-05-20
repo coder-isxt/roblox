@@ -8,6 +8,7 @@ local UILibrary = {}
 UILibrary.__index = UILibrary
 
 local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ContextActionService = game:GetService("ContextActionService")
@@ -55,6 +56,7 @@ local State = {
     CurrentMenu = nil,
     History = {},
     Open = false,
+    NotificationType = "normal",
     Side = Config.Side, -- 1: Left, 2: Right
     WatchingPlayer = nil,
     Binding = nil,
@@ -64,7 +66,7 @@ local State = {
 }
 
 -- Forward Declarations
-local renderMenu, updateSelection, syncUIToConfig, applyTheme, updateBannerUI, goBack, openMenu, openInputPopup
+local renderMenu, updateSelection, syncUIToConfig, applyTheme, updateBannerUI, goBack, openMenu, openInputPopup, openColorPopup
 
 local function createMenuData(title, subtitle)
     local menu = {
@@ -77,6 +79,27 @@ local function createMenuData(title, subtitle)
     }
     table.insert(State.AllMenus, menu)
     return menu
+end
+
+local function normalizeNotifType(notifType)
+    if type(notifType) ~= "string" then
+        return "normal"
+    end
+
+    notifType = notifType:lower()
+    if notifType == "roblox" then
+        return "roblox"
+    end
+
+    return "normal"
+end
+
+local function resolveWindowOptions(title, subtitle)
+    if type(title) == "table" then
+        return title.Title or "Window", title.Subtitle or "", normalizeNotifType(title.NotifType)
+    end
+
+    return title, subtitle, "normal"
 end
 
 -- // SERIALIZATION HELPERS // --
@@ -117,7 +140,9 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "Fracture"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = game:GetService("CoreGui") or Player:WaitForChild("PlayerGui")
+
+local Parent = game:GetService("CoreGui") or Player:WaitForChild("PlayerGui")
+ScreenGui.Parent = Parent
 
 -- // MAIN CONTAINER // --
 local MainFrame = Instance.new("Frame")
@@ -185,8 +210,9 @@ State.Config = {
     },
     Fly = { Master = false, Active = false, Speed = 100 },
     Sprint = { Master = false, Active = false, Speed = 50 },
-    Protections = { AntiFling = false, AntiTouch = false, AntiAFK = false },
+    Protections = { AntiFling = false, AntiTouch = false, AntiAFK = false, RemoteProtection = false, AdonisBypass = false },
     Movement = { Noclip = false, InfiniteJump = false, NoCameraCollision = false, FOV = 70 },
+    RedirectOutput = false,
     Watermark = true
 }
 
@@ -334,6 +360,69 @@ InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 InputBox.TextSize = 16
 InputBox.Font = Config.Font
 InputBox.Parent = InputPopup
+
+-- // COLOR POPUP // --
+local ColorPopup = Instance.new("Frame")
+ColorPopup.Name = "ColorPopup"
+ColorPopup.Size = UDim2.new(0, 300, 0, 160)
+ColorPopup.Position = UDim2.new(0.5, -150, 0.5, -80)
+ColorPopup.BackgroundColor3 = Config.Theme.Background
+local ColorStroke = Instance.new("UIStroke")
+ColorStroke.Thickness = 2
+ColorStroke.Color = Config.Theme.Accent
+ColorStroke.Parent = ColorPopup
+ColorPopup.Visible = false
+ColorPopup.Parent = ScreenGui
+
+local ColorCorner = Instance.new("UICorner")
+ColorCorner.CornerRadius = Config.CornerRadius
+ColorCorner.Parent = ColorPopup
+
+local ColorTitle = Instance.new("TextLabel")
+ColorTitle.Size = UDim2.new(1, 0, 0, 30)
+ColorTitle.Position = UDim2.new(0, 0, 0, 10)
+ColorTitle.BackgroundTransparency = 1
+ColorTitle.Text = "Select Color"
+ColorTitle.TextColor3 = Config.Theme.Accent
+ColorTitle.TextSize = 16
+ColorTitle.Font = Config.Font
+ColorTitle.Parent = ColorPopup
+
+local function createRGBInput(name, pos, default)
+    local box = Instance.new("TextBox")
+    box.Name = name
+    box.Size = UDim2.new(0, 80, 0, 35)
+    box.Position = pos
+    box.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    box.BorderSizePixel = 0
+    box.Text = tostring(default)
+    box.PlaceholderText = name
+    box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.TextSize = 16
+    box.Font = Config.Font
+    box.Parent = ColorPopup
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = box
+    
+    return box
+end
+
+local RBox = createRGBInput("R", UDim2.new(0.1, 0, 0, 50), "255")
+local GBox = createRGBInput("G", UDim2.new(0.4, 0, 0, 50), "255")
+local BBox = createRGBInput("B", UDim2.new(0.7, 0, 0, 50), "255")
+
+local ColorPreview = Instance.new("Frame")
+ColorPreview.Size = UDim2.new(0.8, 0, 0, 35)
+ColorPreview.Position = UDim2.new(0.1, 0, 0, 100)
+ColorPreview.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ColorPreview.BorderSizePixel = 0
+ColorPreview.Parent = ColorPopup
+
+local PreviewCorner = Instance.new("UICorner")
+PreviewCorner.CornerRadius = UDim.new(0, 4)
+PreviewCorner.Parent = ColorPreview
 
 -- // DESCRIPTION BOX // --
 local DescFrame = Instance.new("Frame")
@@ -704,16 +793,69 @@ openInputPopup = function(optData)
     InputPopup.Visible = true
     InputPlaceholder.Text = optData.Placeholder or "Enter Value"
     InputBox.Text = tostring(optData.Value or "")
-    InputBox:CaptureFocus()
+    
+    -- Delay focus to prevent capturing the trigger key (Enter) which adds a space/newline
+    task.spawn(function()
+        task.wait()
+        InputBox:CaptureFocus()
+        InputBox.Text = tostring(optData.Value or "") -- Force reset after focus
+    end)
     
     local connection
     connection = InputBox.FocusLost:Connect(function(enterPressed)
         optData.Value = InputBox.Text
-        optData.UI.ValueLabel.Text = optData.Value
+        if optData.UI and optData.UI.ValueLabel then
+            optData.UI.ValueLabel.Text = optData.Value
+        end
         optData.Callback(optData.Value)
         
         InputPopup.Visible = false
         connection:Disconnect()
+    end)
+end
+
+openColorPopup = function(optData)
+    ColorPopup.Visible = true
+    ColorTitle.Text = optData.Name
+    RBox.Text = tostring(math.floor(optData.Value.R * 255))
+    GBox.Text = tostring(math.floor(optData.Value.G * 255))
+    BBox.Text = tostring(math.floor(optData.Value.B * 255))
+    ColorPreview.BackgroundColor3 = optData.Value
+    
+    local function updatePreview()
+        local r = tonumber(RBox.Text) or 0
+        local g = tonumber(GBox.Text) or 0
+        local b = tonumber(BBox.Text) or 0
+        ColorPreview.BackgroundColor3 = Color3.fromRGB(math.clamp(r, 0, 255), math.clamp(g, 0, 255), math.clamp(b, 0, 255))
+    end
+    
+    local cR = RBox:GetPropertyChangedSignal("Text"):Connect(updatePreview)
+    local cG = GBox:GetPropertyChangedSignal("Text"):Connect(updatePreview)
+    local cB = BBox:GetPropertyChangedSignal("Text"):Connect(updatePreview)
+    
+    local function finish()
+        local r = math.clamp(tonumber(RBox.Text) or 0, 0, 255)
+        local g = math.clamp(tonumber(GBox.Text) or 0, 0, 255)
+        local b = math.clamp(tonumber(BBox.Text) or 0, 0, 255)
+        local newColor = Color3.fromRGB(r, g, b)
+        
+        optData.Value = newColor
+        if optData.UI and optData.UI.ValueLabel then
+            optData.UI.ValueLabel.Text = "[" .. r .. "," .. g .. "," .. b .. "]"
+        end
+        optData.Callback(newColor)
+        
+        ColorPopup.Visible = false
+        cR:Disconnect(); cG:Disconnect(); cB:Disconnect()
+    end
+    
+    local connR = RBox.FocusLost:Connect(function(enter) if enter then finish() end end)
+    local connG = GBox.FocusLost:Connect(function(enter) if enter then finish() end end)
+    local connB = BBox.FocusLost:Connect(function(enter) if enter then finish() end end)
+    
+    task.spawn(function()
+        repeat task.wait() until not ColorPopup.Visible
+        connR:Disconnect(); connG:Disconnect(); connB:Disconnect()
     end)
 end
 
@@ -801,6 +943,9 @@ renderMenu = function(menu)
             valueLabel.Text = (State.Binding == optData) and "[...]" or "[" .. (optData.Value and optData.Value.Name or "NONE") .. "]"
         elseif optData.Type == "input" then
             valueLabel.Text = tostring(optData.Value or "")
+        elseif optData.Type == "color" then
+            local r, g, b = math.floor(optData.Value.R*255), math.floor(optData.Value.G*255), math.floor(optData.Value.B*255)
+            valueLabel.Text = "[" .. r .. "," .. g .. "," .. b .. "]"
         else
             valueLabel.Text = optData.Type == "button" and (optData.ValueText or "") or ""
         end
@@ -1016,6 +1161,8 @@ local function handleMenuInput(name, state, input)
                 openMenu(opt.SubMenu)
             elseif opt.Type == "input" then
                 openInputPopup(opt)
+            elseif opt.Type == "color" then
+                openColorPopup(opt)
             elseif opt.Type == "keybind" then
                 State.Binding = opt
                 opt.UI.ValueLabel.Text = "[...]"
@@ -1155,31 +1302,56 @@ function UILibrary:Unload()
     -- 1. Shutdown Auto-Save
     triggerAutoSave()
     
-    -- 2. Force Disable Movement Mods
+    -- 2. Force Disable Movement Mods & States
     if State.Config.Fly then State.Config.Fly.Active = false end
     if State.Config.Sprint then State.Config.Sprint.Active = false end
     
-    -- 3. Restore Character Physics
-    local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
+    -- 3. Restore Character Physics & Collision
+    local char = Player.Character
+    local hum = char and char:FindFirstChild("Humanoid")
     if hum then
         hum.WalkSpeed = 16
         hum.PlatformStand = false
     end
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanTouch = true
+                part.CanCollide = true
+            end
+        end
+    end
     
-    -- 4. Clean up Global Protections
+    -- 4. Restore Camera & Visuals
+    local cam = workspace.CurrentCamera
+    cam.FieldOfView = 70
+    cam.CameraSubject = hum
+    Player.DevCameraOcclusionMode = Enum.DevCameraOcclusionMode.Zoom
+    
+    -- 5. Clean up Global Protections & Connections
     if _G.AntiFling then _G.AntiFling:Disconnect(); _G.AntiFling = nil end
+    if _G.AntiTouch then _G.AntiTouch:Disconnect(); _G.AntiTouch = nil end
     if _G.AntiAFK then _G.AntiAFK:Disconnect(); _G.AntiAFK = nil end
+    if _G.NoclipConn then _G.NoclipConn:Disconnect(); _G.NoclipConn = nil end
+    if _G.InfJumpConn then _G.InfJumpConn:Disconnect(); _G.InfJumpConn = nil end
+    _G.AntiLog = false
     
-    -- 5. Unbind Inputs & Destroy
+    -- 6. Clean up Dynamic Troll Connections
+    for _, p in ipairs(game.Players:GetPlayers()) do
+        local bid = "Blocker_" .. p.UserId
+        local oid = "Orbit_" .. p.UserId
+        if _G[bid] then _G[bid]:Disconnect(); _G[bid] = nil end
+        if _G[oid] then _G[oid]:Disconnect(); _G[oid] = nil end
+    end
+    
+    -- 7. Unbind Inputs & Destroy
     local CAS = game:GetService("ContextActionService")
     CAS:UnbindAction("fracturecontrols")
     
     ScreenGui:Destroy()
 end
 
-function UILibrary:Notify(title, text, duration)
-    local duration = duration or 5
-    
+local function showDefaultNotification(title, text, duration)
     -- Outer frame for UIListLayout
     local NotifyFrame = Instance.new("Frame")
     NotifyFrame.Size = UDim2.new(1, 0, 0, 0)
@@ -1275,6 +1447,33 @@ function UILibrary:Notify(title, text, duration)
             NotifyFrame:Destroy()
         end)
     end)
+end
+
+local function showRobloxNotification(title, text, duration)
+    local ok = pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = duration
+        })
+    end)
+
+    if not ok then
+        showDefaultNotification(title, text, duration)
+    end
+end
+
+function UILibrary:Notify(title, text, duration)
+    local notifyTitle = tostring(title or "Notification")
+    local notifyText = tostring(text or "")
+    local notifyDuration = tonumber(duration) or 5
+
+    if State.NotificationType == "roblox" then
+        showRobloxNotification(notifyTitle, notifyText, notifyDuration)
+        return
+    end
+
+    showDefaultNotification(notifyTitle, notifyText, notifyDuration)
 end
 
 -- // BUILT-IN FEATURES MODULES // --
@@ -1475,7 +1674,7 @@ function BuiltIn.Protections(lib)
     local ProtectionsMenu = lib:AddMenu("Protections", "Security and anti-exploit", "shield", true)
     local ps = State.Config.Protections
 
-    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents being flung by others", false, nil, function(v)
+    ProtectionsMenu:AddToggle("Anti-Fling", "Prevents being flung by others. May break cars/bikes", false, nil, function(v)
         ps.AntiFling = v
         if v then
             if _G.AntiFling then _G.AntiFling:Disconnect() end
@@ -1547,7 +1746,8 @@ function BuiltIn.Protections(lib)
     end)
 
     local BlockedRemotes = {"Log", "Error", "Report", "Analytics", "Cheat", "Detect", "Flag", "Ban", "Kick", "Anticheat", "Adonis", "Anti"}
-    ProtectionsMenu:AddToggle("Remote Protection", "Blocks AC and Analytics remotes", false, nil, function(v)
+    ProtectionsMenu:AddToggle("Remote Protection", "Blocks AC and Analytics remotes", ps.RemoteProtection, nil, function(v)
+        ps.RemoteProtection = v
         _G.AntiLog = v
         if v then
             -- Only hook once globally
@@ -1577,7 +1777,7 @@ function BuiltIn.Protections(lib)
         end
     end)
     
-    ProtectionsMenu:AddToggle("Anti-AFK", "Prevents idle kick", false, nil, function(v)
+    ProtectionsMenu:AddToggle("Anti-AFK", "Prevents idle kick", ps.AntiAFK, nil, function(v)
         ps.AntiAFK = v
         if v then
             if _G.AntiAFK then _G.AntiAFK:Disconnect() end
@@ -1593,103 +1793,134 @@ function BuiltIn.Protections(lib)
     end)
     
     ProtectionsMenu:AddLabel("Bypass")
-    ProtectionsMenu:AddToggle("Adonis Bypass", "Bypass Adonis Anti Exploit", false, nil, function(v)
-        local getreg = debug.getregistry or getreg
-        local type = type
-        local debug_info = debug.info
-        local task = task
+
+
+
+
+
+    ProtectionsMenu:AddToggle("Adonis Bypass", "Bypass Adonis Anti Cheat (you cant be afk for more than ~2mins)", ps.AdonisBypass, nil, function(v)
+        ps.AdonisBypass = v
+        if not v then return end
+        
+        local type, pairs, unpack, table_insert = type, pairs, unpack, table.insert
         local filtergc = getgc or get_gc_objects
         local isfunctionhooked = isfunctionhooked or function() return false end
         local hookfunction = hookfunction or replaceclosure or detour_function
-        local getrawmetatable = getrawmetatable
-        local setreadonly = setreadonly or make_readonly
+        local hookmetamethod = hookmetamethod or function() end
+        local newcclosure = newcclosure or function(f) return f end
 
-        local noop = function() end
-        local RunService = game:GetService("RunService")
-
-        -- We target the internal "Remote" and "Process" tables revealed by the server code
-        local function bypassInternal()
-            local gc = filtergc()
-            for _, v in pairs(gc) do
-                if type(v) == "table" then
-                    -- Adonis internal table detection
-                    local isAdonis = false
-                    if rawget(v, "Detected") and rawget(v, "Process") and rawget(v, "Remote") then
-                        isAdonis = true
-                    end
-                    
-                    if isAdonis then
-                        -- Hook the detection handler
-                        if type(v.Detected) == "function" and not isfunctionhooked(v.Detected) then
-                            local oldDetected
-                            oldDetected = hookfunction(v.Detected, newcclosure(function(action, info, ...)
-                                -- Logs it locally so you know what triggered it, but doesn't report to server
-                                print("[Zyntra] Blocked Adonis Detection:", action, "|", info)
-                                return nil
-                            end))
-                        end
-                        
-                        -- Hook the reporting/logging functions
-                        if type(v.AddLog) == "function" and not isfunctionhooked(v.AddLog) then
-                            hookfunction(v.AddLog, noop)
-                        end
-                    end
-                    
-                    -- Targeted bypass for the Remote table's Fire/Send methods
-                    if rawget(v, "Send") and rawget(v, "Clients") then
-                        local oldSend = v.Send
-                        if type(oldSend) == "function" and not isfunctionhooked(oldSend) then
-                            v.Send = newcclosure(function(self, name, ...)
-                                local args = {...}
-                                -- Only block detection-related sends
-                                if name == "Detected" or name == "Log" or name == "ExploitDetected" then
-                                    print("[Zyntra] Prevented Remote Report:", name)
-                                    return nil
-                                end
-                                return oldSend(self, name, unpack(args))
-                            end)
-                        end
-                    end
+        local function applyBypass(client)
+            -- Neutralize Exit Points
+            for _, name in pairs({"Detected", "Disconnect", "Kill"}) do
+                local func = client[name]
+                if type(func) == "function" and not isfunctionhooked(func) then
+                    local n, s, l = debug.info(func, "nsl")
+                    SpoofedFunctions[func] = {name = n, src = s, line = l, args = 3, func = func}
+                    hookfunction(func, newcclosure(function(action, ...)
+                        if action == "_" then return true end
+                        return true
+                    end))
                 end
             end
-        end
 
-        -- Kill specific anti-exploit threads without triggering namecall detectors
-        local function killAntiThreads()
-            local reg = getreg()
-            if not reg then return end
-            for _, v in pairs(reg) do
-                if type(v) == 'thread' then
-                    local ok, source = pcall(debug_info, v, 's')
-                    if ok and source then
-                        -- The server code mentions "ClientCheck" and "Anti" modules
-                        if source:find("Adonis") or source:find("Anti") then
-                            -- Check if it's a core thread we shouldn't kill (like the heartbeat)
-                            if not source:find("Remote") and not source:find("Network") then
-                                pcall(task.cancel, v)
+            -- UI Stealth (Meta-Hooks)
+            local oldNC
+            oldNC = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+                local method = getnamecallmethod()
+                if not checkcaller() then
+                    if (method == "GetChildren" or method == "GetDescendants" or method == "FindFirstChild") then
+                        local results = {oldNC(self, ...)}
+                        if type(results[1]) == "table" then
+                            for i, v in pairs(results[1]) do
+                                if v == ScreenGui then table.remove(results[1], i) break end
                             end
+                        elseif results[1] == ScreenGui then
+                            results[1] = nil
+                        end
+                        return unpack(results)
+                    elseif method == "____________" then -- Honeypot
+                        return oldNC(self, ...)
+                    end
+                end
+                return oldNC(self, ...)
+            end))
+            spoofMetamethod(oldNC)
+
+            local oldIDX
+            oldIDX = hookmetamethod(game, "__index", newcclosure(function(self, k)
+                if not checkcaller() then
+                    if (self == Parent or self == game) and k == ScreenGui.Name then
+                        return nil
+                    elseif k == "____________" then -- Honeypot
+                        return oldIDX(self, k)
+                    end
+                end
+                return oldIDX(self, k)
+            end))
+            spoofMetamethod(oldIDX)
+
+            -- Sync-Safe Remote Redirection (Send & Get)
+            local remote = client.Remote
+            if remote and type(remote.Send) == "function" then
+                local snd = remote.Send
+                if not isfunctionhooked(snd) then
+                    hookfunction(snd, newcclosure(function(self, name, ...)
+                        local args = {self, name, ...}
+                        local cmd = (type(self) == "string" and self) or name
+                        if cmd == "Detected" or cmd == "D".."e".."t".."e".."c".."t".."e".."d" or cmd == "LogError" or cmd == "BadMemes" then
+                            if type(self) == "table" then return snd(self, "Ping", "Safe") end
+                            return snd("Ping", "Safe")
+                        end
+                        return snd(unpack(args))
+                    end))
+                end
+            end
+
+            if remote and type(remote.Get) == "function" then
+                local get = remote.Get
+                if not isfunctionhooked(get) then
+                    hookfunction(get, newcclosure(function(self, name, ...)
+                        local cmd = (type(self) == "string" and self) or name
+                        if cmd == "Detected" or cmd == "LogError" or cmd == "BadMemes" then
+                            if type(self) == "table" then return get(self, "Ping", "Safe") end
+                            return get("Ping", "Safe")
+                        end
+                        return get(self, name, ...)
+                    end))
+                end
+            end
+        end
+
+        for _, v in pairs(filtergc()) do
+            if type(v) == "table" and rawget(v, "Detected") and (rawget(v, "Remote") or rawget(v, "Variables")) then
+                pcall(applyBypass, v)
+            end
+        end
+
+        local NamecallInstanceDetector = nil
+        for Index, Table in getgc(true) do
+            if typeof(Table) ~= "table" then continue end
+            if not rawget(Table, "namecallInstance") then continue end
+            for SecondIndex, StackContainerTable in Table do
+                if typeof(StackContainerTable) ~= "table" then continue end
+                for ThirdIndex, Upvalues in StackContainerTable do
+                    if StackContainerTable[ThirdIndex] ~= "kick" then continue end
+                    if typeof(StackContainerTable[ThirdIndex + 1]) ~= "function" then continue end
+                    local FrozenDetectionFunction = StackContainerTable[ThirdIndex + 1]
+                    for _, DetectionIdentifier in getconstants(FrozenDetectionFunction) do
+                        if DetectionIdentifier == "namecallInstance" then
+                            NamecallInstanceDetector = FrozenDetectionFunction
                         end
                     end
                 end
             end
         end
-
-        local function protect()
-            pcall(bypassInternal)
-            pcall(killAntiThreads)
-        end
-
-        -- Start protection
-        protect()
-
-        -- Fast loop to catch dynamic Adonis components
-        task.spawn(function()
-            while task.wait(1.5) do
-                pcall(protect)
-            end
+        assert(NamecallInstanceDetector, "Error while finding anticheat.")
+        hookfunction(NamecallInstanceDetector, function()
+            return false
         end)
 
-        print("[Fracture] Adonis Anti Exploit was Bypassed.")
+        UILibrary:Notify("Bypass", "Adonis Fully Neutralized")
     end)
 end
 
@@ -1950,6 +2181,28 @@ function BuiltIn.Settings(lib)
         State.Config.Watermark = v
         WatermarkFrame.Visible = v
     end)
+
+    local LogService = game:GetService("LogService")
+    local logConnection
+    Settings:AddToggle("Redirect Output", "Redirect console output into console.txt", State.Config.RedirectOutput, nil, function(v)
+        State.Config.RedirectOutput = v
+        if v then
+            if not isfile("console.txt") then writefile("console.txt", "-- Fracture Console Log --\n") end
+            logConnection = LogService.MessageOut:Connect(function(msg, msgType)
+                local timestamp = os.date("%H:%M:%S")
+                local typeStr = tostring(msgType):gsub("Enum.MessageType.", "")
+                local entry = string.format("[%s] [%s] %s\n", timestamp, typeStr, msg)
+                appendfile("console.txt", entry)
+            end)
+            UILibrary:Notify("Settings", "Console output redirected to console.txt")
+        else
+            if logConnection then
+                logConnection:Disconnect()
+                logConnection = nil
+            end
+            UILibrary:Notify("Settings", "Console redirection stopped")
+        end
+    end)
     
     Settings:AddLabel("Other")
     Settings:AddButton("Rejoin", "Rejoin the same server", nil, function() game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer) end)
@@ -2002,6 +2255,12 @@ function BuiltIn.Settings(lib)
 		end
     end)
 
+    Developer:AddLabel("FE Scripts")
+
+    Developer:AddButton("Infinite Yield", "Load Infinite Yield", nil, function()
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    end)
+
     Developer:AddLabel("Developer")
 
     Developer:AddButton("DarkDex", "Load explorer", nil, function()
@@ -2015,17 +2274,43 @@ function BuiltIn.Settings(lib)
 end
 
 function UILibrary:CreateWindow(title, subtitle)
-    State.CurrentMenu = createMenuData(title, subtitle)
+    local resolvedTitle, resolvedSubtitle, notifType = resolveWindowOptions(title, subtitle)
+    State.NotificationType = notifType
+    State.CurrentMenu = createMenuData(resolvedTitle, resolvedSubtitle)
 
     -- Load Built-ins
     BuiltIn.Local(self)
 
     local PlayersMenu = self:AddMenu("Players", "Manage players in the server", "players", true)
     
+    local playerSearchQuery = ""
     local function refreshPlayers()
         PlayersMenu:Clear()
-        for _, p in ipairs(game.Players:GetPlayers()) do
+        
+        PlayersMenu:AddInput("Search", "Filter players by name", "Type name...", nil, function(v)
+            playerSearchQuery = v:lower()
+            refreshPlayers()
+        end)
+
+        PlayersMenu:AddLabel("Players")
+        
+        local allPlayers = game.Players:GetPlayers()
+        table.sort(allPlayers, function(a, b)
+            return a.Name:lower() < b.Name:lower()
+        end)
+
+        for _, p in ipairs(allPlayers) do
             if p == Player then continue end -- Skip self
+            
+            -- Filter by search query
+            if playerSearchQuery ~= "" then
+                local name = p.Name:lower()
+                local display = p.DisplayName:lower()
+                if not name:find(playerSearchQuery) and not display:find(playerSearchQuery) then
+                    continue
+                end
+            end
+
             local pm = PlayersMenu:AddMenu(p.DisplayName .. " (@" .. p.Name .. ")", "Actions for " .. p.Name)
             
             -- Store player object in the menu itself and the option
@@ -2039,14 +2324,25 @@ function UILibrary:CreateWindow(title, subtitle)
                 end
             end
 
-            pm:AddToggle("Spectate", "Watch this player", (workspace.CurrentCamera.CameraSubject == (p.Character and p.Character:FindFirstChild("Humanoid"))), "eye", function(v)
+            local spectateOpt
+            spectateOpt = pm:AddToggle("Spectate", "Watch this player", (workspace.CurrentCamera.CameraSubject ~= nil and p.Character ~= nil and workspace.CurrentCamera.CameraSubject:IsDescendantOf(p.Character)), "eye", function(v)
                 local cam = workspace.CurrentCamera
                 if v then
-                    cam.CameraSubject = p.Character:FindFirstChild("Humanoid")
-                    UILibrary:Notify("Spectate", "Now spectating " .. p.Name)
+                    local targetHum = p.Character and p.Character:FindFirstChild("Humanoid")
+                    if targetHum then
+                        cam.CameraSubject = targetHum
+                        UILibrary:Notify("Spectate", "Now spectating " .. p.DisplayName)
+                    else
+                        -- Reset the toggle state if it fails
+                        spectateOpt.Value = false
+                        if spectateOpt.UI and spectateOpt.UI.Checkbox then
+                            spectateOpt.UI.Checkbox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                        end
+                        UILibrary:Notify("Spectate", "Failed: Player is too far or not loaded", 3)
+                    end
                 else
-                    cam.CameraSubject = Player.Character:FindFirstChild("Humanoid")
-                    UILibrary:Notify("Spectate", "Stopped spectating " .. p.Name)
+                    cam.CameraSubject = Player.Character and Player.Character:FindFirstChild("Humanoid")
+                    UILibrary:Notify("Spectate", "Stopped spectating")
                 end
             end)
 
@@ -2080,14 +2376,7 @@ function UILibrary:CreateWindow(title, subtitle)
                 end
             end)
 
-            -- Reset camera when leaving this specific player's menu
-            pm._menuData.OnClose = function()
-                local cam = workspace.CurrentCamera
-                local hum = Player.Character and Player.Character:FindFirstChild("Humanoid")
-                if cam.CameraSubject ~= hum then
-                    cam.CameraSubject = hum
-                end
-            end
+
             
             pm:AddButton("Teleport", "Teleport to this player", nil, function()
                 local char = Player.Character
@@ -2200,7 +2489,7 @@ function UILibrary:CreateWindow(title, subtitle)
                 end
             end)
 
-            Troll:AddButton("Fling V2", "Send this player into the outside world", nil, function()
+            Troll:AddButton("Fling V2", "Rocket-powered spin fling", nil, function()
                 local char = Player.Character
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 local targetChar = p.Character
@@ -2208,29 +2497,49 @@ function UILibrary:CreateWindow(title, subtitle)
                 
                 if hrp and targetHrp then
                     local oldPos = hrp.CFrame
-                    UILibrary:Notify("Troll", "Flinging " .. p.Name)
+                    UILibrary:Notify("Troll", "Flinging " .. p.DisplayName)
                     
+                    -- Selective Noclip (Limbs only) to ensure smooth flight
+                    local noclip = game:GetService("RunService").Stepped:Connect(function()
+                        for _, v in pairs(char:GetDescendants()) do
+                            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then
+                                v.CanCollide = false
+                            end
+                        end
+                    end)
+
+                    -- Rocket setup
                     local y = Instance.new("RocketPropulsion")
                     y.Parent = hrp
                     y.CartoonFactor = 1
-                    y.MaxThrust = 800000
+                    y.MaxThrust = 1e7
                     y.MaxSpeed = 1000
-                    y.ThrustP = 200000
-                    y.Name = "Fling"
-                    game:GetService("Workspace").CurrentCamera.CameraSubject = p.Character.Head
-                    y.Target = p.Character.HumanoidRootPart
+                    y.ThrustP = 1e7
+                    y.Name = "FlingRocket"
+                    y.Target = targetHrp
+                    
+                    -- Spin power
+                    local bav = Instance.new("BodyAngularVelocity")
+                    bav.MaxTorque = Vector3.new(1, 1, 1) * math.huge
+                    bav.AngularVelocity = Vector3.new(0, 99999, 0)
+                    bav.Parent = hrp
+                    
                     y:Fire()
                     
-                    task.wait(0.4)
+                    task.wait(0.75) -- Time to reach target and impact
 
-                    hrp.Fling:Destroy()
-                    game:GetService("Workspace").CurrentCamera.CameraSubject = char.Head
-                    wait(0.4)
-                    hrp.Fling:Destroy()
-
+                    -- Cleanup
+                    noclip:Disconnect()
+                    y:Destroy()
+                    bav:Destroy()
+                    
                     hrp.CFrame = oldPos
                     hrp.Velocity = Vector3.zero
                     hrp.RotVelocity = Vector3.zero
+                    
+                    for _, v in pairs(char:GetDescendants()) do
+                        if v:IsA("BasePart") then v.CanCollide = true end
+                    end
                 else
                     UILibrary:Notify("Error", "Target character not found")
                 end
@@ -2500,6 +2809,19 @@ function UILibrary:AddInput(name, desc, placeholder, icon, callback)
     renderMenu(State.CurrentMenu)
 end
 
+function UILibrary:AddColor(name, desc, default, icon, callback)
+    if type(icon) == "function" then callback = icon; icon = nil end
+    table.insert(State.CurrentMenu.Options, {
+        Name = name,
+        Description = desc,
+        Icon = icon,
+        Type = "color",
+        Value = default or Color3.fromRGB(255, 255, 255),
+        Callback = callback
+    })
+    renderMenu(State.CurrentMenu)
+end
+
 function UILibrary:AddKeybind(name, desc, default, icon, callback)
     if type(icon) == "function" then callback = icon; icon = nil end
     local bind = {
@@ -2590,6 +2912,19 @@ function UILibrary._wrapMenu(menuData)
     end
     function api:AddLabel(text)
         table.insert(menuData.Options, {Name = text, Type = "label"})
+        if State.CurrentMenu == menuData then renderMenu(menuData) end
+    end
+
+    function api:AddColor(name, desc, default, icon, callback)
+        if type(icon) == "function" then callback = icon; icon = nil end
+        table.insert(menuData.Options, {
+            Name = name,
+            Description = desc,
+            Icon = icon,
+            Type = "color",
+            Value = default or Color3.fromRGB(255, 255, 255),
+            Callback = callback
+        })
         if State.CurrentMenu == menuData then renderMenu(menuData) end
     end
     function api:AddMenu(name, desc, icon, isSystem)
